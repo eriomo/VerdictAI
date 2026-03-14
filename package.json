@@ -1,6 +1,6 @@
 {
   "name": "verdict-ai",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Verdict AI - Legal Intelligence Platform",
   "main": "server.js",
   "scripts": {
