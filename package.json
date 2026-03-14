@@ -1,6 +1,6 @@
 {
   "name": "verdict-ai",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "description": "Verdict AI - Legal Intelligence Platform",
   "main": "server.js",
   "scripts": {
@@ -10,6 +10,7 @@
   "dependencies": {
     "express": "^4.18.2",
     "node-fetch": "^2.7.0",
-    "cors": "^2.8.5"
+    "cors": "^2.8.5",
+    "@supabase/supabase-js": "^2.39.0"
   }
 }
