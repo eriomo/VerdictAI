@@ -8,51 +8,251 @@
 <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<!-- PDF.js for PDF reading -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<!-- docx export -->
+<script src="https://unpkg.com/docx@8.2.2/build/index.umd.js"></script>
+<!-- jsPDF for PDF export -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 html,body,#root{height:100%;width:100%}
 body{font-family:'DM Sans',sans-serif;background:#07101c;color:#F0EDE6;overflow:hidden}
-::-webkit-scrollbar{width:5px}
-::-webkit-scrollbar-thumb{background:rgba(200,164,94,0.3);border-radius:10px}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:rgba(200,164,94,0.3);border-radius:10px}
 @keyframes vPulse{0%,80%,100%{transform:scale(0.75);opacity:0.4}40%{transform:scale(1.2);opacity:1}}
 @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+@keyframes spin{to{transform:rotate(360deg)}}
 .fade{animation:fadeIn 0.3s ease forwards}
 select option{background:#0c1a2e;color:#F0EDE6}
+/* Mobile responsive */
+@media(max-width:768px){
+  .two-col{grid-template-columns:1fr !important}
+  .stat-grid{grid-template-columns:1fr 1fr !important}
+  .feat-grid{grid-template-columns:1fr 1fr !important}
+  .sidebar{width:280px !important}
+  .topbar-subtitle{display:none}
+}
+@media(max-width:480px){
+  .feat-grid{grid-template-columns:1fr !important}
+  .stat-grid{grid-template-columns:1fr 1fr !important}
+}
 </style>
 </head>
 <body>
 <div id="root"></div>
 <script type="text/babel">
-const {useState,useRef,useEffect} = React;
+const {useState,useRef,useEffect,useCallback,createContext,useContext} = React;
 const GOLD="#C8A45E",GOLD2="#D4B474";
 
-// Detect if running on Render (has server) or local file
+// ── Session Context (Fix #10: AI memory within session) ──────────────────────
+const SessionContext = createContext({});
+function SessionProvider({children}) {
+  const [sessionDocs, setSessionDocs] = useState([]);
+  const [lastAnalysis, setLastAnalysis] = useState(null);
+  const addSessionDoc = (doc) => setSessionDocs(prev => [doc, ...prev.slice(0,4)]);
+  return React.createElement(SessionContext.Provider, {
+    value: {sessionDocs, addSessionDoc, lastAnalysis, setLastAnalysis}
+  }, children);
+}
+const useSession = () => useContext(SessionContext);
 
+// ── AI Streaming ──────────────────────────────────────────────────────────────
+async function groqStream(sys, user, cb, retryCount = 0) {
+  try {
+    const res = await fetch('/api/ai', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({system: sys, user: user})
+    });
 
-async function groqStream(sys, user, cb) {
-  const res = await fetch('/api/ai', {
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({system:sys, user:user})
-  });
-  if(!res.ok){const e=await res.json();throw new Error(e.error||'Server error');}
-  const reader=res.body.getReader();const dec=new TextDecoder();let full="";
-  while(true){
-    const{done,value}=await reader.read();if(done)break;
-    for(const line of dec.decode(value).split("\n")){
-      if(!line.startsWith("data: "))continue;
-      const d=line.slice(6);if(d==="[DONE]")continue;
-      try{const delta=JSON.parse(d).choices[0]?.delta?.content||"";full+=delta;cb(full);}catch{}
+    if (res.status === 429 && retryCount < 3) {
+      // Rate limited — show message and retry
+      cb('[Verdict AI is busy — retrying in a moment...]\n\n');
+      await new Promise(r => setTimeout(r, 5000));
+      return groqStream(sys, user, cb, retryCount + 1);
     }
+
+    if (!res.ok) {
+      const e = await res.json().catch(() => ({error: 'Unknown error'}));
+      throw new Error(e.error || `Server error ${res.status}`);
+    }
+
+    const reader = res.body.getReader();
+    const dec = new TextDecoder();
+    let full = '';
+    while (true) {
+      const {done, value} = await reader.read();
+      if (done) break;
+      for (const line of dec.decode(value).split('\n')) {
+        if (!line.startsWith('data: ')) continue;
+        const d = line.slice(6);
+        if (d === '[DONE]') continue;
+        try {
+          const delta = JSON.parse(d).choices[0]?.delta?.content || '';
+          full += delta;
+          cb(full);
+        } catch {}
+      }
+    }
+    return full;
+  } catch (err) {
+    if (retryCount < 2 && err.message.includes('fetch')) {
+      await new Promise(r => setTimeout(r, 3000));
+      return groqStream(sys, user, cb, retryCount + 1);
+    }
+    throw err;
   }
-  return full;
 }
 
-const VOICE=`You are a senior legal counsel with 20 years of experience. Write as a highly experienced lawyer — authoritative, precise, and professional.
+// ── PDF Text Extraction (Fix #1: File upload) ─────────────────────────────────
+async function extractTextFromPDF(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        const pdf = await pdfjsLib.getDocument({data: e.target.result}).promise;
+        let text = '';
+        for (let i = 1; i <= Math.min(pdf.numPages, 50); i++) {
+          const page = await pdf.getPage(i);
+          const content = await page.getTextContent();
+          text += content.items.map(item => item.str).join(' ') + '\n\n';
+        }
+        resolve(text.trim());
+      } catch (err) {
+        reject(err);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+async function extractTextFromFile(file) {
+  const ext = file.name.split('.').pop().toLowerCase();
+  if (ext === 'pdf') return extractTextFromPDF(file);
+  if (['txt', 'md'].includes(ext)) {
+    return new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = e => resolve(e.target.result);
+      r.onerror = reject;
+      r.readAsText(file);
+    });
+  }
+  if (['doc', 'docx'].includes(ext)) {
+    // For docx, read as text (basic extraction)
+    return new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = e => {
+        // Basic text extraction from docx (strips XML tags)
+        const text = e.target.result.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+        resolve(text || 'Could not extract text from this Word document. Please paste the text manually.');
+      };
+      r.onerror = reject;
+      r.readAsText(file);
+    });
+  }
+  throw new Error('Unsupported file type. Please upload PDF, TXT, or DOCX.');
+}
+
+// ── Export Functions (Fix #7: Export to Word/PDF) ─────────────────────────────
+function exportToPDF(text, filename = 'verdict-ai-result') {
+  const {jsPDF} = window.jspdf;
+  const doc = new jsPDF({orientation: 'portrait', unit: 'mm', format: 'a4'});
+  const margin = 20;
+  const pageWidth = doc.internal.pageSize.getWidth() - margin * 2;
+  const lineHeight = 7;
+  let y = margin;
+
+  // Header
+  doc.setFillColor(12, 26, 46);
+  doc.rect(0, 0, doc.internal.pageSize.getWidth(), 20, 'F');
+  doc.setTextColor(200, 164, 94);
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  doc.text('VERDICT AI', margin, 13);
+  doc.setTextColor(240, 237, 230);
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.text('From documents to decisions.', 80, 13);
+  y = 30;
+
+  doc.setTextColor(30, 30, 30);
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+
+  const lines = doc.splitTextToSize(text, pageWidth);
+  lines.forEach(line => {
+    if (y > doc.internal.pageSize.getHeight() - margin) {
+      doc.addPage();
+      y = margin;
+    }
+    // Bold section headers (ALL CAPS lines ending with colon)
+    if (/^[A-Z\s]+:/.test(line.trim())) {
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(12, 26, 46);
+    } else {
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(30, 30, 30);
+    }
+    doc.text(line, margin, y);
+    y += lineHeight;
+  });
+
+  // Footer
+  const pages = doc.internal.getNumberOfPages();
+  for (let i = 1; i <= pages; i++) {
+    doc.setPage(i);
+    doc.setFontSize(8);
+    doc.setTextColor(150);
+    doc.text(`Verdict AI — Page ${i} of ${pages} — verdictai.onrender.com`, margin, doc.internal.pageSize.getHeight() - 10);
+  }
+
+  doc.save(`${filename}.pdf`);
+}
+
+function exportToWord(text, filename = 'verdict-ai-result') {
+  // Create a properly formatted HTML doc that Word can open
+  const html = `<!DOCTYPE html>
+<html><head><meta charset="UTF-8"/>
+<style>
+body{font-family:Calibri,sans-serif;font-size:11pt;line-height:1.8;color:#1a1a1a;margin:2cm}
+h1{color:#0c1a2e;font-size:14pt;border-bottom:2px solid #C8A45E;padding-bottom:6pt}
+.header{background:#0c1a2e;color:#C8A45E;padding:12pt;margin-bottom:20pt}
+.section-header{font-weight:bold;color:#0c1a2e;margin-top:14pt;font-size:11pt}
+p{margin-bottom:8pt}
+.footer{color:#888;font-size:9pt;border-top:1px solid #ccc;margin-top:20pt;padding-top:8pt}
+</style></head><body>
+<div class="header"><strong>VERDICT AI</strong> &nbsp;|&nbsp; From documents to decisions.</div>
+<div style="white-space:pre-wrap">${text.replace(/^([A-Z\s]+:)/gm, '<div class="section-header">$1</div>').replace(/\n/g, '<br/>')}</div>
+<div class="footer">Generated by Verdict AI &mdash; ${new Date().toLocaleDateString('en-NG', {weekday:'long',year:'numeric',month:'long',day:'numeric'})}</div>
+</body></html>`;
+
+  const blob = new Blob([html], {type: 'application/msword'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `${filename}.doc`; a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ── Theme ─────────────────────────────────────────────────────────────────────
+function theme(dark) {
+  return {
+    bg: dark ? '#07101c' : '#ede9e0',
+    card: dark ? '#0c1a2e' : '#fdfaf5',
+    card2: dark ? '#101f35' : '#f5f1e8',
+    border: dark ? 'rgba(30,52,82,0.9)' : 'rgba(0,0,0,0.09)',
+    text: dark ? '#F0EDE6' : '#0D1B2E',
+    dim: dark ? 'rgba(240,237,230,0.6)' : 'rgba(13,27,46,0.65)',
+    muted: dark ? 'rgba(240,237,230,0.32)' : 'rgba(13,27,46,0.35)',
+    input: dark ? 'rgba(3,8,18,0.95)' : 'rgba(255,255,255,0.92)',
+  };
+}
+
+const VOICE = `You are a senior legal counsel with 20 years of experience. Write as a highly experienced lawyer — authoritative, precise, and professional.
 
 STRICT RULES:
-- Never use asterisks, hashtags, or markdown symbols
-- Never use bullet points with dashes or hyphens  
+- Never use asterisks, hashtags, or markdown symbols of any kind
+- Never use bullet points with dashes or hyphens
 - Use numbered lists only for sequential steps
 - Section headers in ALL CAPS followed by a colon, e.g. SUMMARY: or RISK ASSESSMENT:
 - Write in complete sentences and full paragraphs
@@ -61,527 +261,717 @@ STRICT RULES:
 - Be thorough and specific — cite legal principles, doctrines, and statutory frameworks
 - No vague generalities`;
 
-const NAV=[
-  {sec:"MAIN",items:[{id:"dashboard",icon:"🏛️",label:"Dashboard"}]},
-  {sec:"THE READER",items:[{id:"reader",icon:"📄",label:"Document Analysis"},{id:"qa",icon:"💬",label:"Legal Q&A"}]},
-  {sec:"THE THINKER",items:[{id:"warroom",icon:"🧠",label:"Case War Room"},{id:"opposing",icon:"⚔️",label:"Opposing Counsel"},{id:"strength",icon:"⚖️",label:"Strength Assessment"}]},
-  {sec:"THE CREATOR",items:[{id:"draft",icon:"✍️",label:"Draft Documents"},{id:"briefscore",icon:"📊",label:"Brief-to-Win Score"},{id:"explainer",icon:"🗣️",label:"Client Explainer"}]},
-  {sec:"NEW FEATURES",items:[{id:"clausedna",icon:"🧬",label:"Clause DNA"},{id:"jurisdiction",icon:"🌍",label:"Jurisdiction Translator"},{id:"deadlines",icon:"⏰",label:"Deadline Intelligence"}]},
-  {sec:"RESEARCH",items:[{id:"nigeriancases",icon:"⚖️",label:"Nigerian Case Law"},{id:"primsol",icon:"📚",label:"PrimsCol Database"}]},
-  {sec:"THE VAULT",items:[{id:"vault",icon:"🗄️",label:"Document Vault"},{id:"cases",icon:"📁",label:"Case Workspaces"}]},
+const NAV = [
+  {sec:'MAIN', items:[{id:'dashboard',icon:'🏛️',label:'Dashboard'}]},
+  {sec:'THE READER', items:[{id:'reader',icon:'📄',label:'Document Analysis'},{id:'qa',icon:'💬',label:'Legal Q&A'}]},
+  {sec:'THE THINKER', items:[{id:'warroom',icon:'🧠',label:'Case War Room'},{id:'opposing',icon:'⚔️',label:'Opposing Counsel'},{id:'strength',icon:'⚖️',label:'Strength Assessment'}]},
+  {sec:'THE CREATOR', items:[{id:'draft',icon:'✍️',label:'Draft Documents'},{id:'briefscore',icon:'📊',label:'Brief-to-Win Score'},{id:'explainer',icon:'🗣️',label:'Client Explainer'}]},
+  {sec:'NEW FEATURES', items:[{id:'clausedna',icon:'🧬',label:'Clause DNA'},{id:'jurisdiction',icon:'🌍',label:'Jurisdiction Translator'},{id:'deadlines',icon:'⏰',label:'Deadline Intelligence'}]},
+  {sec:'RESEARCH', items:[{id:'nigeriancases',icon:'⚖️',label:'Nigerian Case Law'},{id:'primsol',icon:'📚',label:'PrimsCol Database'}]},
+  {sec:'THE VAULT', items:[{id:'vault',icon:'🗄️',label:'Document Vault'},{id:'cases',icon:'📁',label:'Case Workspaces'}]},
 ];
 
-const FEATURES=[
-  {id:"reader",icon:"📄",title:"Document Analysis",desc:"Analyze any legal document instantly",color:"#4A9EE8",tag:"Reader"},
-  {id:"warroom",icon:"🧠",title:"Case War Room",desc:"Full strategic case analysis",color:"#C8A45E",tag:"Thinker"},
-  {id:"opposing",icon:"⚔️",title:"Opposing Counsel",desc:"Stress-test arguments before court",color:"#E05252",tag:"Thinker"},
-  {id:"strength",icon:"⚖️",title:"Strength Assessment",desc:"Score any legal position 0-100%",color:"#2ECC8A",tag:"Thinker"},
-  {id:"draft",icon:"✍️",title:"Draft Documents",desc:"Generate 16 types of legal docs",color:"#9B59B6",tag:"Creator"},
-  {id:"briefscore",icon:"📊",title:"Brief-to-Win Score",desc:"Score and improve briefs",color:"#F0A500",tag:"Creator"},
-  {id:"explainer",icon:"🗣️",title:"Client Explainer",desc:"Turn legalese into plain English",color:"#1ABC9C",tag:"Creator"},
-  {id:"clausedna",icon:"🧬",title:"Clause DNA",desc:"Deep-decode any contract clause",color:"#E67E22",tag:"New"},
-  {id:"jurisdiction",icon:"🌍",title:"Jurisdiction Translator",desc:"Translate across legal systems",color:"#3498DB",tag:"New"},
-  {id:"deadlines",icon:"⏰",title:"Deadline Intelligence",desc:"Extract every deadline with stakes",color:"#E74C3C",tag:"New"},
-  {id:"nigeriancases",icon:"⚖️",title:"Nigerian Case Law",desc:"Search free Nigerian legal database",color:"#C0392B",tag:"Research"},
-  {id:"vault",icon:"🗄️",title:"Document Vault",desc:"Smart storage with AI search",color:"#7F8C8D",tag:"Vault"},
+const FEATURES = [
+  {id:'reader',icon:'📄',title:'Document Analysis',desc:'Upload PDF or paste any legal document',color:'#4A9EE8',tag:'Reader'},
+  {id:'warroom',icon:'🧠',title:'Case War Room',desc:'Full strategic case analysis',color:'#C8A45E',tag:'Thinker'},
+  {id:'opposing',icon:'⚔️',title:'Opposing Counsel',desc:'Stress-test arguments before court',color:'#E05252',tag:'Thinker'},
+  {id:'strength',icon:'⚖️',title:'Strength Assessment',desc:'Score any legal position 0-100%',color:'#2ECC8A',tag:'Thinker'},
+  {id:'draft',icon:'✍️',title:'Draft Documents',desc:'Generate 16 types of legal docs',color:'#9B59B6',tag:'Creator'},
+  {id:'briefscore',icon:'📊',title:'Brief-to-Win Score',desc:'Score and improve briefs before filing',color:'#F0A500',tag:'Creator'},
+  {id:'explainer',icon:'🗣️',title:'Client Explainer',desc:'Turn legalese into plain English',color:'#1ABC9C',tag:'Creator'},
+  {id:'clausedna',icon:'🧬',title:'Clause DNA',desc:'Deep-decode any contract clause',color:'#E67E22',tag:'New'},
+  {id:'jurisdiction',icon:'🌍',title:'Jurisdiction Translator',desc:'Translate across legal systems',color:'#3498DB',tag:'New'},
+  {id:'deadlines',icon:'⏰',title:'Deadline Intelligence',desc:'Extract every deadline with stakes',color:'#E74C3C',tag:'New'},
+  {id:'nigeriancases',icon:'⚖️',title:'Nigerian Case Law',desc:'AI research + live case database',color:'#C0392B',tag:'Research'},
+  {id:'vault',icon:'🗄️',title:'Document Vault',desc:'Smart storage with AI search',color:'#7F8C8D',tag:'Vault'},
+  {id:'qa',icon:'💬',title:'Legal Q&A',desc:'Ask anything, get expert answers',color:'#8E44AD',tag:'Reader'},
 ];
 
-const DOC_TYPES=["Legal Brief","Contract","Demand Letter","Non-Disclosure Agreement","Employment Agreement","Settlement Proposal","Legal Opinion","Court Motion","Affidavit","Power of Attorney","Will and Testament","Partnership Agreement","Lease Agreement","Service Agreement","Cease and Desist Letter","Appeal Brief"];
-const JURISDICTIONS=["Nigerian Law","English Law (UK)","United States Law","Ghanaian Law","Kenyan Law","South African Law","Canadian Law","Australian Law","French Law","EU Law","International Commercial Law"];
+const DOC_TYPES = ['Legal Brief','Contract','Demand Letter','Non-Disclosure Agreement','Employment Agreement','Settlement Proposal','Legal Opinion','Court Motion','Affidavit','Power of Attorney','Will and Testament','Partnership Agreement','Lease Agreement','Service Agreement','Cease and Desist Letter','Appeal Brief'];
+const JURISDICTIONS = ['Nigerian Law','English Law (UK)','United States Law','Ghanaian Law','Kenyan Law','South African Law','Canadian Law','Australian Law','French Law','EU Law','International Commercial Law'];
 
-const AI_PAGES={
-  warroom:{title:"Case War Room",desc:"Full strategic analysis — arguments, weak points, precedents, and step-by-step strategy.",lbl:"Case Details",ph:"Describe the case: parties, facts, legal issues, jurisdiction, desired outcome...",
-  sys:VOICE+`\n\nBuild a comprehensive Case War Room. Use these sections:\n\nCASE OVERVIEW:\nSummarise the core legal dispute, parties, and what is at stake.\n\nSTRONGEST ARGUMENTS:\nPresent the five strongest arguments numbered 1 to 5, ranked from most to least powerful. For each, state the legal basis, relevant doctrine, and why it is persuasive.\n\nVULNERABILITIES:\nIdentify weaknesses candidly. For each, explain why it is a risk and how opposing counsel could exploit it.\n\nRELEVANT PRECEDENTS AND AUTHORITIES:\nIdentify relevant case law, statutes, and doctrines. Explain how each supports or challenges the position.\n\nRECOMMENDED STRATEGY:\nProvide a concrete step-by-step strategy. Be specific about what actions to take and in what order.\n\nRISK ASSESSMENT:\nState the overall risk level as High, Medium, or Low and explain the primary drivers.\n\nDISCLAIMER: This analysis is generated by Verdict AI for informational purposes and does not constitute legal advice.`},
-
-  opposing:{title:"Opposing Counsel Simulator",desc:"The strongest counter-arguments ranked by danger level, so you are prepared before court.",lbl:"Your Legal Argument",ph:"State your argument in full — position, supporting facts, legal basis, authorities you intend to rely upon...",
-  sys:VOICE+`\n\nSimulate the most capable opposing counsel. Find every weakness and construct the strongest possible counter-case.\n\nVULNERABILITY SCORE:\nState an overall vulnerability score from 1 to 10. Explain the score in three sentences.\n\nCOUNTER-ARGUMENTS:\nFor each counter-argument, state its danger classification as CRITICAL, HIGH, or MEDIUM. State the argument clearly, its legal basis, the damage it could cause, and how it could be defeated.\n\nGAPS AND OMISSIONS:\nIdentify missing facts, uncited authorities, or unaddressed procedural steps.\n\nHOW TO STRENGTHEN YOUR POSITION:\nProvide specific, actionable steps to close the gaps identified above.\n\nDISCLAIMER: This analysis is generated by Verdict AI for informational purposes and does not constitute legal advice.`},
-
-  strength:{title:"Strength Assessment",desc:"Score any legal position 0-100% with full analysis, precedents, and outcome probabilities.",lbl:"Legal Position to Assess",ph:"Describe the position: claim or defence, facts, jurisdiction, applicable law, known precedents...",
-  sys:VOICE+`\n\nConduct a rigorous legal strength assessment. Be candid and specific.\n\nOVERALL STRENGTH SCORE:\nState the strength as a percentage from 0 to 100. Explain the score in four sentences.\n\nFACTORS SUPPORTING THIS POSITION:\nList and explain each strengthening factor with its specific legal basis.\n\nFACTORS UNDERMINING THIS POSITION:\nList and explain each weakening factor candidly. Do not minimise risks.\n\nCOMPARABLE PRECEDENTS:\nIdentify comparable cases and explain how they are likely to influence the outcome.\n\nOUTCOME PROBABILITY:\nAssess the likely outcome if this matter proceeded to court. Identify the key variables that could shift the outcome.\n\nKEY ACTION ITEMS:\nList specific steps to strengthen this position before proceeding.\n\nDISCLAIMER: This analysis is generated by Verdict AI for informational purposes and does not constitute legal advice.`},
-
-  briefscore:{title:"Brief-to-Win Score",desc:"Score your brief across five dimensions with specific, actionable improvements before you file.",lbl:"Your Legal Brief",ph:"Paste your complete legal brief here...",rows:13,
-  sys:VOICE+`\n\nReview this legal brief rigorously as a senior appellate advocate.\n\nOVERALL SCORE:\nState a score out of 100 and a letter grade from A to F. Explain the overall assessment in four sentences.\n\nDIMENSION SCORES:\nScore each dimension out of 20 and explain each score in two to three sentences:\n1. Argument Strength\n2. Citation Quality\n3. Logical Flow\n4. Persuasion and Clarity\n5. Technical Accuracy\n\nSPECIFIC IMPROVEMENTS REQUIRED:\nIdentify specific passages or arguments that need improvement. Quote the problematic text where relevant and explain precisely what must change.\n\nSTRONGEST SECTIONS:\nIdentify what works well and explain why.\n\nREWRITTEN SAMPLE:\nSelect the weakest paragraph and rewrite it to demonstrate the expected standard.\n\nDISCLAIMER: This analysis is generated by Verdict AI for informational purposes and does not constitute legal advice.`},
-
-  explainer:{title:"Client Explainer",desc:"Transform complex legal analysis into a clear, professional client communication.",lbl:"Legal Text or Analysis",ph:"Paste the legal document, ruling, contract clause, or analysis to explain to your client...",
-  sys:VOICE+`\n\nDraft a formal client communication explaining a complex legal matter in plain, accessible language. The client is intelligent but has no legal training.\n\nWrite as a formal client letter with these sections:\n\nBegin with a short introductory paragraph stating what you are writing about.\n\nWHAT THIS DOCUMENT SAYS:\nExplain the content and purpose in plain English. No jargon.\n\nWHAT THIS MEANS FOR YOU:\nExplain the practical implications for the client specifically.\n\nKEY RISKS TO BE AWARE OF:\nExplain any risks, deadlines, or obligations in plain terms.\n\nWHAT HAPPENS NEXT:\nExplain the next steps — what the client must do and what the legal team will handle.\n\nClose with a short paragraph inviting the client to contact the office with questions.`},
-
-  clausedna:{title:"Clause DNA",isNew:true,desc:"A complete forensic breakdown of any contract clause — risk, standardness, bias, and negotiation strategy.",lbl:"Contract Clause",ph:"Paste any contract clause here...",
-  sys:VOICE+`\n\nConduct a detailed forensic analysis of this contract clause.\n\nCLAUSE IDENTIFICATION:\nIdentify the type of clause, its standard legal name, and its purpose in a commercial agreement.\n\nSTANDARDNESS ASSESSMENT:\nState how standard this clause is as a percentage. Explain what makes it standard or unusual compared to market practice.\n\nRISK SCORE:\nState the risk level as a percentage from 0 to 100. Explain which party bears greater risk, what specific risks are created, and when they would materialise.\n\nJURISDICTION AND PARTY BIAS:\nExplain which jurisdiction this clause appears designed for and which party it favours. Give commercial and legal reasons.\n\nINDUSTRY BENCHMARK:\nCompare to standard market practice. Explain where it deviates and whether those deviations are acceptable.\n\nMISSING PROTECTIONS:\nIdentify absent protections, carve-outs, or qualifications that a well-advised party would insist upon.\n\nNEGOTIATION STRATEGY:\nProvide specific tactical advice on how to negotiate this clause. What to push back on, what language to propose, and the strongest commercial argument.\n\nSUGGESTED REWRITE:\nIf problematic, provide a revised version that better protects the receiving party.\n\nDISCLAIMER: This analysis is generated by Verdict AI for informational purposes and does not constitute legal advice.`},
-
-  deadlines:{title:"Deadline Intelligence",isNew:true,desc:"Every deadline — explicit and implied — extracted from any legal document with full consequences.",lbl:"Legal Document",ph:"Paste your legal document — case filings, contracts, court orders, statutes...",
-  sys:VOICE+`\n\nExtract every deadline — both explicit and implied — from this document. You are a meticulous legal risk manager.\n\nFor each deadline, state:\nThe deadline itself (specific date or time period).\nThe obligation that must be fulfilled.\nThe specific clause or provision creating it.\nThe consequence of missing it, classified as CRITICAL, HIGH, MEDIUM, or LOW.\nHow you derived the date or period if it is implied.\n\nPresent all deadlines in order of urgency, most time-sensitive first. Write URGENT ATTENTION REQUIRED before any CRITICAL deadline.\n\nAfter all deadlines, provide:\n\nCOMPLIANCE CALENDAR NOTES:\nNote how deadlines interact, any risk of clustering, and jurisdiction-specific rules affecting their calculation.\n\nDISCLAIMER: This analysis is generated by Verdict AI for informational purposes. All deadlines should be verified by a qualified legal professional.`},
+const AI_PAGES = {
+  warroom: {title:'Case War Room', desc:'Full strategic analysis — arguments, weak points, precedents, and step-by-step strategy.', lbl:'Case Details', ph:'Describe the case: parties, facts, legal issues, jurisdiction, desired outcome...', sys: VOICE+'\n\nBuild a comprehensive Case War Room.\n\nCASE OVERVIEW:\nSummarise the core legal dispute, parties, and what is at stake.\n\nSTRONGEST ARGUMENTS:\nPresent the five strongest arguments numbered 1 to 5, ranked from most to least powerful. For each, state the legal basis, relevant doctrine, and why it is persuasive.\n\nVULNERABILITIES:\nIdentify weaknesses candidly. For each, explain why it is a risk and how opposing counsel could exploit it.\n\nRELEVANT PRECEDENTS AND AUTHORITIES:\nIdentify relevant case law, statutes, and doctrines. Explain how each supports or challenges the position.\n\nRECOMMENDED STRATEGY:\nProvide a concrete step-by-step strategy. Be specific about what actions to take and in what order.\n\nRISK ASSESSMENT:\nState the overall risk level as High, Medium, or Low and explain the primary drivers.\n\nDISCLAIMER: This analysis is generated by Verdict AI for informational purposes and does not constitute legal advice.'},
+  opposing: {title:'Opposing Counsel Simulator', desc:'The strongest counter-arguments ranked by danger level, so you are prepared before court.', lbl:'Your Legal Argument', ph:'State your argument in full — position, supporting facts, legal basis, authorities you intend to rely upon...', sys: VOICE+'\n\nSimulate the most capable opposing counsel.\n\nVULNERABILITY SCORE:\nState an overall vulnerability score from 1 to 10. Explain the score in three sentences.\n\nCOUNTER-ARGUMENTS:\nFor each counter-argument, state its danger classification as CRITICAL, HIGH, or MEDIUM. State the argument clearly, its legal basis, the damage it could cause, and how it could be defeated.\n\nGAPS AND OMISSIONS:\nIdentify missing facts, uncited authorities, or unaddressed procedural steps.\n\nHOW TO STRENGTHEN YOUR POSITION:\nProvide specific, actionable steps to close the identified gaps.\n\nDISCLAIMER: This analysis is generated by Verdict AI for informational purposes and does not constitute legal advice.'},
+  strength: {title:'Strength Assessment', desc:'Score any legal position 0-100% with full analysis, precedents, and outcome probabilities.', lbl:'Legal Position to Assess', ph:'Describe the position: claim or defence, facts, jurisdiction, applicable law, known precedents...', sys: VOICE+'\n\nConduct a rigorous legal strength assessment.\n\nOVERALL STRENGTH SCORE:\nState the strength as a percentage from 0 to 100. Explain the score in four sentences.\n\nFACTORS SUPPORTING THIS POSITION:\nList and explain each strengthening factor with its specific legal basis.\n\nFACTORS UNDERMINING THIS POSITION:\nList and explain each weakening factor candidly.\n\nCOMPARABLE PRECEDENTS:\nIdentify comparable cases and explain how they are likely to influence the outcome.\n\nOUTCOME PROBABILITY:\nAssess the likely outcome if this matter proceeded to court.\n\nKEY ACTION ITEMS:\nList specific steps to strengthen this position before proceeding.\n\nDISCLAIMER: This analysis is generated by Verdict AI for informational purposes and does not constitute legal advice.'},
+  briefscore: {title:'Brief-to-Win Score', desc:'Score your brief across five dimensions with specific, actionable improvements before you file.', lbl:'Your Legal Brief', ph:'Paste your complete legal brief here...', rows:13, sys: VOICE+'\n\nReview this legal brief rigorously.\n\nOVERALL SCORE:\nState a score out of 100 and a letter grade from A to F. Explain the overall assessment in four sentences.\n\nDIMENSION SCORES:\nScore each dimension out of 20:\n1. Argument Strength\n2. Citation Quality\n3. Logical Flow\n4. Persuasion and Clarity\n5. Technical Accuracy\n\nSPECIFIC IMPROVEMENTS REQUIRED:\nIdentify specific passages or arguments that need improvement.\n\nSTRONGEST SECTIONS:\nIdentify what works well and explain why.\n\nREWRITTEN SAMPLE:\nSelect the weakest paragraph and rewrite it to the expected standard.\n\nDISCLAIMER: This analysis is generated by Verdict AI for informational purposes and does not constitute legal advice.'},
+  explainer: {title:'Client Explainer', desc:'Transform complex legal analysis into a clear, professional client communication.', lbl:'Legal Text or Analysis', ph:'Paste the legal document, ruling, contract clause, or analysis to explain to your client...', sys: VOICE+'\n\nDraft a formal client letter explaining complex legal matters in plain language.\n\nBegin with a short introductory paragraph stating what you are writing about.\n\nWHAT THIS DOCUMENT SAYS:\nExplain the content and purpose in plain English. No jargon.\n\nWHAT THIS MEANS FOR YOU:\nExplain the practical implications for the client specifically.\n\nKEY RISKS TO BE AWARE OF:\nExplain any risks, deadlines, or obligations in plain terms.\n\nWHAT HAPPENS NEXT:\nExplain the next steps clearly.\n\nClose with a short paragraph inviting the client to contact the office with questions.'},
+  clausedna: {title:'Clause DNA', isNew:true, desc:'A complete forensic breakdown of any contract clause.', lbl:'Contract Clause', ph:'Paste any contract clause here...', sys: VOICE+'\n\nConduct a detailed forensic clause analysis.\n\nCLAUSE IDENTIFICATION:\nIdentify the type of clause, its standard legal name, and its purpose.\n\nSTANDARDNESS ASSESSMENT:\nState how standard this clause is as a percentage. Explain what makes it standard or unusual.\n\nRISK SCORE:\nState the risk level as a percentage from 0 to 100. Explain which party bears greater risk and what risks are created.\n\nJURISDICTION AND PARTY BIAS:\nExplain which jurisdiction and party this clause favours.\n\nINDUSTRY BENCHMARK:\nCompare to standard market practice.\n\nMISSING PROTECTIONS:\nIdentify absent protections a well-advised party would insist upon.\n\nNEGOTIATION STRATEGY:\nProvide specific tactical advice on how to negotiate this clause.\n\nSUGGESTED REWRITE:\nIf problematic, provide a revised version.\n\nDISCLAIMER: This analysis is generated by Verdict AI for informational purposes and does not constitute legal advice.'},
+  deadlines: {title:'Deadline Intelligence', isNew:true, desc:'Every deadline — explicit and implied — from any legal document with full consequences.', lbl:'Legal Document', ph:'Paste your legal document — case filings, contracts, court orders, statutes...', sys: VOICE+'\n\nExtract every deadline — explicit and implied — from this document.\n\nFor each deadline state: the deadline itself, the obligation that must be fulfilled, the specific clause or provision creating it, the consequence of missing it classified as CRITICAL, HIGH, MEDIUM, or LOW, and how you derived the date or period if implied.\n\nPresent all deadlines in order of urgency. Write URGENT ATTENTION REQUIRED before any CRITICAL deadline.\n\nCOMPLIANCE CALENDAR NOTES:\nNote how deadlines interact, any risk of clustering, and jurisdiction-specific calculation rules.\n\nDISCLAIMER: This analysis is generated by Verdict AI for informational purposes. All deadlines should be verified by a qualified legal professional.'},
 };
 
-function theme(dark){
-  return{
-    bg:dark?"#07101c":"#ede9e0",card:dark?"#0c1a2e":"#fdfaf5",card2:dark?"#101f35":"#f5f1e8",
-    border:dark?"rgba(30,52,82,0.9)":"rgba(0,0,0,0.09)",text:dark?"#F0EDE6":"#0D1B2E",
-    dim:dark?"rgba(240,237,230,0.6)":"rgba(13,27,46,0.65)",muted:dark?"rgba(240,237,230,0.32)":"rgba(13,27,46,0.35)",
-    input:dark?"rgba(3,8,18,0.95)":"rgba(255,255,255,0.92)",
-  };
-}
-
 // ── UI Primitives ─────────────────────────────────────────────────────────────
-function Pulse(){
-  return React.createElement("div",{style:{display:"flex",gap:6,alignItems:"center",padding:"14px 0"}},
-    [0,1,2].map(i=>React.createElement("span",{key:i,style:{display:"inline-block",width:8,height:8,borderRadius:"50%",background:GOLD,animation:`vPulse 1.2s ${i*0.2}s infinite ease-in-out`}})),
-    React.createElement("span",{style:{marginLeft:8,fontSize:13,opacity:0.45}},"Verdict AI is analyzing...")
+function Pulse() {
+  return React.createElement('div', {style:{display:'flex',gap:6,alignItems:'center',padding:'14px 0'}},
+    [0,1,2].map(i => React.createElement('span', {key:i, style:{display:'inline-block',width:8,height:8,borderRadius:'50%',background:GOLD,animation:`vPulse 1.2s ${i*0.2}s infinite ease-in-out`}})),
+    React.createElement('span', {style:{marginLeft:8,fontSize:13,opacity:0.45}}, 'Verdict AI is analyzing...')
   );
 }
 
-function Out({text,loading,ph,t}){
-  const ref=useRef();
-  useEffect(()=>{if(ref.current)ref.current.scrollTop=ref.current.scrollHeight;},[text]);
-  return React.createElement("div",{ref,style:{background:t.input,border:`1px solid ${t.border}`,borderRadius:10,padding:20,minHeight:180,maxHeight:460,overflowY:"auto",fontSize:14,lineHeight:2,whiteSpace:"pre-wrap",wordBreak:"break-word",color:t.text,letterSpacing:"0.1px"}},
-    loading&&!text?React.createElement(Pulse):!loading&&!text?React.createElement("span",{style:{color:t.muted,fontStyle:"italic",fontSize:13.5}},ph||"Results will appear here..."):text
+function Out({text, loading, ph, t}) {
+  const ref = useRef();
+  useEffect(() => { if (ref.current) ref.current.scrollTop = ref.current.scrollHeight; }, [text]);
+  return React.createElement('div', {ref, style:{background:t.input,border:`1px solid ${t.border}`,borderRadius:10,padding:20,minHeight:180,maxHeight:460,overflowY:'auto',fontSize:14,lineHeight:2,whiteSpace:'pre-wrap',wordBreak:'break-word',color:t.text,letterSpacing:'0.1px'}},
+    loading && !text ? React.createElement(Pulse) :
+    !loading && !text ? React.createElement('span', {style:{color:t.muted,fontStyle:'italic',fontSize:13.5}}, ph || 'Results will appear here...') :
+    text
   );
 }
 
-function Lbl({children,t}){return React.createElement("div",{style:{fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"1.3px",color:t.muted,marginBottom:7}},children);}
+function Lbl({children, t}) {
+  return React.createElement('div', {style:{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'1.3px',color:t.muted,marginBottom:7}}, children);
+}
 
-function Inp({val,set,ph,rows,t,style={}}){
-  const base={width:"100%",boxSizing:"border-box",background:t.input,border:`1px solid ${t.border}`,borderRadius:8,padding:"11px 14px",fontFamily:"'DM Sans',sans-serif",fontSize:13.5,color:t.text,outline:"none",...style};
+function Inp({val, set, ph, rows, t, style={}}) {
+  const base = {width:'100%',boxSizing:'border-box',background:t.input,border:`1px solid ${t.border}`,borderRadius:8,padding:'11px 14px',fontFamily:"'DM Sans',sans-serif",fontSize:13.5,color:t.text,outline:'none',...style};
   return rows
-    ?React.createElement("textarea",{value:val,onChange:e=>set(e.target.value),placeholder:ph,rows,onFocus:e=>{e.target.style.borderColor=GOLD;},onBlur:e=>{e.target.style.borderColor=t.border;},style:{...base,resize:"vertical",lineHeight:1.7}})
-    :React.createElement("input",{value:val,onChange:e=>set(e.target.value),placeholder:ph,onFocus:e=>{e.target.style.borderColor=GOLD;},onBlur:e=>{e.target.style.borderColor=t.border;},style:base});
+    ? React.createElement('textarea', {value:val, onChange:e=>set(e.target.value), placeholder:ph, rows, onFocus:e=>{e.target.style.borderColor=GOLD;}, onBlur:e=>{e.target.style.borderColor=t.border;}, style:{...base,resize:'vertical',lineHeight:1.7}})
+    : React.createElement('input', {value:val, onChange:e=>set(e.target.value), placeholder:ph, onFocus:e=>{e.target.style.borderColor=GOLD;}, onBlur:e=>{e.target.style.borderColor=t.border;}, style:base});
 }
 
-function Sel({val,set,opts,ph,t}){
-  return React.createElement("select",{value:val,onChange:e=>set(e.target.value),style:{width:"100%",background:t.input,border:`1px solid ${t.border}`,borderRadius:8,padding:"11px 14px",fontFamily:"'DM Sans',sans-serif",fontSize:13.5,color:val?t.text:t.muted,outline:"none"}},
-    React.createElement("option",{value:""},ph||"Select..."),
-    ...opts.map(o=>React.createElement("option",{key:o,value:o},o))
+function Sel({val, set, opts, ph, t}) {
+  return React.createElement('select', {value:val, onChange:e=>set(e.target.value), style:{width:'100%',background:t.input,border:`1px solid ${t.border}`,borderRadius:8,padding:'11px 14px',fontFamily:"'DM Sans',sans-serif",fontSize:13.5,color:val?t.text:t.muted,outline:'none'}},
+    React.createElement('option', {value:''}, ph || 'Select...'),
+    ...opts.map(o => React.createElement('option', {key:o, value:o}, o))
   );
 }
 
-function Btn({onClick,disabled,children,variant="gold",sm,full}){
-  const s={gold:{background:`linear-gradient(135deg,${GOLD},${GOLD2})`,color:"#0D1B2E",border:"none",boxShadow:"0 4px 14px rgba(200,164,94,0.25)"},ghost:{background:"transparent",color:"rgba(200,164,94,0.85)",border:"1px solid rgba(200,164,94,0.3)"},red:{background:"rgba(224,82,82,0.1)",color:"#E05252",border:"1px solid rgba(224,82,82,0.25)"}};
-  return React.createElement("button",{onClick,disabled,style:{display:"inline-flex",alignItems:"center",justifyContent:"center",gap:7,padding:sm?"7px 14px":"12px 24px",borderRadius:8,fontFamily:"'DM Sans',sans-serif",fontSize:sm?12:14,fontWeight:600,cursor:disabled?"not-allowed":"pointer",opacity:disabled?0.4:1,width:full?"100%":"auto",transition:"all 0.15s",...s[variant]}},children);
+function Btn({onClick, disabled, children, variant='gold', sm, full}) {
+  const s = {
+    gold: {background:`linear-gradient(135deg,${GOLD},${GOLD2})`,color:'#0D1B2E',border:'none',boxShadow:'0 4px 14px rgba(200,164,94,0.25)'},
+    ghost: {background:'transparent',color:'rgba(200,164,94,0.85)',border:'1px solid rgba(200,164,94,0.3)'},
+    red: {background:'rgba(224,82,82,0.1)',color:'#E05252',border:'1px solid rgba(224,82,82,0.25)'},
+    blue: {background:'rgba(74,158,232,0.15)',color:'#4A9EE8',border:'1px solid rgba(74,158,232,0.3)'},
+  };
+  return React.createElement('button', {onClick, disabled, style:{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:7,padding:sm?'7px 14px':'12px 24px',borderRadius:8,fontFamily:"'DM Sans',sans-serif",fontSize:sm?12:14,fontWeight:600,cursor:disabled?'not-allowed':'pointer',opacity:disabled?0.4:1,width:full?'100%':'auto',transition:'all 0.15s',...s[variant]}}, children);
 }
 
-function CopyBtn({text}){
-  const[done,setDone]=useState(false);
-  if(!text)return null;
-  return React.createElement("div",{style:{display:"flex",gap:8,marginTop:12}},
-    React.createElement(Btn,{variant:"ghost",sm:true,onClick:()=>{navigator.clipboard.writeText(text);setDone(true);setTimeout(()=>setDone(false),2000);}},done?"Copied!":"Copy"),
-    React.createElement(Btn,{variant:"ghost",sm:true,onClick:()=>{const b=new Blob([text],{type:"text/plain"});const u=URL.createObjectURL(b);const a=document.createElement("a");a.href=u;a.download="verdict-ai-result.txt";a.click();}},"Download")
+// Fix #7: Export buttons
+function ExportBtns({text, title}) {
+  if (!text) return null;
+  const fname = (title || 'verdict-ai').toLowerCase().replace(/\s+/g, '-');
+  return React.createElement('div', {style:{display:'flex',gap:8,marginTop:12,flexWrap:'wrap'}},
+    React.createElement(Btn, {variant:'ghost', sm:true, onClick:()=>navigator.clipboard.writeText(text)}, 'Copy'),
+    React.createElement(Btn, {variant:'ghost', sm:true, onClick:()=>exportToPDF(text, fname)}, 'Export PDF'),
+    React.createElement(Btn, {variant:'ghost', sm:true, onClick:()=>exportToWord(text, fname)}, 'Export Word'),
+    React.createElement(Btn, {variant:'ghost', sm:true, onClick:()=>{const b=new Blob([text],{type:'text/plain'});const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=fname+'.txt';a.click();}}, 'Save TXT')
   );
 }
 
-function Two({l,r}){return React.createElement("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:24}},React.createElement("div",null,l),React.createElement("div",null,r));}
+function Two({l, r}) {
+  return React.createElement('div', {className:'two-col', style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:24}},
+    React.createElement('div', null, l), React.createElement('div', null, r)
+  );
+}
 
-function Hdr({title,desc,isNew,t}){
-  return React.createElement("div",{style:{marginBottom:26}},
-    React.createElement("div",{style:{width:44,height:3,background:`linear-gradient(90deg,${GOLD},transparent)`,borderRadius:100,marginBottom:16}}),
-    React.createElement("div",{style:{display:"flex",alignItems:"center",gap:10,marginBottom:7}},
-      React.createElement("h1",{style:{fontFamily:"'Playfair Display',serif",fontSize:24,fontWeight:700,margin:0,color:t.text}},title),
-      isNew&&React.createElement("span",{style:{background:"rgba(200,164,94,0.13)",color:GOLD,fontSize:9,fontWeight:700,padding:"3px 9px",borderRadius:100}},"NEW")
+function Hdr({title, desc, isNew, t}) {
+  return React.createElement('div', {style:{marginBottom:26}},
+    React.createElement('div', {style:{width:44,height:3,background:`linear-gradient(90deg,${GOLD},transparent)`,borderRadius:100,marginBottom:16}}),
+    React.createElement('div', {style:{display:'flex',alignItems:'center',gap:10,marginBottom:7}},
+      React.createElement('h1', {style:{fontFamily:"'Playfair Display',serif",fontSize:24,fontWeight:700,margin:0,color:t.text}}, title),
+      isNew && React.createElement('span', {style:{background:'rgba(200,164,94,0.13)',color:GOLD,fontSize:9,fontWeight:700,padding:'3px 9px',borderRadius:100}}, 'NEW')
     ),
-    React.createElement("p",{style:{color:t.dim,fontSize:13.5,margin:0,lineHeight:1.6}},desc)
+    React.createElement('p', {style:{color:t.dim,fontSize:13.5,margin:0,lineHeight:1.6}}, desc)
   );
 }
 
-// ── Generic AI Page ───────────────────────────────────────────────────────────
-function AIPage({cfg,t}){
-  const[inp,setInp]=useState("");const[out,setOut]=useState("");const[loading,setLoading]=useState(false);
-  const run=async()=>{
-    if(!inp.trim())return;
-    setLoading(true);setOut("");
-    try{await groqStream(cfg.sys,inp,v=>setOut(v));}
-    catch(e){setOut("An error occurred: "+e.message);}
+// Fix #1: File Upload Component
+function FileUpload({onText, t}) {
+  const [dragging, setDragging] = useState(false);
+  const [extracting, setExtracting] = useState(false);
+  const [fileName, setFileName] = useState('');
+  const inputRef = useRef();
+
+  const handleFile = async (file) => {
+    if (!file) return;
+    setExtracting(true);
+    setFileName(file.name);
+    try {
+      const text = await extractTextFromFile(file);
+      onText(text, file.name);
+    } catch (err) {
+      alert('Could not read file: ' + err.message);
+    }
+    setExtracting(false);
+  };
+
+  return React.createElement('div', null,
+    React.createElement('div', {
+      onClick: () => inputRef.current?.click(),
+      onDragOver: e => { e.preventDefault(); setDragging(true); },
+      onDragLeave: () => setDragging(false),
+      onDrop: e => { e.preventDefault(); setDragging(false); handleFile(e.dataTransfer.files[0]); },
+      style: {
+        border: `2px dashed ${dragging ? GOLD : t.border}`,
+        borderRadius: 10, padding: '20px', textAlign: 'center',
+        cursor: 'pointer', background: dragging ? 'rgba(200,164,94,0.06)' : t.input,
+        marginBottom: 12, transition: 'all 0.2s'
+      }
+    },
+      extracting
+        ? React.createElement('div', {style:{color:GOLD,fontSize:13}}, '⏳ Extracting text...')
+        : React.createElement('div', null,
+            React.createElement('div', {style:{fontSize:28,marginBottom:6}}, '📎'),
+            React.createElement('div', {style:{fontSize:13,fontWeight:600,color:t.text,marginBottom:3}},
+              fileName ? `✓ ${fileName}` : 'Drop file here or click to upload'
+            ),
+            React.createElement('div', {style:{fontSize:11,color:t.muted}}, 'Supports PDF, DOCX, TXT')
+          )
+    ),
+    React.createElement('input', {ref:inputRef, type:'file', accept:'.pdf,.doc,.docx,.txt,.md', style:{display:'none'}, onChange:e=>handleFile(e.target.files[0])})
+  );
+}
+
+// Fix #10: Session context banner
+function SessionBanner({t, onUse}) {
+  const {lastAnalysis} = useSession();
+  if (!lastAnalysis) return null;
+  return React.createElement('div', {
+    style:{background:'rgba(200,164,94,0.07)',border:'1px solid rgba(200,164,94,0.2)',borderRadius:8,padding:'10px 14px',marginBottom:14,display:'flex',alignItems:'center',justifyContent:'space-between',gap:10,fontSize:13}
+  },
+    React.createElement('span', {style:{color:t.dim}}, `💡 You have a recent analysis: "${lastAnalysis.title}"`),
+    React.createElement(Btn, {variant:'ghost', sm:true, onClick:()=>onUse(lastAnalysis.text)}, 'Use as context')
+  );
+}
+
+// ── Generic AI Feature Page ───────────────────────────────────────────────────
+function AIPage({cfg, t}) {
+  const [inp, setInp] = useState('');
+  const [out, setOut] = useState('');
+  const [loading, setLoading] = useState(false);
+  const {setLastAnalysis} = useSession();
+
+  const run = async () => {
+    if (!inp.trim()) return;
+    setLoading(true); setOut('');
+    try {
+      const result = await groqStream(cfg.sys, inp, v => setOut(v));
+      setLastAnalysis({title: cfg.title, text: result});
+    } catch(e) {
+      setOut('An error occurred: ' + e.message + '\n\nPlease try again in a moment.');
+    }
     setLoading(false);
   };
-  return React.createElement("div",{className:"fade"},
-    React.createElement(Hdr,{title:cfg.title,desc:cfg.desc,isNew:cfg.isNew,t}),
-    React.createElement(Two,{
-      l:React.createElement(React.Fragment,null,React.createElement("div",{style:{marginBottom:16}},React.createElement(Lbl,{t},cfg.lbl),React.createElement(Inp,{val:inp,set:setInp,ph:cfg.ph,rows:cfg.rows||12,t})),React.createElement(Btn,{full:true,onClick:run,disabled:loading||!inp.trim()},loading?"Analyzing...":"Run Analysis")),
-      r:React.createElement(React.Fragment,null,React.createElement(Lbl,{t},"Analysis"),React.createElement(Out,{text:out,loading,t}),React.createElement(CopyBtn,{text:out}))
+
+  return React.createElement('div', {className:'fade'},
+    React.createElement(Hdr, {title:cfg.title, desc:cfg.desc, isNew:cfg.isNew, t}),
+    React.createElement(SessionBanner, {t, onUse:text=>setInp(prev=>prev+'\n\nContext from previous analysis:\n'+text.slice(0,500))}),
+    React.createElement(Two, {
+      l: React.createElement(React.Fragment, null,
+        React.createElement('div', {style:{marginBottom:16}}, React.createElement(Lbl, {t}, cfg.lbl), React.createElement(Inp, {val:inp, set:setInp, ph:cfg.ph, rows:cfg.rows||12, t})),
+        React.createElement(Btn, {full:true, onClick:run, disabled:loading||!inp.trim()}, loading ? 'Analyzing...' : 'Run Analysis')
+      ),
+      r: React.createElement(React.Fragment, null,
+        React.createElement(Lbl, {t}, 'Analysis'),
+        React.createElement(Out, {text:out, loading, t}),
+        React.createElement(ExportBtns, {text:out, title:cfg.title})
+      )
     })
   );
 }
 
-// ── Nigerian Cases Page ───────────────────────────────────────────────────────
-function NigerianCasesPage({t}){
-  const[query,setQuery]=useState("");const[aiOut,setAiOut]=useState("");const[loading,setLoading]=useState(false);
-  const[liveResults,setLiveResults]=useState([]);const[liveLoading,setLiveLoading]=useState(false);const[searched,setSearched]=useState(false);
+// ── Document Analysis (Fix #1: File upload, Fix #10: Session memory) ─────────
+function ReaderPage({onSave, t}) {
+  const [txt, setTxt] = useState('');
+  const [out, setOut] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [fileName, setFileName] = useState('');
+  const {addSessionDoc, setLastAnalysis} = useSession();
 
-  const runAI=async()=>{
-    if(!query.trim())return;
-    setLoading(true);setAiOut("");
-    const sys=VOICE+`\n\nYou are a Nigerian legal research specialist. Answer comprehensively.\n\nRESEARCH SUMMARY:\nSummarise the state of Nigerian law on this issue.\n\nRELEVANT NIGERIAN CASES:\nIdentify the most significant Nigerian cases. For each: full case name, court and year, key legal principle, and specific relevance to the query. Reference NWLR, LRN, or other Nigerian law report citations where known.\n\nAPPLICABLE STATUTES:\nIdentify relevant Nigerian statutes, regulations, and subsidiary legislation.\n\nCURRENT LEGAL POSITION:\nState the current position of Nigerian law based on the authorities identified.\n\nSUGGESTED PRIMSOL SEARCH TERMS:\nProvide specific search terms to use on PrimsCol for a comprehensive search of the full database.\n\nDISCLAIMER: This analysis draws on Verdict AI knowledge of Nigerian law. Verify all citations on PrimsCol or current law reports before relying on them.`;
-    try{await groqStream(sys,"Nigerian law research query: "+query,v=>setAiOut(v));}
-    catch(e){setAiOut("Error: "+e.message);}
+  const sys = VOICE + '\n\nConduct a detailed legal document review.\n\nDOCUMENT OVERVIEW:\nIdentify the document type, purpose, parties, governing jurisdiction, and relevant dates.\n\nKEY FACTS AND BACKGROUND:\nSummarise the factual background established by the document.\n\nLEGAL ISSUES AND OBLIGATIONS:\nIdentify and explain each significant legal obligation, right, or restriction.\n\nCRITICAL CLAUSES AND PROVISIONS:\nIdentify the most commercially and legally significant clauses and explain each.\n\nRISK FLAGS:\nIdentify every clause, term, or omission creating risk or ambiguity. Classify each as CRITICAL, HIGH, MEDIUM, or LOW.\n\nPLAIN ENGLISH SUMMARY:\nExplain what this document means in straightforward terms for a non-lawyer.\n\nRECOMMENDED ACTIONS:\nList specific steps to take before signing or acting on this document.\n\nDISCLAIMER: This analysis is generated by Verdict AI for informational purposes and does not constitute legal advice.';
+
+  const run = async () => {
+    if (!txt.trim()) return;
+    setLoading(true); setOut('');
+    try {
+      const res = await groqStream(sys, txt, s => setOut(s));
+      const doc = {name:(fileName||'Document')+' — '+new Date().toLocaleDateString(), content:txt.slice(0,400)+'...', analysis:res, date:new Date().toLocaleDateString()};
+      onSave(doc);
+      addSessionDoc(doc);
+      setLastAnalysis({title: fileName || 'Document Analysis', text: res});
+    } catch(e) { setOut('Error: '+e.message); }
     setLoading(false);
   };
 
-  const searchLive=async()=>{
-    if(!query.trim())return;
-    setLiveLoading(true);setLiveResults([]);setSearched(true);
-    try{
-      // Try AfricanLII / Nigeria LII via our server proxy if on server, else direct
-      const url=IS_SERVER?`/api/cases/search?q=${encodeURIComponent(query)}&jurisdiction=ng`:`https://africanlii.org/search?q=${encodeURIComponent(query)}&jurisdiction=ng&format=json`;
-      const res=await fetch(url);
-      if(res.ok){
-        const data=await res.json();
-        setLiveResults(data.results||[]);
-      }else{setLiveResults([]);}
-    }catch(e){setLiveResults([]);}
+  return React.createElement('div', {className:'fade'},
+    React.createElement(Hdr, {title:'Document Analysis', desc:'Upload a PDF or paste any legal document for instant AI analysis. Automatically saved to your Vault.', t}),
+    React.createElement(Two, {
+      l: React.createElement(React.Fragment, null,
+        React.createElement(FileUpload, {t, onText:(text, name)=>{setTxt(text);setFileName(name||'Uploaded Document');}}),
+        React.createElement('div', {style:{textAlign:'center',color:t.muted,fontSize:12,margin:'8px 0'}}, '— or paste text directly —'),
+        React.createElement('div', {style:{marginBottom:16}},
+          React.createElement(Lbl, {t}, 'Document Text'),
+          React.createElement(Inp, {val:txt, set:setTxt, ph:'Paste your legal document, contract, court ruling, statute, or brief here...', rows:10, t})
+        ),
+        React.createElement(Btn, {full:true, onClick:run, disabled:loading||!txt.trim()}, loading ? 'Analyzing...' : 'Analyze Document')
+      ),
+      r: React.createElement(React.Fragment, null,
+        React.createElement(Lbl, {t}, 'Analysis'),
+        React.createElement(Out, {text:out, loading, ph:'Upload a file or paste text and click Analyze.', t}),
+        React.createElement(ExportBtns, {text:out, title:'Document-Analysis'})
+      )
+    })
+  );
+}
+
+// ── Legal Q&A ─────────────────────────────────────────────────────────────────
+function QAPage({t}) {
+  const [q, setQ] = useState('');
+  const [ctx, setCtx] = useState('');
+  const [out, setOut] = useState('');
+  const [loading, setLoading] = useState(false);
+  const {lastAnalysis} = useSession();
+
+  const QUICK = ['What are the essential elements of a valid contract under Nigerian law?','What is the legal distinction between a tort and a crime?','When does force majeure excuse contractual non-performance?','Key procedural differences between arbitration and litigation in Nigeria?','What provisions must every employment contract contain to be enforceable?'];
+
+  const ask = async (question) => {
+    const q2 = question || q; if (!q2.trim()) return;
+    setLoading(true); setOut('');
+    // Fix #10: Auto-include recent session context
+    const sessionCtx = lastAnalysis ? `\n\nContext from current session (${lastAnalysis.title}):\n${lastAnalysis.text.slice(0,600)}` : '';
+    const sys = VOICE + '\n\nAnswer legal questions comprehensively.\n\nDIRECT ANSWER:\nProvide a clear, direct answer in the first paragraph.\n\nLEGAL FRAMEWORK:\nExplain the relevant legal framework, principles, statutes, and doctrines.\n\nPRACTICAL APPLICATION:\nExplain how these principles apply in practice.\n\nJURISDICTIONAL CONSIDERATIONS:\nNote important differences across jurisdictions, with particular attention to Nigerian law where relevant.\n\nKEY AUTHORITIES:\nReference the most important cases, statutes, or instruments a practitioner would rely upon.\n\nDISCLAIMER: This response is generated by Verdict AI for informational purposes and does not constitute legal advice.' + sessionCtx;
+    try { await groqStream(sys, ctx ? `Context: ${ctx}\n\nQuestion: ${q2}` : q2, s => setOut(s)); }
+    catch(e) { setOut('Error: ' + e.message); }
+    setLoading(false);
+  };
+
+  return React.createElement('div', {className:'fade'},
+    React.createElement(Hdr, {title:'Legal Q&A', desc:'Ask any legal question and receive a detailed, authoritative answer. Session context is included automatically.', t}),
+    React.createElement(Two, {
+      l: React.createElement(React.Fragment, null,
+        lastAnalysis && React.createElement('div', {style:{background:'rgba(200,164,94,0.07)',border:'1px solid rgba(200,164,94,0.2)',borderRadius:8,padding:'9px 13px',marginBottom:12,fontSize:12.5,color:t.dim}}, `💡 Using context from: ${lastAnalysis.title}`),
+        React.createElement('div', {style:{marginBottom:14}},
+          React.createElement(Lbl, {t}, 'Common Questions'),
+          QUICK.map(qs => React.createElement('button', {key:qs, onClick:()=>{setQ(qs);ask(qs);}, style:{display:'block',width:'100%',textAlign:'left',background:t.input,border:`1px solid ${t.border}`,borderRadius:7,padding:'9px 12px',fontSize:12.5,color:t.dim,cursor:'pointer',marginBottom:5,fontFamily:"'DM Sans',sans-serif",lineHeight:1.4,transition:'border-color 0.15s'}, onMouseEnter:e=>e.target.style.borderColor=GOLD, onMouseLeave:e=>e.target.style.borderColor=t.border}, qs))
+        ),
+        React.createElement('div', {style:{marginBottom:12}}, React.createElement(Lbl, {t}, 'Additional Context'), React.createElement(Inp, {val:ctx, set:setCtx, ph:'Add jurisdiction or specific circumstances...', rows:2, t})),
+        React.createElement('div', {style:{display:'flex',gap:8}}, React.createElement(Inp, {val:q, set:setQ, ph:'Ask any legal question...', t, style:{flex:1}}), React.createElement(Btn, {onClick:()=>ask(q), disabled:loading||!q.trim()}, 'Ask'))
+      ),
+      r: React.createElement(React.Fragment, null,
+        React.createElement(Lbl, {t}, 'Answer'),
+        React.createElement(Out, {text:out, loading, ph:'Select a question or type your own.', t}),
+        React.createElement(ExportBtns, {text:out, title:'Legal-QA'})
+      )
+    })
+  );
+}
+
+// ── Draft Documents ───────────────────────────────────────────────────────────
+function DraftPage({t}) {
+  const [type, setType] = useState('');
+  const [details, setDetails] = useState('');
+  const [out, setOut] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const run = async () => {
+    if (!type || !details.trim()) return;
+    setLoading(true); setOut('');
+    const sys = VOICE + '\n\nYou are a senior legal drafter. Draft a complete, polished document ready for partner review. Use proper legal document formatting — numbered clauses, defined terms, proper recitals where required. Use [SQUARE BRACKETS] for information to be supplied. End with a DRAFTING NOTES section explaining key choices, clauses requiring attention, missing information, and jurisdiction-specific considerations.';
+    try { await groqStream(sys, `Draft a ${type} with these instructions:\n\n${details}`, s => setOut(s)); }
+    catch(e) { setOut('Error: ' + e.message); }
+    setLoading(false);
+  };
+
+  return React.createElement('div', {className:'fade'},
+    React.createElement(Hdr, {title:'Draft Documents', desc:'Generate complete, professionally drafted legal documents ready for partner review.', t}),
+    React.createElement(Two, {
+      l: React.createElement(React.Fragment, null,
+        React.createElement('div', {style:{marginBottom:12}}, React.createElement(Lbl, {t}, 'Document Type'), React.createElement(Sel, {val:type, set:setType, opts:DOC_TYPES, ph:'Select document type...', t})),
+        React.createElement('div', {style:{marginBottom:16}}, React.createElement(Lbl, {t}, 'Instructions and Requirements'), React.createElement(Inp, {val:details, set:setDetails, ph:'Parties, jurisdiction, key commercial terms, specific clauses, purpose, and any other requirements...', rows:11, t})),
+        React.createElement(Btn, {full:true, onClick:run, disabled:loading||!type||!details.trim()}, loading ? 'Drafting...' : 'Draft Document')
+      ),
+      r: React.createElement(React.Fragment, null,
+        React.createElement(Lbl, {t}, 'Drafted Document'),
+        React.createElement(Out, {text:out, loading, ph:'Select a type, add your instructions, and click Draft.', t}),
+        React.createElement(ExportBtns, {text:out, title:'Drafted-Document'})
+      )
+    })
+  );
+}
+
+// ── Jurisdiction Translator ───────────────────────────────────────────────────
+function JurisdictionPage({t}) {
+  const [txt, setTxt] = useState('');
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
+  const [out, setOut] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const run = async () => {
+    if (!txt.trim() || !from || !to) { alert('Please complete all fields.'); return; }
+    setLoading(true); setOut('');
+    const sys = VOICE + `\n\nYou are a cross-jurisdictional legal specialist. Translate legal concepts between ${from} and ${to}.\n\nCONCEPT IDENTIFICATION:\nIdentify the key legal concepts present in the text.\n\nANALYSIS UNDER ${from.toUpperCase()}:\nExplain how each concept operates under ${from} with relevant statutes or cases.\n\nEQUIVALENT UNDER ${to.toUpperCase()}:\nIdentify the closest equivalent under ${to} and how it operates.\n\nKEY DIFFERENCES:\nExplain specifically how treatment differs between the two systems.\n\nPRACTICAL IMPLICATIONS:\nExplain what a lawyer operating across both systems needs to know.\n\nRISK AREAS:\nIdentify where assuming equivalence could lead to a damaging outcome.\n\nDISCLAIMER: This analysis is generated by Verdict AI for informational purposes and does not constitute legal advice.`;
+    try { await groqStream(sys, `Translate from ${from} to ${to}:\n\n${txt}`, s => setOut(s)); }
+    catch(e) { setOut('Error: ' + e.message); }
+    setLoading(false);
+  };
+
+  return React.createElement('div', {className:'fade'},
+    React.createElement(Hdr, {title:'Jurisdiction Translator', desc:'Translate legal concepts between different legal systems worldwide.', isNew:true, t}),
+    React.createElement(Two, {
+      l: React.createElement(React.Fragment, null,
+        React.createElement('div', {style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:12}},
+          React.createElement('div', null, React.createElement(Lbl, {t}, 'From'), React.createElement(Sel, {val:from, set:setFrom, opts:JURISDICTIONS, ph:'Source...', t})),
+          React.createElement('div', null, React.createElement(Lbl, {t}, 'To'), React.createElement(Sel, {val:to, set:setTo, opts:JURISDICTIONS, ph:'Target...', t}))
+        ),
+        React.createElement('div', {style:{marginBottom:16}}, React.createElement(Lbl, {t}, 'Legal Text or Concept'), React.createElement(Inp, {val:txt, set:setTxt, ph:'Paste the legal document or describe the concept to translate...', rows:11, t})),
+        React.createElement(Btn, {full:true, onClick:run, disabled:loading||!txt.trim()||!from||!to}, loading ? 'Translating...' : 'Translate Jurisdiction')
+      ),
+      r: React.createElement(React.Fragment, null,
+        React.createElement(Lbl, {t}, 'Translation Analysis'),
+        React.createElement(Out, {text:out, loading, ph:'Select two jurisdictions and add your text.', t}),
+        React.createElement(ExportBtns, {text:out, title:'Jurisdiction-Translation'})
+      )
+    })
+  );
+}
+
+// ── Nigerian Cases (Fix #3,4,5: Real search + AI grounding) ──────────────────
+function NigerianCasesPage({t}) {
+  const [query, setQuery] = useState('');
+  const [aiOut, setAiOut] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [liveResults, setLiveResults] = useState([]);
+  const [liveLoading, setLiveLoading] = useState(false);
+  const [searched, setSearched] = useState(false);
+
+  const runAI = async () => {
+    if (!query.trim()) return;
+    setLoading(true); setAiOut('');
+    const sys = VOICE + '\n\nYou are a Nigerian legal research specialist.\n\nRESEARCH SUMMARY:\nSummarise the state of Nigerian law on this issue.\n\nRELEVANT NIGERIAN CASES:\nIdentify the most significant Nigerian cases. For each: full case name, court and year, key legal principle, and specific relevance. Reference NWLR, LRN, or other Nigerian law report citations where known.\n\nAPPLICABLE STATUTES:\nIdentify relevant Nigerian statutes, regulations, and subsidiary legislation.\n\nCURRENT LEGAL POSITION:\nState the current position of Nigerian law based on the authorities identified.\n\nSUGGESTED PRIMSOL SEARCH TERMS:\nProvide specific search terms to use on PrimsCol for a comprehensive search.\n\nDISCLAIMER: This analysis draws on Verdict AI knowledge of Nigerian law. Verify all citations on PrimsCol or current law reports before relying on them.';
+    try { await groqStream(sys, 'Nigerian law research query: ' + query, v => setAiOut(v)); }
+    catch(e) { setAiOut('Error: ' + e.message); }
+    setLoading(false);
+  };
+
+  // Fix #5: Proper Nigerian case search
+  const searchLive = async () => {
+    if (!query.trim()) return;
+    setLiveLoading(true); setLiveResults([]); setSearched(true);
+    try {
+      const res = await fetch(`/api/cases/search?q=${encodeURIComponent(query)}`);
+      if (res.ok) {
+        const data = await res.json();
+        setLiveResults(data.results || []);
+      }
+    } catch(e) {
+      console.log('Search error:', e.message);
+      setLiveResults([]);
+    }
     setLiveLoading(false);
   };
 
-  return React.createElement("div",{className:"fade"},
-    React.createElement(Hdr,{title:"Nigerian Case Law Research",desc:"AI-powered Nigerian legal research with access to open case law databases.",t}),
-    React.createElement("div",{style:{marginBottom:16}},
-      React.createElement(Lbl,{t},"Research Query"),
-      React.createElement(Inp,{val:query,set:setQuery,ph:"Describe the legal issue — e.g. breach of contract under Nigerian law, land tenure under the Land Use Act, directors duties under CAMA 2020...",rows:3,t})
+  return React.createElement('div', {className:'fade'},
+    React.createElement(Hdr, {title:'Nigerian Case Law Research', desc:'AI-powered Nigerian legal research with live database search.', t}),
+    React.createElement('div', {style:{marginBottom:16}},
+      React.createElement(Lbl, {t}, 'Research Query'),
+      React.createElement(Inp, {val:query, set:setQuery, ph:'Describe the legal issue — e.g. breach of contract under Nigerian law, Land Use Act, CAMA 2020 directors duties...', rows:3, t})
     ),
-    React.createElement("div",{style:{display:"flex",gap:10,marginBottom:28}},
-      React.createElement(Btn,{onClick:runAI,disabled:loading||!query.trim(),full:true},loading?"Researching...":"AI Legal Research"),
-      React.createElement(Btn,{onClick:searchLive,disabled:liveLoading||!query.trim(),variant:"ghost"},liveLoading?"Searching...":"Search Case Database")
+    React.createElement('div', {style:{display:'flex',gap:10,marginBottom:24,flexWrap:'wrap'}},
+      React.createElement(Btn, {onClick:runAI, disabled:loading||!query.trim(), full:true}, loading ? 'Researching...' : 'AI Legal Research'),
+      React.createElement(Btn, {onClick:searchLive, disabled:liveLoading||!query.trim(), variant:'ghost'}, liveLoading ? 'Searching...' : 'Search Case Database')
     ),
-    React.createElement(Two,{
-      l:React.createElement(React.Fragment,null,
-        React.createElement(Lbl,{t},"AI Legal Analysis"),
-        React.createElement(Out,{text:aiOut,loading,ph:"Click AI Legal Research to receive a detailed analysis of Nigerian law on your issue.",t}),
-        React.createElement(CopyBtn,{text:aiOut})
+    React.createElement(Two, {
+      l: React.createElement(React.Fragment, null,
+        React.createElement(Lbl, {t}, 'AI Legal Analysis'),
+        React.createElement(Out, {text:aiOut, loading, ph:'Click AI Legal Research for a detailed analysis of Nigerian law on your issue.', t}),
+        React.createElement(ExportBtns, {text:aiOut, title:'Nigerian-Law-Research'})
       ),
-      r:React.createElement(React.Fragment,null,
-        React.createElement(Lbl,{t},"Live Case Database Results"),
-        !searched&&React.createElement("div",{style:{background:t.input,border:`1px solid ${t.border}`,borderRadius:10,padding:20,minHeight:180,display:"flex",alignItems:"center",justifyContent:"center",color:t.muted,fontSize:13.5,fontStyle:"italic"}},"Click Search Case Database to query AfricanLII for Nigerian judgments."),
-        liveLoading&&React.createElement("div",{style:{background:t.input,border:`1px solid ${t.border}`,borderRadius:10,padding:20,minHeight:180}},React.createElement(Pulse)),
-        searched&&!liveLoading&&React.createElement("div",{style:{background:t.input,border:`1px solid ${t.border}`,borderRadius:10,padding:16,minHeight:180,maxHeight:400,overflowY:"auto"}},
-          liveResults.length===0
-            ?React.createElement("div",null,
-                React.createElement("p",{style:{color:t.dim,fontSize:13.5,marginBottom:16,lineHeight:1.6}},"No direct database results found for this query. The free database may not have indexed this specific matter. Use the search terms from the AI analysis above on PrimsCol for comprehensive results."),
-                React.createElement("a",{href:"https://primsol.lawpavilion.com",target:"_blank",rel:"noreferrer",style:{display:"inline-flex",alignItems:"center",gap:8,padding:"10px 18px",borderRadius:8,background:`linear-gradient(135deg,${GOLD},${GOLD2})`,color:"#0D1B2E",fontWeight:600,fontSize:13.5,textDecoration:"none",fontFamily:"'DM Sans',sans-serif"}},"Open PrimsCol Database")
-              )
-            :liveResults.map((r,i)=>React.createElement("div",{key:i,style:{borderBottom:`1px solid ${t.border}`,paddingBottom:12,marginBottom:12}},
-                React.createElement("a",{href:r.url||r.link||"#",target:"_blank",rel:"noreferrer",style:{color:GOLD,fontWeight:600,fontSize:13.5,textDecoration:"none",lineHeight:1.4}},r.title||r.name||"Untitled Case"),
-                React.createElement("div",{style:{fontSize:12,color:t.muted,marginTop:3}},r.court||"",r.year?` — ${r.year}`:""),
-                r.snippet&&React.createElement("p",{style:{fontSize:12.5,color:t.dim,marginTop:5,lineHeight:1.55}},r.snippet)
+      r: React.createElement(React.Fragment, null,
+        React.createElement(Lbl, {t}, 'Live Case Database'),
+        !searched && React.createElement('div', {style:{background:t.input,border:`1px solid ${t.border}`,borderRadius:10,padding:20,minHeight:180,display:'flex',alignItems:'center',justifyContent:'center',color:t.muted,fontSize:13.5,fontStyle:'italic'}}, 'Click Search Case Database to query Nigerian case law databases.'),
+        liveLoading && React.createElement('div', {style:{background:t.input,border:`1px solid ${t.border}`,borderRadius:10,padding:20,minHeight:180}}, React.createElement(Pulse)),
+        searched && !liveLoading && React.createElement('div', {style:{background:t.input,border:`1px solid ${t.border}`,borderRadius:10,padding:16,minHeight:180,maxHeight:400,overflowY:'auto'}},
+          liveResults.length === 0
+            ? React.createElement('p', {style:{color:t.dim,fontSize:13.5,lineHeight:1.7}}, 'No direct results found. Use the PrimsCol link below or the AI analysis on the left for case references.')
+            : liveResults.map((r, i) => React.createElement('div', {key:i, style:{borderBottom:`1px solid ${t.border}`,paddingBottom:12,marginBottom:12}},
+                React.createElement('a', {href:r.url||'#', target:'_blank', rel:'noreferrer', style:{color:GOLD,fontWeight:600,fontSize:13.5,textDecoration:'none',lineHeight:1.4,display:'block',marginBottom:3}}, r.title||'Untitled Case'),
+                React.createElement('div', {style:{fontSize:11.5,color:t.muted}}, [r.court, r.year, r.source].filter(Boolean).join(' — ')),
+                r.snippet && React.createElement('p', {style:{fontSize:12.5,color:t.dim,marginTop:5,lineHeight:1.55}}, r.snippet),
+                r.isLink && React.createElement('span', {style:{fontSize:11,color:GOLD,marginTop:3,display:'block'}}, '→ Click to open external database')
               ))
         )
       )
     }),
-    React.createElement("div",{style:{marginTop:24,background:t.card,border:`1px solid ${t.border}`,borderRadius:10,padding:18,display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:12}},
-      React.createElement("div",null,
-        React.createElement("div",{style:{fontFamily:"'Playfair Display',serif",fontSize:15,fontWeight:600,marginBottom:4,color:t.text}},"Need the full PrimsCol database?"),
-        React.createElement("p",{style:{fontSize:13,color:t.dim,lineHeight:1.5,margin:0}},"PrimsCol by LawPavilion contains Nigerian cases from 1960 to present. Open it in a panel below or in a new tab.")
+    React.createElement('div', {style:{marginTop:20,background:t.card,border:`1px solid ${t.border}`,borderRadius:10,padding:16,display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:10}},
+      React.createElement('div', null,
+        React.createElement('div', {style:{fontFamily:"'Playfair Display',serif",fontSize:14,fontWeight:600,marginBottom:3,color:t.text}}, 'Access PrimsCol Full Database'),
+        React.createElement('p', {style:{fontSize:12.5,color:t.muted,margin:0}}, 'Nigerian cases from 1960 to present. Subscription required.')
       ),
-      React.createElement("div",{style:{display:"flex",gap:10}},
-        React.createElement("a",{href:"https://primsol.lawpavilion.com",target:"_blank",rel:"noreferrer",style:{display:"inline-flex",alignItems:"center",gap:8,padding:"10px 18px",borderRadius:8,background:`linear-gradient(135deg,${GOLD},${GOLD2})`,color:"#0D1B2E",fontWeight:600,fontSize:13.5,textDecoration:"none",fontFamily:"'DM Sans',sans-serif"}},"Open PrimsCol")
+      React.createElement('a', {href:'https://primsol.lawpavilion.com', target:'_blank', rel:'noreferrer', style:{display:'inline-flex',alignItems:'center',gap:8,padding:'10px 18px',borderRadius:8,background:`linear-gradient(135deg,${GOLD},${GOLD2})`,color:'#0D1B2E',fontWeight:600,fontSize:13.5,textDecoration:'none',fontFamily:"'DM Sans',sans-serif"}}, 'Open PrimsCol')
+    )
+  );
+}
+
+// ── PrimsCol Embedded ─────────────────────────────────────────────────────────
+function PrimsolPage({t}) {
+  return React.createElement('div', {className:'fade'},
+    React.createElement(Hdr, {title:'PrimsCol — Nigerian Case Law', desc:'Access the full LawPavilion PrimsCol database with over 200,000 Nigerian judgments from 1960 to present.', t}),
+    React.createElement('div', {style:{background:t.card,border:`1px solid ${t.border}`,borderRadius:10,padding:14,marginBottom:14,fontSize:13,color:t.dim,lineHeight:1.7}},
+      React.createElement('strong', {style:{color:GOLD}}, 'How this works: '),
+      'PrimsCol loads in the panel below. Log in with your LawPavilion credentials and search directly without leaving Verdict AI. A PrimsCol subscription is required — visit ',
+      React.createElement('a', {href:'https://lawpavilion.com', target:'_blank', rel:'noreferrer'}, 'lawpavilion.com'), ' to subscribe.'
+    ),
+    React.createElement('div', {style:{position:'relative',width:'100%',height:'70vh',borderRadius:12,overflow:'hidden',border:`1px solid ${t.border}`}},
+      React.createElement('iframe', {src:'https://primsol.lawpavilion.com', style:{width:'100%',height:'100%',border:'none',background:t.card}, title:'PrimsCol Nigerian Case Law Database', allow:'fullscreen'}),
+      React.createElement('div', {style:{position:'absolute',bottom:0,left:0,right:0,background:'rgba(7,16,28,0.85)',padding:'8px 14px',display:'flex',alignItems:'center',justifyContent:'space-between',fontSize:11.5,color:t.muted}},
+        React.createElement('span', null, 'Log in with your LawPavilion credentials inside the panel above.'),
+        React.createElement('a', {href:'https://primsol.lawpavilion.com', target:'_blank', rel:'noreferrer', style:{color:GOLD,fontSize:12}}, 'Open in new tab ↗')
       )
     )
   );
 }
 
-// ── PrimsCol Embedded Panel ───────────────────────────────────────────────────
-function PrimsolPage({t}){
-  const[creds,setCreds]=useState({email:"",password:""});
-  const[loggedIn,setLoggedIn]=useState(false);
-  const iframeRef=useRef();
+// ── Vault (Fix #2: Persistent storage + Fix #9: Search) ──────────────────────
+function VaultPage({docs, t}) {
+  const [q, setQ] = useState('');
+  const [out, setOut] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [view, setView] = useState(null);
 
-  // Try to post login credentials into the iframe
-  const attemptLogin=()=>{
-    const iframe=iframeRef.current;
-    if(!iframe)return;
-    // We can't control cross-origin iframe content, but we open the login URL directly
-    iframe.src=`https://primsol.lawpavilion.com/login`;
-    setLoggedIn(true);
+  // Fix #9: Local search before AI search
+  const [localResults, setLocalResults] = useState(null);
+
+  const localSearch = (query) => {
+    if (!query.trim()) { setLocalResults(null); return; }
+    const q2 = query.toLowerCase();
+    const results = docs.filter(d =>
+      d.name?.toLowerCase().includes(q2) ||
+      d.content?.toLowerCase().includes(q2) ||
+      d.analysis?.toLowerCase().includes(q2)
+    );
+    setLocalResults(results);
   };
 
-  return React.createElement("div",{className:"fade"},
-    React.createElement(Hdr,{title:"PrimsCol — Nigerian Case Law",desc:"Access the full LawPavilion PrimsCol database with over 200,000 Nigerian judgments from 1960 to present.",t}),
-    React.createElement("div",{style:{background:t.card,border:`1px solid ${t.border}`,borderRadius:10,padding:16,marginBottom:16,fontSize:13,color:t.dim,lineHeight:1.7}},
-      React.createElement("strong",{style:{color:GOLD}},"How this works: "),
-      "PrimsCol runs inside this panel below. Log in with your LawPavilion credentials and search directly from here without switching tabs. A PrimsCol subscription is required — visit ",
-      React.createElement("a",{href:"https://lawpavilion.com",target:"_blank",rel:"noreferrer",style:{color:GOLD}},"lawpavilion.com"),
-      " to subscribe."
+  const aiSearch = async () => {
+    if (!docs.length) { alert('Your vault is empty. Analyze a document first.'); return; }
+    if (!q.trim()) return;
+    setLoading(true); setOut('');
+    const sys = VOICE + ' Conduct a semantic search of a document vault. Identify which documents are most relevant to the query and explain specifically why. Rank by relevance with a confidence level for each.';
+    try { await groqStream(sys, `Query: "${q}"\n\nDocuments:\n${docs.map((d,i)=>`[${i+1}] ${d.name}: ${d.content}`).join('\n')}`, s => setOut(s)); }
+    catch(e) { setOut('Error: ' + e.message); }
+    setLoading(false);
+  };
+
+  if (view) return React.createElement('div', {className:'fade'},
+    React.createElement(Btn, {variant:'ghost', sm:true, onClick:()=>setView(null)}, 'Back to Vault'),
+    React.createElement('div', {style:{height:20}}),
+    React.createElement('h2', {style:{fontFamily:"'Playfair Display',serif",fontSize:20,marginBottom:4,color:t.text}}, view.name),
+    React.createElement('div', {style:{fontSize:12,color:t.muted,marginBottom:20}}, view.date),
+    view.analysis && React.createElement(React.Fragment, null, React.createElement(Lbl, {t}, 'AI Analysis'), React.createElement(Out, {text:view.analysis, loading:false, t}), React.createElement(ExportBtns, {text:view.analysis, title:'Vault-Document'}))
+  );
+
+  const displayDocs = localResults !== null ? localResults : docs;
+
+  return React.createElement('div', {className:'fade'},
+    React.createElement(Hdr, {title:'Document Vault', desc:'Every analyzed document is saved here automatically. Search instantly by name, content, or use AI semantic search.', t}),
+
+    // Fix #9: Search bar with instant local search + AI search
+    React.createElement('div', {style:{display:'flex',gap:8,marginBottom:16,flexWrap:'wrap'}},
+      React.createElement(Inp, {val:q, set:v=>{setQ(v);localSearch(v);}, ph:"Search by name, content, or describe what you're looking for...", t, style:{flex:1}}),
+      React.createElement(Btn, {onClick:aiSearch, disabled:loading||!q.trim(), variant:'ghost'}, loading ? 'Searching...' : 'AI Search')
     ),
-    React.createElement("div",{style:{position:"relative",width:"100%",height:"72vh",borderRadius:12,overflow:"hidden",border:`1px solid ${t.border}`}},
-      React.createElement("iframe",{
-        ref:iframeRef,
-        src:"https://primsol.lawpavilion.com",
-        style:{width:"100%",height:"100%",border:"none",background:t.card},
-        title:"PrimsCol Nigerian Case Law Database",
-        allow:"fullscreen"
-      }),
-      // Overlay helper tip
-      React.createElement("div",{style:{position:"absolute",bottom:0,left:0,right:0,background:"rgba(7,16,28,0.85)",padding:"10px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",fontSize:12,color:t.muted}},
-        React.createElement("span",null,"Tip: Log in with your LawPavilion credentials inside the panel above to access the full database."),
-        React.createElement("a",{href:"https://primsol.lawpavilion.com",target:"_blank",rel:"noreferrer",style:{color:GOLD,fontSize:12}},"Open in new tab ↗")
-      )
-    )
+
+    localResults !== null && React.createElement('div', {style:{fontSize:12,color:t.muted,marginBottom:12}},
+      `${localResults.length} result${localResults.length!==1?'s':''} matching "${q}"`
+    ),
+
+    out && React.createElement('div', {style:{marginBottom:22}}, React.createElement(Lbl, {t}, 'AI Search Results'), React.createElement(Out, {text:out, loading, t})),
+
+    !docs.length
+      ? React.createElement('div', {style:{textAlign:'center',padding:'60px 20px',color:t.muted}},
+          React.createElement('div', {style:{fontSize:42,marginBottom:12}}, '🗄️'),
+          React.createElement('div', {style:{fontFamily:"'Playfair Display',serif",fontSize:17,marginBottom:7,color:t.dim}}, 'Your vault is empty'),
+          React.createElement('div', {style:{fontSize:13,lineHeight:1.6}}, 'Documents you analyze will be saved here automatically.')
+        )
+      : React.createElement(React.Fragment, null,
+          React.createElement('div', {style:{fontSize:12,color:t.muted,marginBottom:12}}, `${docs.length} document${docs.length!==1?'s':''} saved`),
+          displayDocs.map((d, i) => React.createElement('div', {key:i, style:{background:t.card,border:`1px solid ${t.border}`,borderRadius:9,padding:'13px 18px',marginBottom:8,display:'flex',alignItems:'center',gap:14}},
+            React.createElement('span', {style:{fontSize:22}}, '📄'),
+            React.createElement('div', {style:{flex:1}},
+              React.createElement('div', {style:{fontWeight:600,fontSize:14,color:t.text}}, d.name),
+              React.createElement('div', {style:{fontSize:11,color:t.muted,marginTop:2}}, d.date)
+            ),
+            React.createElement(Btn, {variant:'ghost', sm:true, onClick:()=>setView(d)}, 'View')
+          ))
+        )
   );
 }
 
-// ── All other pages ───────────────────────────────────────────────────────────
-function Dashboard({go,t,docCount}){
-  return React.createElement("div",{className:"fade"},
-    React.createElement("div",{style:{marginBottom:30}},
-      React.createElement("div",{style:{width:44,height:3,background:`linear-gradient(90deg,${GOLD},transparent)`,borderRadius:100,marginBottom:16}}),
-      React.createElement("h1",{style:{fontFamily:"'Playfair Display',serif",fontSize:30,fontWeight:700,lineHeight:1.2,margin:"0 0 10px",color:t.text}},"Welcome to ",React.createElement("span",{style:{color:GOLD}},"Verdict AI")),
-      React.createElement("p",{style:{color:t.dim,fontSize:14.5,margin:0,lineHeight:1.6}},"From documents to decisions. Your complete AI legal intelligence platform.")
+// ── Cases Page ────────────────────────────────────────────────────────────────
+function CasesPage({t}) {
+  const [cases, setCases] = useState(() => { try { return JSON.parse(localStorage.getItem('vc')||'[]'); } catch { return []; } });
+  const [showNew, setShowNew] = useState(false);
+  const [name, setName] = useState(''); const [desc, setDesc] = useState('');
+  const save = c => { setCases(c); localStorage.setItem('vc', JSON.stringify(c)); };
+  const add = () => { if (!name.trim()) return; save([{id:Date.now(),name,desc,status:'active',date:new Date().toLocaleDateString()},...cases]); setName(''); setDesc(''); setShowNew(false); };
+
+  return React.createElement('div', {className:'fade'},
+    React.createElement(Hdr, {title:'Case Workspaces', desc:'Organise all your work by case matter. Keep documents, notes, and analyses together.', t}),
+    React.createElement('div', {style:{display:'flex',justifyContent:'flex-end',marginBottom:18}}, React.createElement(Btn, {onClick:()=>setShowNew(p=>!p)}, 'New Case')),
+    showNew && React.createElement('div', {style:{background:'rgba(200,164,94,0.07)',border:'1px solid rgba(200,164,94,0.2)',borderRadius:10,padding:20,marginBottom:20}},
+      React.createElement('div', {style:{marginBottom:12}}, React.createElement(Lbl, {t}, 'Case Name'), React.createElement(Inp, {val:name, set:setName, ph:'e.g. Adeyemi v. Lagos State Government [2026]', t})),
+      React.createElement('div', {style:{marginBottom:16}}, React.createElement(Lbl, {t}, 'Description'), React.createElement(Inp, {val:desc, set:setDesc, ph:'Brief description of the matter...', rows:2, t})),
+      React.createElement('div', {style:{display:'flex',gap:8}}, React.createElement(Btn, {onClick:add}, 'Create Workspace'), React.createElement(Btn, {variant:'ghost', onClick:()=>setShowNew(false)}, 'Cancel'))
     ),
-    React.createElement("div",{style:{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:30}},
-      [{v:docCount,l:"Docs Saved"},{v:"13",l:"AI Features"},{v:"Unlimited",l:"Analyses"},{v:"Active",l:"AI Status",c:"#2ECC8A"}].map((s,i)=>
-        React.createElement("div",{key:i,style:{background:t.card,border:`1px solid ${t.border}`,borderRadius:11,padding:"16px 18px"}},
-          React.createElement("div",{style:{fontFamily:"'Playfair Display',serif",fontSize:22,fontWeight:700,color:s.c||GOLD}},s.v),
-          React.createElement("div",{style:{fontSize:12,color:t.muted,marginTop:4}},s.l)
+    !cases.length
+      ? React.createElement('div', {style:{textAlign:'center',padding:'60px 20px',color:t.muted}},
+          React.createElement('div', {style:{fontSize:42,marginBottom:12}}, '📁'),
+          React.createElement('div', {style:{fontFamily:"'Playfair Display',serif",fontSize:17,marginBottom:7,color:t.dim}}, 'No workspaces yet'),
+          React.createElement('div', {style:{fontSize:13,lineHeight:1.6}}, 'Create a workspace to organise your case matters.')
+        )
+      : React.createElement('div', {style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}},
+          cases.map(c => React.createElement('div', {key:c.id, style:{background:t.card,border:`1px solid ${t.border}`,borderRadius:10,padding:18}},
+            React.createElement('div', {style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:8}},
+              React.createElement('div', null,
+                React.createElement('div', {style:{fontFamily:"'Playfair Display',serif",fontSize:14,fontWeight:600,color:t.text}}, c.name),
+                React.createElement('div', {style:{fontSize:11,color:t.muted,marginTop:2}}, c.date)
+              ),
+              React.createElement('div', {style:{display:'flex',gap:7,alignItems:'center'}},
+                React.createElement('select', {value:c.status, onChange:e=>save(cases.map(x=>x.id===c.id?{...x,status:e.target.value}:x)), style:{background:t.input,border:`1px solid ${t.border}`,borderRadius:6,color:c.status==='active'?'#2ECC8A':c.status==='pending'?'#F0A500':t.muted,fontSize:11,padding:'4px 8px',fontFamily:'inherit',outline:'none'}},
+                  React.createElement('option', {value:'active'}, 'Active'),
+                  React.createElement('option', {value:'pending'}, 'Pending'),
+                  React.createElement('option', {value:'closed'}, 'Closed')
+                ),
+                React.createElement('button', {onClick:()=>save(cases.filter(x=>x.id!==c.id)), style:{background:'rgba(224,82,82,0.1)',border:'1px solid rgba(224,82,82,0.2)',borderRadius:6,color:'#E05252',cursor:'pointer',padding:'4px 10px',fontSize:12}}, 'Remove')
+              )
+            ),
+            c.desc && React.createElement('div', {style:{fontSize:12.5,color:t.dim,lineHeight:1.55,marginTop:6}}, c.desc)
+          ))
+        )
+  );
+}
+
+// ── Dashboard ─────────────────────────────────────────────────────────────────
+function Dashboard({go, t, docCount}) {
+  return React.createElement('div', {className:'fade'},
+    React.createElement('div', {style:{marginBottom:28}},
+      React.createElement('div', {style:{width:44,height:3,background:`linear-gradient(90deg,${GOLD},transparent)`,borderRadius:100,marginBottom:16}}),
+      React.createElement('h1', {style:{fontFamily:"'Playfair Display',serif",fontSize:28,fontWeight:700,lineHeight:1.2,margin:'0 0 10px',color:t.text}}, 'Welcome to ', React.createElement('span', {style:{color:GOLD}}, 'Verdict AI')),
+      React.createElement('p', {style:{color:t.dim,fontSize:14,margin:0,lineHeight:1.6}}, 'From documents to decisions. Your complete AI legal intelligence platform.')
+    ),
+    React.createElement('div', {className:'stat-grid', style:{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12,marginBottom:28}},
+      [{v:docCount,l:'Docs Saved'},{v:'13',l:'AI Features'},{v:'Unlimited',l:'Analyses'},{v:'Active',l:'AI Status',c:'#2ECC8A'}].map((s,i) =>
+        React.createElement('div', {key:i, style:{background:t.card,border:`1px solid ${t.border}`,borderRadius:11,padding:'15px 17px'}},
+          React.createElement('div', {style:{fontFamily:"'Playfair Display',serif",fontSize:22,fontWeight:700,color:s.c||GOLD}}, s.v),
+          React.createElement('div', {style:{fontSize:12,color:t.muted,marginTop:4}}, s.l)
         )
       )
     ),
-    React.createElement("h2",{style:{fontFamily:"'Playfair Display',serif",fontSize:18,marginBottom:14,color:t.text}},"All Features"),
-    React.createElement("div",{style:{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12}},
-      FEATURES.map(f=>React.createElement("div",{key:f.id,onClick:()=>go(f.id),
-        style:{background:t.card,border:`1px solid ${t.border}`,borderRadius:11,padding:18,cursor:"pointer",transition:"all 0.2s"},
-        onMouseEnter:e=>{e.currentTarget.style.borderColor=GOLD;e.currentTarget.style.transform="translateY(-2px)";e.currentTarget.style.background=t.card2;},
-        onMouseLeave:e=>{e.currentTarget.style.borderColor=t.border;e.currentTarget.style.transform="none";e.currentTarget.style.background=t.card;}},
-        React.createElement("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}},
-          React.createElement("div",{style:{width:38,height:38,borderRadius:9,background:`${f.color}1a`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:19}},f.icon),
-          React.createElement("span",{style:{background:"rgba(200,164,94,0.11)",color:GOLD,fontSize:9,fontWeight:700,padding:"3px 8px",borderRadius:100}},f.tag)
+    React.createElement('h2', {style:{fontFamily:"'Playfair Display',serif",fontSize:18,marginBottom:14,color:t.text}}, 'All Features'),
+    React.createElement('div', {className:'feat-grid', style:{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:12}},
+      FEATURES.map(f => React.createElement('div', {key:f.id, onClick:()=>go(f.id),
+        style:{background:t.card,border:`1px solid ${t.border}`,borderRadius:11,padding:16,cursor:'pointer',transition:'all 0.2s'},
+        onMouseEnter:e=>{e.currentTarget.style.borderColor=GOLD;e.currentTarget.style.transform='translateY(-2px)';e.currentTarget.style.background=t.card2;},
+        onMouseLeave:e=>{e.currentTarget.style.borderColor=t.border;e.currentTarget.style.transform='none';e.currentTarget.style.background=t.card;}},
+        React.createElement('div', {style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:9}},
+          React.createElement('div', {style:{width:36,height:36,borderRadius:8,background:`${f.color}1a`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:18}}, f.icon),
+          React.createElement('span', {style:{background:'rgba(200,164,94,0.11)',color:GOLD,fontSize:9,fontWeight:700,padding:'2px 7px',borderRadius:100}}, f.tag)
         ),
-        React.createElement("div",{style:{fontFamily:"'Playfair Display',serif",fontSize:14,fontWeight:600,marginBottom:4,color:t.text}},f.title),
-        React.createElement("div",{style:{fontSize:12,color:t.muted,lineHeight:1.55}},f.desc)
+        React.createElement('div', {style:{fontFamily:"'Playfair Display',serif",fontSize:13.5,fontWeight:600,marginBottom:3,color:t.text}}, f.title),
+        React.createElement('div', {style:{fontSize:11.5,color:t.muted,lineHeight:1.5}}, f.desc)
       ))
     )
   );
 }
 
-function ReaderPage({onSave,t}){
-  const[txt,setTxt]=useState("");const[out,setOut]=useState("");const[loading,setLoading]=useState(false);
-  const run=async()=>{
-    if(!txt.trim())return;setLoading(true);setOut("");
-    const sys=VOICE+`\n\nConduct a detailed legal document review.\n\nDOCUMENT OVERVIEW:\nIdentify the document type, purpose, parties, governing jurisdiction, and relevant dates.\n\nKEY FACTS AND BACKGROUND:\nSummarise the factual background established by the document.\n\nLEGAL ISSUES AND OBLIGATIONS:\nIdentify and explain each significant legal obligation, right, or restriction created by the document.\n\nCRITICAL CLAUSES AND PROVISIONS:\nIdentify the most commercially and legally significant clauses. For each, explain what it means and why it matters.\n\nRISK FLAGS:\nIdentify every clause, term, or omission creating risk or ambiguity. Classify each as CRITICAL, HIGH, MEDIUM, or LOW.\n\nPLAIN ENGLISH SUMMARY:\nExplain what this document means in straightforward terms for a non-lawyer.\n\nRECOMMENDED ACTIONS:\nList specific steps to take before signing, relying on, or acting in accordance with this document.\n\nDISCLAIMER: This analysis is generated by Verdict AI for informational purposes and does not constitute legal advice.`;
-    try{const res=await groqStream(sys,txt,s=>setOut(s));onSave({name:"Document — "+new Date().toLocaleDateString(),content:txt.slice(0,300)+"...",analysis:res,date:new Date().toLocaleDateString()});}
-    catch(e){setOut("Error: "+e.message);}
-    setLoading(false);
-  };
-  return React.createElement("div",{className:"fade"},
-    React.createElement(Hdr,{title:"Document Analysis",desc:"Paste any legal document for a thorough, professional AI analysis. Automatically saved to your Vault.",t}),
-    React.createElement(Two,{
-      l:React.createElement(React.Fragment,null,React.createElement("div",{style:{marginBottom:16}},React.createElement(Lbl,{t},"Document Text"),React.createElement(Inp,{val:txt,set:setTxt,ph:"Paste your legal document, contract, court ruling, statute, or brief here...",rows:14,t})),React.createElement(Btn,{full:true,onClick:run,disabled:loading||!txt.trim()},loading?"Analyzing...":"Analyze Document")),
-      r:React.createElement(React.Fragment,null,React.createElement(Lbl,{t},"Analysis"),React.createElement(Out,{text:out,loading,ph:"Paste a document and click Analyze.",t}),React.createElement(CopyBtn,{text:out}))
-    })
-  );
-}
+// ── App Shell (Fix #8: Mobile responsive) ────────────────────────────────────
+function App() {
+  const [page, setPage] = useState('dashboard');
+  const [dark, setDark] = useState(true);
+  const [sideOpen, setSideOpen] = useState(false);
 
-function QAPage({t}){
-  const[q,setQ]=useState("");const[ctx,setCtx]=useState("");const[out,setOut]=useState("");const[loading,setLoading]=useState(false);
-  const QUICK=["What are the essential elements of a valid contract under Nigerian law?","What is the legal distinction between a tort and a crime?","When does force majeure excuse contractual non-performance?","Key procedural differences between arbitration and litigation in Nigeria?","What provisions must every employment contract contain to be enforceable?"];
-  const ask=async(question)=>{
-    const q2=question||q;if(!q2.trim())return;setLoading(true);setOut("");
-    const sys=VOICE+`\n\nAnswer legal questions comprehensively.\n\nDIRECT ANSWER:\nProvide a clear, direct answer in the first paragraph without excessive hedging.\n\nLEGAL FRAMEWORK:\nExplain the relevant legal framework, principles, statutes, and doctrines.\n\nPRACTICAL APPLICATION:\nExplain how these principles apply in practice.\n\nJURISDICTIONAL CONSIDERATIONS:\nNote important differences across jurisdictions, with particular attention to Nigerian law where relevant.\n\nKEY AUTHORITIES:\nReference the most important cases, statutes, or instruments a practitioner would rely upon.\n\nDISCLAIMER: This response is generated by Verdict AI for informational purposes and does not constitute legal advice.`;
-    try{await groqStream(sys,ctx?`Context: ${ctx}\n\nQuestion: ${q2}`:q2,s=>setOut(s));}
-    catch(e){setOut("Error: "+e.message);}
-    setLoading(false);
-  };
-  return React.createElement("div",{className:"fade"},
-    React.createElement(Hdr,{title:"Legal Q&A",desc:"Ask any legal question and receive a detailed, authoritative answer grounded in legal principles.",t}),
-    React.createElement(Two,{
-      l:React.createElement(React.Fragment,null,
-        React.createElement("div",{style:{marginBottom:14}},React.createElement(Lbl,{t},"Common Questions"),
-          QUICK.map(qs=>React.createElement("button",{key:qs,onClick:()=>{setQ(qs);ask(qs);},style:{display:"block",width:"100%",textAlign:"left",background:t.input,border:`1px solid ${t.border}`,borderRadius:7,padding:"9px 12px",fontSize:12.5,color:t.dim,cursor:"pointer",marginBottom:5,fontFamily:"'DM Sans',sans-serif",lineHeight:1.4,transition:"border-color 0.15s"},onMouseEnter:e=>e.target.style.borderColor=GOLD,onMouseLeave:e=>e.target.style.borderColor=t.border},qs))
-        ),
-        React.createElement("div",{style:{marginBottom:12}},React.createElement(Lbl,{t},"Context (Optional)"),React.createElement(Inp,{val:ctx,set:setCtx,ph:"Add jurisdiction, document context, or specific circumstances...",rows:2,t})),
-        React.createElement("div",{style:{display:"flex",gap:8}},React.createElement(Inp,{val:q,set:setQ,ph:"Ask any legal question...",t,style:{flex:1}}),React.createElement(Btn,{onClick:()=>ask(q),disabled:loading||!q.trim()},"Ask"))
-      ),
-      r:React.createElement(React.Fragment,null,React.createElement(Lbl,{t},"Answer"),React.createElement(Out,{text:out,loading,ph:"Select a question or type your own.",t}),React.createElement(CopyBtn,{text:out}))
-    })
-  );
-}
+  // Fix #2: Persist docs to localStorage with proper key
+  const [docs, setDocs] = useState(() => { try { return JSON.parse(localStorage.getItem('vd')||'[]'); } catch { return []; } });
+  const addDoc = d => { const u=[d,...docs]; setDocs(u); localStorage.setItem('vd', JSON.stringify(u)); };
 
-function DraftPage({t}){
-  const[type,setType]=useState("");const[details,setDetails]=useState("");const[out,setOut]=useState("");const[loading,setLoading]=useState(false);
-  const run=async()=>{
-    if(!type||!details.trim())return;setLoading(true);setOut("");
-    const sys=VOICE+`\n\nYou are a senior legal drafter. Draft a complete, polished document ready for partner review before filing or signing. Use proper legal document formatting — numbered clauses, defined terms, proper recitals where required. Use [SQUARE BRACKETS] for information to be supplied. End with a DRAFTING NOTES section explaining key choices, clauses requiring attention, missing information, and jurisdiction-specific considerations.`;
-    try{await groqStream(sys,`Draft a ${type} with these instructions:\n\n${details}`,s=>setOut(s));}
-    catch(e){setOut("Error: "+e.message);}
-    setLoading(false);
-  };
-  return React.createElement("div",{className:"fade"},
-    React.createElement(Hdr,{title:"Draft Documents",desc:"Generate complete, professionally drafted legal documents ready for partner review.",t}),
-    React.createElement(Two,{
-      l:React.createElement(React.Fragment,null,
-        React.createElement("div",{style:{marginBottom:12}},React.createElement(Lbl,{t},"Document Type"),React.createElement(Sel,{val:type,set:setType,opts:DOC_TYPES,ph:"Select document type...",t})),
-        React.createElement("div",{style:{marginBottom:16}},React.createElement(Lbl,{t},"Instructions and Requirements"),React.createElement(Inp,{val:details,set:setDetails,ph:"Parties, jurisdiction, key commercial terms, specific clauses, purpose, and any other requirements...",rows:11,t})),
-        React.createElement(Btn,{full:true,onClick:run,disabled:loading||!type||!details.trim()},loading?"Drafting...":"Draft Document")
-      ),
-      r:React.createElement(React.Fragment,null,React.createElement(Lbl,{t},"Drafted Document"),React.createElement(Out,{text:out,loading,ph:"Select a type, add your instructions, and click Draft.",t}),React.createElement(CopyBtn,{text:out}))
-    })
-  );
-}
+  const t = theme(dark);
+  const go = id => { setPage(id); setSideOpen(false); };
 
-function JurisdictionPage({t}){
-  const[txt,setTxt]=useState("");const[from,setFrom]=useState("");const[to,setTo]=useState("");const[out,setOut]=useState("");const[loading,setLoading]=useState(false);
-  const run=async()=>{
-    if(!txt.trim()||!from||!to){alert("Please complete all fields.");return;}setLoading(true);setOut("");
-    const sys=VOICE+`\n\nYou are a cross-jurisdictional legal specialist. Translate legal concepts between ${from} and ${to}.\n\nCONCEPT IDENTIFICATION:\nIdentify the key legal concepts present in the text.\n\nANALYSIS UNDER ${from.toUpperCase()}:\nExplain how each concept operates under ${from} with relevant statutes or cases.\n\nEQUIVALENT UNDER ${to.toUpperCase()}:\nIdentify the closest equivalent under ${to} and how it operates.\n\nKEY DIFFERENCES:\nExplain specifically how treatment differs between the two systems.\n\nPRACTICAL IMPLICATIONS:\nExplain what a lawyer or party operating across both systems needs to know.\n\nRISK AREAS:\nIdentify where assuming equivalence could lead to a damaging outcome.\n\nDISCLAIMER: This analysis is generated by Verdict AI for informational purposes and does not constitute legal advice.`;
-    try{await groqStream(sys,`Translate from ${from} to ${to}:\n\n${txt}`,s=>setOut(s));}
-    catch(e){setOut("Error: "+e.message);}
-    setLoading(false);
-  };
-  return React.createElement("div",{className:"fade"},
-    React.createElement(Hdr,{title:"Jurisdiction Translator",desc:"Translate legal concepts between different legal systems worldwide.",isNew:true,t}),
-    React.createElement(Two,{
-      l:React.createElement(React.Fragment,null,
-        React.createElement("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}},
-          React.createElement("div",null,React.createElement(Lbl,{t},"From"),React.createElement(Sel,{val:from,set:setFrom,opts:JURISDICTIONS,ph:"Source...",t})),
-          React.createElement("div",null,React.createElement(Lbl,{t},"To"),React.createElement(Sel,{val:to,set:setTo,opts:JURISDICTIONS,ph:"Target...",t}))
-        ),
-        React.createElement("div",{style:{marginBottom:16}},React.createElement(Lbl,{t},"Legal Text or Concept"),React.createElement(Inp,{val:txt,set:setTxt,ph:"Paste the legal document or describe the concept to translate...",rows:11,t})),
-        React.createElement(Btn,{full:true,onClick:run,disabled:loading||!txt.trim()||!from||!to},loading?"Translating...":"Translate Jurisdiction")
-      ),
-      r:React.createElement(React.Fragment,null,React.createElement(Lbl,{t},"Translation Analysis"),React.createElement(Out,{text:out,loading,ph:"Select two jurisdictions and add your text.",t}),React.createElement(CopyBtn,{text:out}))
-    })
-  );
-}
-
-function VaultPage({docs,t}){
-  const[q,setQ]=useState("");const[out,setOut]=useState("");const[loading,setLoading]=useState(false);const[view,setView]=useState(null);
-  const search=async()=>{
-    if(!docs.length){alert("Your vault is empty. Analyze a document first.");return;}if(!q.trim())return;
-    setLoading(true);setOut("");
-    const sys=VOICE+` Conduct a semantic search of a document vault. Identify which documents are most relevant to the query and explain specifically why. Rank by relevance with a confidence level for each.`;
-    try{await groqStream(sys,`Query: "${q}"\n\nDocuments:\n${docs.map((d,i)=>`[${i+1}] ${d.name}: ${d.content}`).join("\n")}`,s=>setOut(s));}
-    catch(e){setOut("Error: "+e.message);}
-    setLoading(false);
-  };
-  if(view)return React.createElement("div",{className:"fade"},
-    React.createElement(Btn,{variant:"ghost",sm:true,onClick:()=>setView(null)},"Back to Vault"),
-    React.createElement("div",{style:{height:20}}),
-    React.createElement("h2",{style:{fontFamily:"'Playfair Display',serif",fontSize:20,marginBottom:4,color:t.text}},view.name),
-    React.createElement("div",{style:{fontSize:12,color:t.muted,marginBottom:20}},view.date),
-    view.analysis&&React.createElement(React.Fragment,null,React.createElement(Lbl,{t},"AI Analysis"),React.createElement(Out,{text:view.analysis,loading:false,t}),React.createElement(CopyBtn,{text:view.analysis}))
-  );
-  return React.createElement("div",{className:"fade"},
-    React.createElement(Hdr,{title:"Document Vault",desc:"Every document you analyze is saved here automatically. Use AI semantic search to locate anything instantly.",t}),
-    React.createElement("div",{style:{display:"flex",gap:10,marginBottom:24}},
-      React.createElement(Inp,{val:q,set:setQ,ph:"Search using natural language...",t,style:{flex:1}}),
-      React.createElement(Btn,{onClick:search,disabled:loading||!q.trim()},loading?"Searching...":"Search")
-    ),
-    out&&React.createElement("div",{style:{marginBottom:22}},React.createElement(Lbl,{t},"Search Results"),React.createElement(Out,{text:out,loading,t})),
-    !docs.length
-      ?React.createElement("div",{style:{textAlign:"center",padding:"60px 20px",color:t.muted}},React.createElement("div",{style:{fontSize:42,marginBottom:12}},"🗄️"),React.createElement("div",{style:{fontFamily:"'Playfair Display',serif",fontSize:17,marginBottom:7,color:t.dim}},"Your vault is empty"),React.createElement("div",{style:{fontSize:13,lineHeight:1.6}},"Documents you analyze will be saved here automatically."))
-      :React.createElement(React.Fragment,null,
-          React.createElement("div",{style:{fontSize:12,color:t.muted,marginBottom:12}},docs.length," document"+(docs.length!==1?"s":"")+" saved"),
-          docs.map((d,i)=>React.createElement("div",{key:i,style:{background:t.card,border:`1px solid ${t.border}`,borderRadius:9,padding:"13px 18px",marginBottom:8,display:"flex",alignItems:"center",gap:14}},
-            React.createElement("span",{style:{fontSize:22}},"📄"),
-            React.createElement("div",{style:{flex:1}},React.createElement("div",{style:{fontWeight:600,fontSize:14,color:t.text}},d.name),React.createElement("div",{style:{fontSize:11,color:t.muted,marginTop:2}},d.date)),
-            React.createElement(Btn,{variant:"ghost",sm:true,onClick:()=>setView(d)},"View")
-          ))
-        )
-  );
-}
-
-function CasesPage({t}){
-  const[cases,setCases]=useState(()=>{try{return JSON.parse(localStorage.getItem("vc")||"[]");}catch{return[];}});
-  const[showNew,setShowNew]=useState(false);const[name,setName]=useState("");const[desc,setDesc]=useState("");
-  const save=c=>{setCases(c);localStorage.setItem("vc",JSON.stringify(c));};
-  const add=()=>{if(!name.trim())return;save([{id:Date.now(),name,desc,status:"active",date:new Date().toLocaleDateString()},...cases]);setName("");setDesc("");setShowNew(false);};
-  return React.createElement("div",{className:"fade"},
-    React.createElement(Hdr,{title:"Case Workspaces",desc:"Organise all your work by case matter. Keep documents, notes, and analyses together.",t}),
-    React.createElement("div",{style:{display:"flex",justifyContent:"flex-end",marginBottom:18}},React.createElement(Btn,{onClick:()=>setShowNew(p=>!p)},"New Case")),
-    showNew&&React.createElement("div",{style:{background:"rgba(200,164,94,0.07)",border:"1px solid rgba(200,164,94,0.2)",borderRadius:10,padding:20,marginBottom:20}},
-      React.createElement("div",{style:{marginBottom:12}},React.createElement(Lbl,{t},"Case Name"),React.createElement(Inp,{val:name,set:setName,ph:"e.g. Adeyemi v. Lagos State Government [2026]",t})),
-      React.createElement("div",{style:{marginBottom:16}},React.createElement(Lbl,{t},"Description"),React.createElement(Inp,{val:desc,set:setDesc,ph:"Brief description of the matter...",rows:2,t})),
-      React.createElement("div",{style:{display:"flex",gap:8}},React.createElement(Btn,{onClick:add},"Create Workspace"),React.createElement(Btn,{variant:"ghost",onClick:()=>setShowNew(false)},"Cancel"))
-    ),
-    !cases.length
-      ?React.createElement("div",{style:{textAlign:"center",padding:"60px 20px",color:t.muted}},React.createElement("div",{style:{fontSize:42,marginBottom:12}},"📁"),React.createElement("div",{style:{fontFamily:"'Playfair Display',serif",fontSize:17,marginBottom:7,color:t.dim}},"No workspaces yet"),React.createElement("div",{style:{fontSize:13,lineHeight:1.6}},"Create a workspace to organise your case matters."))
-      :React.createElement("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}},
-          cases.map(c=>React.createElement("div",{key:c.id,style:{background:t.card,border:`1px solid ${t.border}`,borderRadius:10,padding:18}},
-            React.createElement("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}},
-              React.createElement("div",null,React.createElement("div",{style:{fontFamily:"'Playfair Display',serif",fontSize:14,fontWeight:600,color:t.text}},c.name),React.createElement("div",{style:{fontSize:11,color:t.muted,marginTop:2}},c.date)),
-              React.createElement("div",{style:{display:"flex",gap:7,alignItems:"center"}},
-                React.createElement("select",{value:c.status,onChange:e=>save(cases.map(x=>x.id===c.id?{...x,status:e.target.value}:x)),style:{background:t.input,border:`1px solid ${t.border}`,borderRadius:6,color:c.status==="active"?"#2ECC8A":c.status==="pending"?"#F0A500":t.muted,fontSize:11,padding:"4px 8px",fontFamily:"inherit",outline:"none"}},
-                  React.createElement("option",{value:"active"},"Active"),React.createElement("option",{value:"pending"},"Pending"),React.createElement("option",{value:"closed"},"Closed")
-                ),
-                React.createElement("button",{onClick:()=>save(cases.filter(x=>x.id!==c.id)),style:{background:"rgba(224,82,82,0.1)",border:"1px solid rgba(224,82,82,0.2)",borderRadius:6,color:"#E05252",cursor:"pointer",padding:"4px 10px",fontSize:12}},"Remove")
-              )
-            ),
-            c.desc&&React.createElement("div",{style:{fontSize:12.5,color:t.dim,lineHeight:1.55,marginTop:6}},c.desc)
-          ))
-        )
-  );
-}
-
-// ── App Shell ─────────────────────────────────────────────────────────────────
-function App(){
-  const[page,setPage]=useState("dashboard");
-  const[dark,setDark]=useState(true);
-  const[sideOpen,setSideOpen]=useState(false);
-  const[docs,setDocs]=useState(()=>{try{return JSON.parse(localStorage.getItem("vd")||"[]");}catch{return[];}});
-  const addDoc=d=>{const u=[d,...docs];setDocs(u);localStorage.setItem("vd",JSON.stringify(u));};
-  const t=theme(dark);
-  const go=id=>{setPage(id);setSideOpen(false);};
-
-  const renderPage=()=>{
-    if(AI_PAGES[page])return React.createElement(AIPage,{cfg:AI_PAGES[page],t});
-    switch(page){
-      case"dashboard":return React.createElement(Dashboard,{go,t,docCount:docs.length});
-      case"reader":return React.createElement(ReaderPage,{onSave:addDoc,t});
-      case"qa":return React.createElement(QAPage,{t});
-      case"draft":return React.createElement(DraftPage,{t});
-      case"jurisdiction":return React.createElement(JurisdictionPage,{t});
-      case"nigeriancases":return React.createElement(NigerianCasesPage,{t});
-      case"primsol":return React.createElement(PrimsolPage,{t});
-      case"vault":return React.createElement(VaultPage,{docs,t});
-      case"cases":return React.createElement(CasesPage,{t});
-      default:return React.createElement(Dashboard,{go,t,docCount:docs.length});
+  const renderPage = () => {
+    if (AI_PAGES[page]) return React.createElement(AIPage, {cfg:AI_PAGES[page], t});
+    switch(page) {
+      case 'dashboard': return React.createElement(Dashboard, {go, t, docCount:docs.length});
+      case 'reader': return React.createElement(ReaderPage, {onSave:addDoc, t});
+      case 'qa': return React.createElement(QAPage, {t});
+      case 'draft': return React.createElement(DraftPage, {t});
+      case 'jurisdiction': return React.createElement(JurisdictionPage, {t});
+      case 'nigeriancases': return React.createElement(NigerianCasesPage, {t});
+      case 'primsol': return React.createElement(PrimsolPage, {t});
+      case 'vault': return React.createElement(VaultPage, {docs, t});
+      case 'cases': return React.createElement(CasesPage, {t});
+      default: return React.createElement(Dashboard, {go, t, docCount:docs.length});
     }
   };
 
-  const pageTitle=AI_PAGES[page]?.title||{dashboard:"Dashboard",reader:"Document Analysis",qa:"Legal Q&A",draft:"Draft Documents",jurisdiction:"Jurisdiction Translator",nigeriancases:"Nigerian Case Law",primsol:"PrimsCol Database",vault:"Document Vault",cases:"Case Workspaces"}[page]||"Verdict AI";
+  const pageTitle = AI_PAGES[page]?.title || {dashboard:'Dashboard',reader:'Document Analysis',qa:'Legal Q&A',draft:'Draft Documents',jurisdiction:'Jurisdiction Translator',nigeriancases:'Nigerian Case Law',primsol:'PrimsCol Database',vault:'Document Vault',cases:'Case Workspaces'}[page] || 'Verdict AI';
 
-  return React.createElement("div",{style:{display:"flex",height:"100vh",overflow:"hidden",background:t.bg,color:t.text,fontFamily:"'DM Sans',sans-serif",transition:"background 0.3s,color 0.3s",position:"relative"}},
-    sideOpen&&React.createElement("div",{onClick:()=>setSideOpen(false),style:{position:"fixed",inset:0,background:"rgba(0,0,0,0.55)",zIndex:99}}),
+  return React.createElement(SessionProvider, null,
+    React.createElement('div', {style:{display:'flex',height:'100vh',overflow:'hidden',background:t.bg,color:t.text,fontFamily:"'DM Sans',sans-serif",transition:'background 0.3s,color 0.3s',position:'relative'}},
+      React.createElement('style', null, `
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@400;500;600&display=swap');
+        @keyframes vPulse{0%,80%,100%{transform:scale(0.75);opacity:0.4}40%{transform:scale(1.2);opacity:1}}
+        @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+        .fade{animation:fadeIn 0.3s ease forwards}
+        *{box-sizing:border-box}
+        ::-webkit-scrollbar{width:5px}
+        ::-webkit-scrollbar-thumb{background:rgba(200,164,94,0.25);border-radius:10px}
+        select option{background:#0c1a2e;color:#F0EDE6}
+        @media(max-width:768px){.two-col{grid-template-columns:1fr!important}.stat-grid{grid-template-columns:1fr 1fr!important}.feat-grid{grid-template-columns:1fr 1fr!important}}
+        @media(max-width:480px){.feat-grid{grid-template-columns:1fr!important}}
+      `),
 
-    // SIDEBAR
-    React.createElement("div",{style:{width:245,background:t.card,borderRight:`1px solid ${t.border}`,display:"flex",flexDirection:"column",flexShrink:0,overflowY:"auto",position:"fixed",top:0,bottom:0,left:0,zIndex:100,transform:sideOpen?"translateX(0)":"translateX(-100%)",transition:"transform 0.25s ease, background 0.3s"}},
-      React.createElement("div",{style:{padding:"20px 18px 16px",borderBottom:`1px solid ${t.border}`,display:"flex",alignItems:"center",justifyContent:"space-between"}},
-        React.createElement("div",{style:{display:"flex",alignItems:"center",gap:10}},
-          React.createElement("div",{style:{width:34,height:34,background:`linear-gradient(135deg,${GOLD},${GOLD2})`,borderRadius:9,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Playfair Display',serif",fontWeight:700,fontSize:17,color:"#0D1B2E",boxShadow:"0 4px 14px rgba(200,164,94,0.3)"}},"V"),
-          React.createElement("span",{style:{fontFamily:"'Playfair Display',serif",fontSize:19,fontWeight:700,color:t.text}},"Verdict",React.createElement("span",{style:{color:GOLD}},"AI"))
-        ),
-        React.createElement("button",{onClick:()=>setSideOpen(false),style:{background:"none",border:"none",color:t.muted,cursor:"pointer",fontSize:22,padding:4,lineHeight:1}},"×")
-      ),
-      React.createElement("nav",{style:{flex:1,padding:"10px 8px"}},
-        NAV.map(s=>React.createElement("div",{key:s.sec},
-          React.createElement("div",{style:{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:"1.5px",color:t.muted,padding:"10px 10px 4px"}},s.sec),
-          s.items.map(item=>React.createElement("button",{key:item.id,onClick:()=>go(item.id),
-            style:{display:"flex",alignItems:"center",gap:9,width:"100%",padding:"9px 10px",borderRadius:7,border:page===item.id?`1px solid rgba(200,164,94,0.22)`:"1px solid transparent",background:page===item.id?"rgba(200,164,94,0.11)":"none",color:page===item.id?GOLD:t.dim,fontSize:13,fontWeight:500,cursor:"pointer",fontFamily:"inherit",marginBottom:1,textAlign:"left",transition:"all 0.12s"}},
-            React.createElement("span",{style:{fontSize:14}},item.icon),item.label
-          ))
-        ))
-      ),
-      React.createElement("div",{style:{padding:"10px 8px",borderTop:`1px solid ${t.border}`}},
-        React.createElement("div",{style:{display:"flex",alignItems:"center",gap:8,padding:"8px 10px"}},
-          React.createElement("span",null,"☀️"),
-          React.createElement("div",{onClick:()=>setDark(p=>!p),style:{width:42,height:23,background:dark?"rgba(200,164,94,0.18)":"rgba(0,0,0,0.1)",border:`1px solid ${dark?"rgba(200,164,94,0.3)":t.border}`,borderRadius:100,position:"relative",cursor:"pointer",transition:"all 0.3s"}},
-            React.createElement("div",{style:{position:"absolute",top:2,left:dark?19:2,width:17,height:17,background:GOLD,borderRadius:"50%",transition:"left 0.3s"}})
+      // Overlay
+      sideOpen && React.createElement('div', {onClick:()=>setSideOpen(false), style:{position:'fixed',inset:0,background:'rgba(0,0,0,0.55)',zIndex:99}}),
+
+      // SIDEBAR (Fix #8: mobile-friendly)
+      React.createElement('div', {className:'sidebar', style:{width:245,background:t.card,borderRight:`1px solid ${t.border}`,display:'flex',flexDirection:'column',flexShrink:0,overflowY:'auto',position:'fixed',top:0,bottom:0,left:0,zIndex:100,transform:sideOpen?'translateX(0)':'translateX(-100%)',transition:'transform 0.25s ease, background 0.3s'}},
+        React.createElement('div', {style:{padding:'20px 18px 16px',borderBottom:`1px solid ${t.border}`,display:'flex',alignItems:'center',justifyContent:'space-between'}},
+          React.createElement('div', {style:{display:'flex',alignItems:'center',gap:10}},
+            React.createElement('div', {style:{width:34,height:34,background:`linear-gradient(135deg,${GOLD},${GOLD2})`,borderRadius:9,display:'flex',alignItems:'center',justifyContent:'center',fontFamily:"'Playfair Display',serif",fontWeight:700,fontSize:17,color:'#0D1B2E',boxShadow:'0 4px 14px rgba(200,164,94,0.3)'}}, 'V'),
+            React.createElement('span', {style:{fontFamily:"'Playfair Display',serif",fontSize:19,fontWeight:700,color:t.text}}, 'Verdict', React.createElement('span', {style:{color:GOLD}}, 'AI'))
           ),
-          React.createElement("span",null,"🌙"),
-          React.createElement("span",{style:{fontSize:11,color:t.muted}},dark?"Dark mode":"Light mode")
+          React.createElement('button', {onClick:()=>setSideOpen(false), style:{background:'none',border:'none',color:t.muted,cursor:'pointer',fontSize:22,padding:4,lineHeight:1}}, '×')
+        ),
+        React.createElement('nav', {style:{flex:1,padding:'10px 8px'}},
+          NAV.map(s => React.createElement('div', {key:s.sec},
+            React.createElement('div', {style:{fontSize:9,fontWeight:700,textTransform:'uppercase',letterSpacing:'1.5px',color:t.muted,padding:'10px 10px 4px'}}, s.sec),
+            s.items.map(item => React.createElement('button', {key:item.id, onClick:()=>go(item.id),
+              style:{display:'flex',alignItems:'center',gap:9,width:'100%',padding:'9px 10px',borderRadius:7,border:page===item.id?'1px solid rgba(200,164,94,0.22)':'1px solid transparent',background:page===item.id?'rgba(200,164,94,0.11)':'none',color:page===item.id?GOLD:t.dim,fontSize:13,fontWeight:500,cursor:'pointer',fontFamily:'inherit',marginBottom:1,textAlign:'left',transition:'all 0.12s'}},
+              React.createElement('span', {style:{fontSize:14}}, item.icon), item.label
+            ))
+          ))
+        ),
+        React.createElement('div', {style:{padding:'10px 8px',borderTop:`1px solid ${t.border}`}},
+          React.createElement('div', {style:{display:'flex',alignItems:'center',gap:8,padding:'8px 10px'}},
+            React.createElement('span', null, '☀️'),
+            React.createElement('div', {onClick:()=>setDark(p=>!p), style:{width:42,height:23,background:dark?'rgba(200,164,94,0.18)':'rgba(0,0,0,0.1)',border:`1px solid ${dark?'rgba(200,164,94,0.3)':t.border}`,borderRadius:100,position:'relative',cursor:'pointer',transition:'all 0.3s'}},
+              React.createElement('div', {style:{position:'absolute',top:2,left:dark?19:2,width:17,height:17,background:GOLD,borderRadius:'50%',transition:'left 0.3s'}})
+            ),
+            React.createElement('span', null, '🌙'),
+            React.createElement('span', {style:{fontSize:11,color:t.muted}}, dark ? 'Dark mode' : 'Light mode')
+          )
+        )
+      ),
+
+      // MAIN
+      React.createElement('div', {style:{flex:1,display:'flex',flexDirection:'column',overflow:'hidden',width:'100%'}},
+        React.createElement('div', {style:{height:56,background:t.card,borderBottom:`1px solid ${t.border}`,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 18px',flexShrink:0,transition:'background 0.3s'}},
+          React.createElement('div', {style:{display:'flex',alignItems:'center',gap:14}},
+            React.createElement('button', {onClick:()=>setSideOpen(true), style:{background:'none',border:'none',cursor:'pointer',fontSize:20,color:t.dim,padding:4,lineHeight:1}}, '☰'),
+            React.createElement('h2', {style:{fontFamily:"'Playfair Display',serif",fontSize:17,fontWeight:600,margin:0,color:t.text}}, pageTitle)
+          ),
+          React.createElement('span', {className:'topbar-subtitle', style:{fontSize:11,color:t.muted,fontStyle:'italic',letterSpacing:'0.3px'}}, 'From documents to decisions.')
+        ),
+        React.createElement('div', {style:{flex:1,overflowY:'auto',padding:'24px 20px'}},
+          renderPage()
         )
       )
-    ),
-
-    // MAIN
-    React.createElement("div",{style:{flex:1,display:"flex",flexDirection:"column",overflow:"hidden",width:"100%"}},
-      React.createElement("div",{style:{height:56,background:t.card,borderBottom:`1px solid ${t.border}`,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 18px",flexShrink:0,transition:"background 0.3s"}},
-        React.createElement("div",{style:{display:"flex",alignItems:"center",gap:14}},
-          React.createElement("button",{onClick:()=>setSideOpen(true),style:{background:"none",border:"none",cursor:"pointer",fontSize:20,color:t.dim,padding:4,lineHeight:1}},"☰"),
-          React.createElement("h2",{style:{fontFamily:"'Playfair Display',serif",fontSize:17,fontWeight:600,margin:0,color:t.text}},pageTitle)
-        ),
-        React.createElement("span",{style:{fontSize:11,color:t.muted,fontStyle:"italic",letterSpacing:"0.3px"}},"From documents to decisions.")
-      ),
-      React.createElement("div",{style:{flex:1,overflowY:"auto",padding:"24px 20px"}},renderPage())
     )
   );
 }
 
-ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(App));
+ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
 </script>
 </body>
 </html>
