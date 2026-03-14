@@ -731,7 +731,7 @@ function VaultPage({docs,onDelete,onRefresh,t}){
     React.createElement(Btn,{variant:'ghost',sm:true,onClick:()=>setView(null)},'Back to Vault'),
     React.createElement('div',{style:{height:18}}),
     React.createElement('h2',{style:{fontFamily:"'Playfair Display',serif",fontSize:20,marginBottom:4,color:t.text}},view.name),
-    React.createElement('div',{style:{fontSize:12,color:t.muted,marginBottom:18}},new Date(view.created_at).toLocaleDateString()},
+    React.createElement('div',{style:{fontSize:12,color:t.muted,marginBottom:18}},new Date(view.created_at).toLocaleDateString())},
     view.analysis&&React.createElement(React.Fragment,null,React.createElement(Lbl,{t},'AI Analysis'),React.createElement(Out,{text:view.analysis,loading:false,t}),React.createElement(ExportBtns,{text:view.analysis,title:'Vault-Document'}))
   );
 
