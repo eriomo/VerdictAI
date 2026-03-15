@@ -1268,39 +1268,68 @@ function AppContent(){
   const [dataLoading,setDataLoading]=useState(false);
   const t=theme(dark);
 
-  // Load cloud data when user logs in
+  // Load cloud data when user logs in — with session cache to prevent flash
   useEffect(()=>{
-    if(user){loadAll();}
+    if(user){
+      // Load from cache immediately so UI shows instantly
+      try {
+        const cachedDocs = sessionStorage.getItem('vd_docs');
+        const cachedCases = sessionStorage.getItem('vd_cases');
+        const cachedProfile = sessionStorage.getItem('vd_profile');
+        if(cachedDocs) setDocs(JSON.parse(cachedDocs));
+        if(cachedCases) setCases(JSON.parse(cachedCases));
+        if(cachedProfile) setProfile(JSON.parse(cachedProfile));
+      } catch(e) {}
+      // Then refresh from server in background
+      loadAll(true);
+    }
   },[user]);
 
-  const loadAll=async()=>{
-    setDataLoading(true);
+  const loadAll=async(silent=false)=>{
+    if(!silent) setDataLoading(true);
     try{
       const [d,c,p]=await Promise.all([
         api('/api/documents').catch(()=>[]),
         api('/api/cases').catch(()=>[]),
         api('/api/profile').catch(()=>null),
       ]);
-      setDocs(Array.isArray(d)?d:[]);
-      setCases(Array.isArray(c)?c:[]);
+      const docs = Array.isArray(d)?d:[];
+      const cases = Array.isArray(c)?c:[];
+      setDocs(docs);
+      setCases(cases);
       setProfile(p);
+      // Cache for instant reload
+      try {
+        sessionStorage.setItem('vd_docs', JSON.stringify(docs));
+        sessionStorage.setItem('vd_cases', JSON.stringify(cases));
+        sessionStorage.setItem('vd_profile', JSON.stringify(p));
+      } catch(e) {}
     }catch(e){console.log('Load error:',e.message);}
-    setDataLoading(false);
+    if(!silent) setDataLoading(false);
   };
 
   const saveDoc=async doc=>{
-    try{const d=await api('/api/documents',{method:'POST',body:doc});setDocs(prev=>[d,...prev]);}
+    try{
+      const d=await api('/api/documents',{method:'POST',body:doc});
+      const updated=[d,...docs];
+      setDocs(updated);
+      try{sessionStorage.setItem('vd_docs',JSON.stringify(updated));}catch(e){}
+    }
     catch(e){console.log('Save doc error:',e.message);}
   };
 
   const deleteDoc=async id=>{
     await api(`/api/documents/${id}`,{method:'DELETE'});
-    setDocs(prev=>prev.filter(d=>d.id!==id));
+    const updated=docs.filter(d=>d.id!==id);
+    setDocs(updated);
+    try{sessionStorage.setItem('vd_docs',JSON.stringify(updated));}catch(e){}
   };
 
   const addCase=async caseData=>{
     const c=await api('/api/cases',{method:'POST',body:caseData});
-    setCases(prev=>[c,...prev]);
+    const updated=[c,...cases];
+    setCases(updated);
+    try{sessionStorage.setItem('vd_cases',JSON.stringify(updated));}catch(e){}
   };
 
   const updateCase=async(id,updates)=>{
@@ -1356,6 +1385,7 @@ function AppContent(){
         @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@400;500;600&display=swap');
         @keyframes vPulse{0%,80%,100%{transform:scale(0.75);opacity:0.4}40%{transform:scale(1.2);opacity:1}}
         @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes spin{to{transform:rotate(360deg)}}
         .fade{animation:fadeIn 0.3s ease forwards}
         *{box-sizing:border-box}
         ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:rgba(200,164,94,0.25);border-radius:10px}
@@ -1421,7 +1451,10 @@ function AppContent(){
           React.createElement('span',{style:{fontSize:11,color:t.muted,fontStyle:'italic'}},'From documents to decisions.')
         ),
         React.createElement('div',{style:{flex:1,overflowY:'auto',padding:'24px 20px',minHeight:0,WebkitOverflowScrolling:'touch'}},
-          dataLoading?React.createElement('div',{style:{display:'flex',alignItems:'center',justifyContent:'center',height:200,color:t.muted,fontSize:13}},'Loading your data...'):renderPage()
+          (dataLoading && docs.length===0 && cases.length===0 && !profile)?React.createElement('div',{style:{display:'flex',alignItems:'center',justifyContent:'center',height:200,color:t.muted,fontSize:13,gap:10}},
+          React.createElement('div',{style:{width:20,height:20,border:`2px solid ${GOLD}`,borderTopColor:'transparent',borderRadius:'50%',animation:'spin 0.8s linear infinite'}}),
+          'Loading your data...'
+        ):renderPage()
         )
       )
     )
