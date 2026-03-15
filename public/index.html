@@ -17,38 +17,39 @@
 <script src="https://unpkg.com/docx@8.2.2/build/index.umd.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
-html,body{width:100%;height:100%;overflow:hidden;}
+html,body{width:100%;height:100%;}
 body{font-family:'DM Sans',sans-serif;background:#07101c;color:#F0EDE6;}
-#root{width:100%;height:100%;display:flex;flex-direction:column;overflow:hidden;}
-
-/* Main scroll container - captures ALL scroll events */
-.page-content-scroll{
-  flex:1;
-  overflow-y:auto;
-  overflow-x:hidden;
-  -webkit-overflow-scrolling:touch;
-  overscroll-behavior-y:contain;
-  padding:24px 20px;
-  outline:none;
-  /* Force scroll to work on mouse wheel */
-  scroll-behavior:smooth;
-}
-
-/* Make sure nothing above intercepts scroll */
-.page-content-scroll:hover{
-  overflow-y:auto;
-}
-
+#root{width:100%;height:100%;}
 ::-webkit-scrollbar{width:6px}
 ::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:rgba(200,164,94,0.3);border-radius:10px}
-::-webkit-scrollbar-thumb:hover{background:rgba(200,164,94,0.5)}
-
+::-webkit-scrollbar-thumb{background:rgba(200,164,94,0.35);border-radius:10px}
+::-webkit-scrollbar-thumb:hover{background:rgba(200,164,94,0.55)}
 @keyframes vPulse{0%,80%,100%{transform:scale(0.75);opacity:0.4}40%{transform:scale(1.2);opacity:1}}
 @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 @keyframes spin{to{transform:rotate(360deg)}}
 .fade{animation:fadeIn 0.3s ease forwards}
 select option{background:#0c1a2e;color:#F0EDE6}
+
+/* SCROLL FIX — the content area must own vertical scroll exclusively */
+.page-content-scroll{
+  flex:1;
+  min-height:0;
+  overflow-y:scroll;
+  overflow-x:hidden;
+  -webkit-overflow-scrolling:touch;
+  overscroll-behavior-y:contain;
+  touch-action:pan-y;
+  padding:24px 20px;
+  outline:none;
+  position:relative;
+}
+
+/* Prevent body from intercepting scroll on mobile */
+body.has-scroll-area{
+  overflow:hidden;
+  position:fixed;
+  width:100%;
+}
 
 @media(max-width:768px){
   .two-col{grid-template-columns:1fr!important}
@@ -1278,7 +1279,15 @@ function AppContent(){
   const {user,loading:authLoading}=useAuth();
   const [page,setPage]=useState('dashboard');
   const [showAuth,setShowAuth]=useState(false);
-  const [dark,setDark]=useState(true);
+  // Theme: read saved preference, fall back to system preference
+  const [dark,setDark]=useState(()=>{
+    try {
+      const saved = localStorage.getItem('vd_theme');
+      if (saved !== null) return saved === 'dark';
+    } catch(e) {}
+    // Fall back to system preference
+    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  });
   const [sideOpen,setSideOpen]=useState(false);
   const [docs,setDocs]=useState([]);
   const [cases,setCases]=useState([]);
@@ -1291,9 +1300,21 @@ function AppContent(){
     const ping = async () => {
       try { await fetch('/api/health'); } catch(e) {}
     };
-    ping(); // ping immediately on load
-    const interval = setInterval(ping, 10 * 60 * 1000); // every 10 minutes
+    ping();
+    const interval = setInterval(ping, 10 * 60 * 1000);
     return () => clearInterval(interval);
+  }, []);
+
+  // Listen for system theme changes
+  useEffect(()=>{
+    try {
+      const saved = localStorage.getItem('vd_theme');
+      if (saved !== null) return; // user has a saved preference, don't override
+      const mq = window.matchMedia('(prefers-color-scheme: dark)');
+      const handler = (e) => setDark(e.matches);
+      mq.addEventListener('change', handler);
+      return () => mq.removeEventListener('change', handler);
+    } catch(e) {}
   }, []);
 
   // Load cloud data when user logs in — with session cache to prevent flash
@@ -1408,7 +1429,7 @@ function AppContent(){
   const pageTitle=AI_PAGES[page]?.title||{dashboard:'Dashboard',reader:'Document Analysis',qa:'Legal Q&A',draft:'Draft Documents',jurisdiction:'Jurisdiction Translator',nigeriancases:'Nigerian Case Law',primsol:'PrimsCol Database',vault:'Document Vault',cases:'Case Workspaces',profile:'My Profile',upgrade:'Upgrade Plan'}[page]||'Verdict AI';
 
   return React.createElement(SessionProvider,null,
-    React.createElement('div',{style:{display:'flex',flexDirection:'column',minHeight:'100vh',background:t.bg,color:t.text,fontFamily:"'DM Sans',sans-serif",transition:'background 0.3s,color 0.3s',position:'relative'}},
+    React.createElement('div',{style:{display:'flex',flexDirection:'column',height:'100vh',background:t.bg,color:t.text,fontFamily:"'DM Sans',sans-serif",transition:'background 0.3s,color 0.3s',position:'relative',overflow:'hidden'}},
       React.createElement('style',null,`
         @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@400;500;600&display=swap');
         @keyframes vPulse{0%,80%,100%{transform:scale(0.75);opacity:0.4}40%{transform:scale(1.2);opacity:1}}
@@ -1460,7 +1481,7 @@ function AppContent(){
           profile?.tier==='free'&&React.createElement('button',{onClick:()=>go('upgrade'),style:{display:'flex',alignItems:'center',justifyContent:'center',width:'100%',padding:'9px',marginBottom:8,borderRadius:7,background:`linear-gradient(135deg,${GOLD},${GOLD2})`,border:'none',color:'#0D1B2E',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}},'⚡ Upgrade to Solo'),
           React.createElement('div',{style:{display:'flex',alignItems:'center',gap:8,padding:'5px 10px'}},
             React.createElement('span',null,'☀️'),
-            React.createElement('div',{onClick:()=>setDark(p=>!p),style:{width:42,height:23,background:dark?'rgba(200,164,94,0.18)':'rgba(0,0,0,0.1)',border:`1px solid ${dark?'rgba(200,164,94,0.3)':t.border}`,borderRadius:100,position:'relative',cursor:'pointer',transition:'all 0.3s'}},
+            React.createElement('div',{onClick:()=>{setDark(p=>{const next=!p;try{localStorage.setItem('vd_theme',next?'dark':'light');}catch(e){}return next;});},style:{width:42,height:23,background:dark?'rgba(200,164,94,0.18)':'rgba(0,0,0,0.1)',border:`1px solid ${dark?'rgba(200,164,94,0.3)':t.border}`,borderRadius:100,position:'relative',cursor:'pointer',transition:'all 0.3s'}},
               React.createElement('div',{style:{position:'absolute',top:2,left:dark?19:2,width:17,height:17,background:GOLD,borderRadius:'50%',transition:'left 0.3s'}})
             ),
             React.createElement('span',null,'🌙'),
@@ -1470,7 +1491,7 @@ function AppContent(){
       ),
 
       // MAIN
-      React.createElement('div',{style:{flex:1,display:'flex',flexDirection:'column',width:'100%',overflow:'hidden',minHeight:0}},
+      React.createElement('div',{style:{flex:1,display:'flex',flexDirection:'column',width:'100%',overflow:'hidden',minHeight:0,height:0}},
         React.createElement('div',{style:{height:56,background:t.card,borderBottom:`1px solid ${t.border}`,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 18px',flexShrink:0,transition:'background 0.3s',position:'sticky',top:0,zIndex:50}},
           React.createElement('div',{style:{display:'flex',alignItems:'center',gap:14}},
             React.createElement('button',{onClick:()=>setSideOpen(true),style:{background:'none',border:'none',cursor:'pointer',fontSize:20,color:t.dim,padding:4,lineHeight:1,WebkitTransform:'translateZ(0)',transform:'translateZ(0)',display:'flex',alignItems:'center',justifyContent:'center',minWidth:32,minHeight:32}},'☰'),
