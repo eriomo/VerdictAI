@@ -1268,6 +1268,16 @@ function AppContent(){
   const [dataLoading,setDataLoading]=useState(false);
   const t=theme(dark);
 
+  // Keep-alive ping every 10 minutes to prevent Render spin-down
+  useEffect(()=>{
+    const ping = async () => {
+      try { await fetch('/api/health'); } catch(e) {}
+    };
+    ping(); // ping immediately on load
+    const interval = setInterval(ping, 10 * 60 * 1000); // every 10 minutes
+    return () => clearInterval(interval);
+  }, []);
+
   // Load cloud data when user logs in — with session cache to prevent flash
   useEffect(()=>{
     if(user){
