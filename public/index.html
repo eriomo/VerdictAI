@@ -25,27 +25,12 @@
 *{box-sizing:border-box;margin:0;padding:0;}
 html,body{width:100%;height:100%;}
 body{font-family:'DM Sans',sans-serif;background:#07101c;color:#F0EDE6;}
-#root{width:100%;height:100%;}
-::-webkit-scrollbar{width:6px}
-::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:rgba(200,164,94,0.35);border-radius:10px}
-::-webkit-scrollbar-thumb:hover{background:rgba(200,164,94,0.55)}
-@keyframes vPulse{0%,80%,100%{transform:scale(0.75);opacity:0.4}40%{transform:scale(1.2);opacity:1}}
-@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-@keyframes spin{to{transform:rotate(360deg)}}
-.fade{animation:fadeIn 0.3s ease forwards}
-select option{background:#0c1a2e;color:#F0EDE6}
+#root{width:100%;height:100%;display:flex;flex-direction:column;}
 
-/* SCROLL FIX */
-.scroll-wrapper{
-  flex:1;
-  position:relative;
-  min-height:0;
-  overflow:hidden;
-}
+/* SCROLL FIX — flex column scroll pattern */
 .page-content-scroll{
-  position:absolute;
-  top:0; left:0; right:0; bottom:0;
+  flex:1 1 0;
+  min-height:0;
   overflow-y:scroll;
   overflow-x:hidden;
   -webkit-overflow-scrolling:touch;
@@ -55,6 +40,15 @@ select option{background:#0c1a2e;color:#F0EDE6}
   outline:none;
 }
 
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(200,164,94,0.35);border-radius:10px}
+::-webkit-scrollbar-thumb:hover{background:rgba(200,164,94,0.55)}
+@keyframes vPulse{0%,80%,100%{transform:scale(0.75);opacity:0.4}40%{transform:scale(1.2);opacity:1}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+.fade{animation:fadeIn 0.3s ease forwards}
+select option{background:#0c1a2e;color:#F0EDE6}
 @media(max-width:768px){
   .two-col{grid-template-columns:1fr!important}
   .stat-grid{grid-template-columns:1fr 1fr!important}
@@ -1437,7 +1431,7 @@ function AppContent(){
   const pageTitle=AI_PAGES[page]?.title||{dashboard:'Dashboard',reader:'Document Analysis',qa:'Legal Q&A',draft:'Draft Documents',jurisdiction:'Jurisdiction Translator',nigeriancases:'Nigerian Case Law',primsol:'PrimsCol Database',vault:'Document Vault',cases:'Case Workspaces',profile:'My Profile',upgrade:'Upgrade Plan'}[page]||'Verdict AI';
 
   return React.createElement(SessionProvider,null,
-    React.createElement('div',{style:{display:'flex',flexDirection:'column',height:'100vh',background:t.bg,color:t.text,fontFamily:"'DM Sans',sans-serif",transition:'background 0.3s,color 0.3s',position:'relative',overflow:'hidden'}},
+    React.createElement('div',{style:{display:'flex',flexDirection:'column',height:'100vh',background:t.bg,color:t.text,fontFamily:"'DM Sans',sans-serif",transition:'background 0.3s,color 0.3s',overflow:'hidden'}},
       React.createElement('style',null,`
         @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@400;500;600&display=swap');
         @keyframes vPulse{0%,80%,100%{transform:scale(0.75);opacity:0.4}40%{transform:scale(1.2);opacity:1}}
@@ -1499,7 +1493,7 @@ function AppContent(){
       ),
 
       // MAIN
-      React.createElement('div',{style:{flex:1,display:'flex',flexDirection:'column',width:'100%',minHeight:0,overflow:'hidden'}},
+      React.createElement('div',{style:{flex:'1 1 0',display:'flex',flexDirection:'column',width:'100%',minHeight:0,overflow:'hidden'}},
         React.createElement('div',{style:{height:56,background:t.card,borderBottom:`1px solid ${t.border}`,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 18px',flexShrink:0,transition:'background 0.3s',position:'sticky',top:0,zIndex:50}},
           React.createElement('div',{style:{display:'flex',alignItems:'center',gap:14}},
             React.createElement('button',{onClick:()=>setSideOpen(true),style:{background:'none',border:'none',cursor:'pointer',fontSize:20,color:t.dim,padding:4,lineHeight:1,WebkitTransform:'translateZ(0)',transform:'translateZ(0)',display:'flex',alignItems:'center',justifyContent:'center',minWidth:32,minHeight:32}},'☰'),
@@ -1513,7 +1507,6 @@ function AppContent(){
           'Loading your data...'
         ):renderPage()
       )
-        )
       )
     )
   );
