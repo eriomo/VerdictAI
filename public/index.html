@@ -16,6 +16,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
 <script src="https://unpkg.com/docx@8.2.2/build/index.umd.js" defer></script>
+<script src="https://unpkg.com/mammoth@1.6.0/mammoth.browser.min.js" defer></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 html,body{width:100%;height:100%;}
@@ -109,6 +110,8 @@ async function stream(sys,user,cb,retries=0){
 // ── File extraction ───────────────────────────────────────────────────────────
 async function extractFile(file){
   const ext=file.name.split(".").pop().toLowerCase();
+
+  // PDF extraction using PDF.js
   if(ext==="pdf"){
     return new Promise((res,rej)=>{
       const r=new FileReader();
@@ -128,7 +131,55 @@ async function extractFile(file){
       r.readAsArrayBuffer(file);
     });
   }
-  return new Promise((res,rej)=>{const r=new FileReader();r.onload=e=>res(e.target.result);r.onerror=rej;r.readAsText(file);});
+
+  // DOCX extraction using mammoth.js
+  if(ext==="docx"||ext==="doc"){
+    return new Promise((res,rej)=>{
+      const r=new FileReader();
+      r.onload=async e=>{
+        try{
+          // Try mammoth first (works for .docx)
+          if(window.mammoth&&ext==="docx"){
+            const result=await mammoth.extractRawText({arrayBuffer:e.target.result});
+            if(result.value&&result.value.trim().length>20){
+              res(result.value.trim());
+              return;
+            }
+          }
+          // Fallback: try to extract text from the XML inside the DOCX ZIP
+          // DOCX files are ZIP archives containing word/document.xml
+          try{
+            const uint8=new Uint8Array(e.target.result);
+            const str=new TextDecoder("utf-8").decode(uint8);
+            // Extract text between XML tags
+            const xmlMatch=str.match(/word\/document\.xml[^<]*(<\?xml[^]*?<\/w:document>)/);
+            if(xmlMatch){
+              const xml=xmlMatch[1];
+              // Strip XML tags and clean up
+              const text=xml.replace(/<w:br[^>]*>/g,"\n").replace(/<w:p[\s>][^>]*>/g,"\n").replace(/<[^>]+>/g," ").replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"').replace(/&#x[0-9A-F]+;/gi,"").replace(/\s{3,}/g,"\n\n").trim();
+              if(text.length>20){res(text);return;}
+            }
+          }catch{}
+          // Last fallback: plain text read
+          const decoder=new TextDecoder("utf-8",{fatal:false});
+          const text=decoder.decode(e.target.result);
+          // Filter out binary garbage - keep only printable ASCII and common chars
+          const clean=text.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]/g,"").replace(/[^\x20-\x7e\n\r\t\u00A0-\uFFFF]/g,"").replace(/\s{4,}/g,"\n\n").trim();
+          if(clean.length>50)res(clean);
+          else rej(new Error("Could not extract readable text from this file. Please copy and paste the text directly."));
+        }catch(err){rej(err);}
+      };
+      r.readAsArrayBuffer(file);
+    });
+  }
+
+  // Plain text files
+  return new Promise((res,rej)=>{
+    const r=new FileReader();
+    r.onload=e=>res(e.target.result);
+    r.onerror=rej;
+    r.readAsText(file,"UTF-8");
+  });
 }
 
 // ── Exports ───────────────────────────────────────────────────────────────────
