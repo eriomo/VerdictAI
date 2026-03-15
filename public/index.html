@@ -14,6 +14,7 @@
 <script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://unpkg.com/docx@8.2.2/build/index.umd.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 html,body{width:100%;height:100%;}
@@ -52,6 +53,41 @@ const GOLD="#C8A45E",GOLD2="#D4B474";
 const SUPABASE_URL = "https://xlykbkfwgqhldxrwhwbp.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable__xQGhfqxD0qjoduO8JSkcg_YOrrSNBs";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+
+// ── Citation Warning Banner ────────────────────────────────────────────────
+function CitationWarning({text, t}) {
+  const [dismissed, setDismissed] = useState(false);
+  if (!text || dismissed) return null;
+  
+  // Check if response contains case-like citations
+  const hasCitations = /\b(v\.?\s+|vs\.?\s+|\[\d{4}\]|\(\d{4}\)|NWLR|LRN|FWLR|NLR|SC\.|CA\.|FCT)/.test(text);
+  if (!hasCitations) return null;
+
+  return React.createElement('div', {
+    style: {
+      background: 'rgba(240,165,0,0.08)',
+      border: '1px solid rgba(240,165,0,0.35)',
+      borderRadius: 8,
+      padding: '10px 14px',
+      marginTop: 12,
+      display: 'flex',
+      alignItems: 'flex-start',
+      gap: 10,
+      fontSize: 12.5,
+    }
+  },
+    React.createElement('span', {style:{fontSize:16,flexShrink:0}}, '⚠️'),
+    React.createElement('div', {style:{flex:1,color:'rgba(240,165,0,0.9)',lineHeight:1.6}},
+      React.createElement('strong', null, 'Citation Verification Required: '),
+      'This analysis contains case citations that have not been independently verified. Before relying on any case name, citation, or legal authority in court or in a document, verify it on PrimsCol or current Nigerian law reports.'
+    ),
+    React.createElement('button', {
+      onClick: () => setDismissed(true),
+      style: {background:'none',border:'none',color:'rgba(240,165,0,0.6)',cursor:'pointer',fontSize:16,flexShrink:0,padding:0,lineHeight:1}
+    }, '×')
+  );
+}
 
 // ── Auth Context ───────────────────────────────────────────────────────────────
 const AuthContext = createContext(null);
@@ -208,6 +244,102 @@ function exportPDF(text, filename='verdict-ai') {
   doc.save(`${filename}.pdf`);
 }
 
+async function exportDOCX(text, filename='verdict-ai') {
+  try {
+    const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, BorderStyle, Table, TableRow, TableCell, WidthType, ShadingType } = window.docx;
+    
+    const lines = text.split('\n');
+    const children = [];
+    
+    // Header paragraph
+    children.push(new Paragraph({
+      children: [
+        new TextRun({ text: 'VERDICT AI', bold: true, size: 28, color: 'C8A45E', font: 'Calibri' }),
+        new TextRun({ text: '   |   From documents to decisions.', size: 18, color: '888888', font: 'Calibri' }),
+      ],
+      spacing: { after: 200 },
+      border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: 'C8A45E' } },
+    }));
+
+    children.push(new Paragraph({ text: '', spacing: { after: 100 } }));
+
+    lines.forEach(line => {
+      const trimmed = line.trim();
+      if (!trimmed) {
+        children.push(new Paragraph({ text: '', spacing: { after: 80 } }));
+        return;
+      }
+      // Section headers - ALL CAPS ending with colon
+      if (/^[A-Z][A-Z\s]{3,}:/.test(trimmed)) {
+        children.push(new Paragraph({
+          children: [new TextRun({ text: trimmed, bold: true, size: 22, color: '0A1628', font: 'Calibri' })],
+          spacing: { before: 240, after: 80 },
+          border: { bottom: { style: BorderStyle.SINGLE, size: 3, color: 'E0DAD0' } },
+        }));
+      }
+      // Numbered items
+      else if (/^\d+\./.test(trimmed)) {
+        children.push(new Paragraph({
+          children: [new TextRun({ text: trimmed, size: 20, font: 'Calibri', color: '1A1A2E' })],
+          spacing: { after: 80 },
+          indent: { left: 360 },
+        }));
+      }
+      // CRITICAL/HIGH/MEDIUM/LOW labels
+      else if (/^(CRITICAL|HIGH|MEDIUM|LOW|URGENT)/.test(trimmed)) {
+        const color = trimmed.startsWith('CRITICAL') || trimmed.startsWith('URGENT') ? 'E05252' : 
+                      trimmed.startsWith('HIGH') ? 'E67E22' : 
+                      trimmed.startsWith('MEDIUM') ? 'F0A500' : '2ECC8A';
+        children.push(new Paragraph({
+          children: [new TextRun({ text: trimmed, bold: true, size: 20, color, font: 'Calibri' })],
+          spacing: { after: 80 },
+        }));
+      }
+      // Regular body text
+      else {
+        children.push(new Paragraph({
+          children: [new TextRun({ text: trimmed, size: 20, font: 'Calibri', color: '1A1A2E' })],
+          spacing: { after: 80 },
+        }));
+      }
+    });
+
+    // Footer
+    children.push(new Paragraph({ text: '', spacing: { before: 400 } }));
+    children.push(new Paragraph({
+      children: [new TextRun({ 
+        text: `Generated by Verdict AI — ${new Date().toLocaleDateString('en-NG', {weekday:'long',year:'numeric',month:'long',day:'numeric'})} — verdictai.onrender.com`,
+        size: 16, color: '888888', italics: true, font: 'Calibri'
+      })],
+      border: { top: { style: BorderStyle.SINGLE, size: 3, color: 'E0DAD0' } },
+      spacing: { before: 120 },
+    }));
+
+    const doc = new Document({
+      creator: 'Verdict AI',
+      title: filename,
+      description: 'Generated by Verdict AI — From documents to decisions.',
+      sections: [{ 
+        properties: {},
+        children 
+      }],
+    });
+
+    const blob = await Packer.toBlob(doc);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename + '.docx'; a.click();
+    URL.revokeObjectURL(url);
+  } catch(err) {
+    console.error('DOCX export error:', err);
+    // Fallback to basic doc
+    const blob = new Blob([text], {type:'application/msword'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename + '.doc'; a.click();
+  }
+}
+
 // ── Theme ──────────────────────────────────────────────────────────────────────
 function theme(dark){
   return{bg:dark?'#07101c':'#ede9e0',card:dark?'#0c1a2e':'#fdfaf5',card2:dark?'#101f35':'#f5f1e8',border:dark?'rgba(30,52,82,0.9)':'rgba(0,0,0,0.09)',text:dark?'#F0EDE6':'#0D1B2E',dim:dark?'rgba(240,237,230,0.6)':'rgba(13,27,46,0.65)',muted:dark?'rgba(240,237,230,0.32)':'rgba(13,27,46,0.35)',input:dark?'rgba(3,8,18,0.95)':'rgba(255,255,255,0.92)'};
@@ -304,6 +436,7 @@ function ExportBtns({text,title}){
   return React.createElement('div',{style:{display:'flex',gap:8,marginTop:12,flexWrap:'wrap'}},
     React.createElement(Btn,{variant:'ghost',sm:true,onClick:()=>navigator.clipboard.writeText(text)},'Copy'),
     React.createElement(Btn,{variant:'ghost',sm:true,onClick:()=>exportPDF(text,fn)},'Export PDF'),
+    React.createElement(Btn,{variant:'ghost',sm:true,onClick:()=>exportDOCX(text,fn)},'Export Word'),
     React.createElement(Btn,{variant:'ghost',sm:true,onClick:()=>{const b=new Blob([text],{type:'text/plain'});const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=fn+'.txt';a.click();}},'Save TXT')
   );
 }
@@ -402,7 +535,7 @@ function AIPage({cfg,t,onNavigate}){
 }
 
 // ── Auth Pages ─────────────────────────────────────────────────────────────────
-function AuthPage({t}){
+function AuthPage({t, onBack}){
   const {signIn,signUp}=useAuth();
   const [mode,setMode]=useState('login');
   const [email,setEmail]=useState('');
@@ -432,7 +565,8 @@ function AuthPage({t}){
       React.createElement('div',{style:{textAlign:'center',marginBottom:32}},
         React.createElement('div',{style:{width:52,height:52,background:`linear-gradient(135deg,${GOLD},${GOLD2})`,borderRadius:14,display:'inline-flex',alignItems:'center',justifyContent:'center',fontFamily:"'Playfair Display',serif",fontWeight:700,fontSize:26,color:'#0D1B2E',boxShadow:'0 6px 20px rgba(200,164,94,0.35)',marginBottom:12}},'V'),
         React.createElement('div',{style:{fontFamily:"'Playfair Display',serif",fontSize:26,fontWeight:700,color:t.text}},'Verdict',React.createElement('span',{style:{color:GOLD}},'AI')),
-        React.createElement('div',{style:{fontSize:13,color:t.muted,marginTop:4,fontStyle:'italic'}},'From documents to decisions.')
+        React.createElement('div',{style:{fontSize:13,color:t.muted,marginTop:4,fontStyle:'italic'}},'From documents to decisions.'),
+        onBack&&React.createElement('button',{onClick:onBack,style:{marginTop:12,background:'none',border:'none',color:t.muted,cursor:'pointer',fontSize:12,fontFamily:'inherit',display:'flex',alignItems:'center',gap:4,margin:'12px auto 0'}},'← Back to homepage')
       ),
       // Card
       React.createElement('div',{style:{background:t.card,border:`1px solid ${t.border}`,borderRadius:14,padding:32}},
@@ -670,8 +804,46 @@ function NigerianCasesPage({t,onNavigate}){
     if(!query.trim())return;setLiveLoading(true);setLiveResults([]);setSearched(true);
     try{
       const data=await api(`/api/cases/search?q=${encodeURIComponent(query)}`);
-      setLiveResults(data.results||[]);
-    }catch(e){setLiveResults([]);}
+      const liveResults = data.results||[];
+      // Always add direct search links regardless of live results
+      const searchLinks = [
+        {
+          title: `Search "${query}" on AfricanLII`,
+          court: 'Free Nigerian Case Law Database',
+          year: '',
+          url: `https://africanlii.org/search?q=${encodeURIComponent(query)}&jurisdiction=ng`,
+          snippet: 'Click to search AfricanLII directly — thousands of Nigerian court judgments, free to access.',
+          source: 'AfricanLII',
+          isLink: true
+        },
+        {
+          title: `Search "${query}" on PrimsCol`,
+          court: 'LawPavilion — Full Database',
+          year: '',
+          url: 'https://primsol.lawpavilion.com',
+          snippet: 'Click to search PrimsCol — comprehensive Nigerian cases from 1960 to present. Subscription required.',
+          source: 'PrimsCol',
+          isLink: true
+        },
+        {
+          title: `Search "${query}" on Nigeria LII`,
+          court: 'NigeriaLII — Open Access',
+          year: '',
+          url: `https://nigerialii.org/search?q=${encodeURIComponent(query)}`,
+          snippet: 'Click to search NigeriaLII — another free source of Nigerian legal materials.',
+          source: 'NigeriaLII',
+          isLink: true
+        }
+      ];
+      setLiveResults([...liveResults, ...searchLinks]);
+    }catch(e){
+      // Even on error, show the search links
+      setLiveResults([
+        {title:`Search "${query}" on AfricanLII`,court:'Free Nigerian Case Law',year:'',url:`https://africanlii.org/search?q=${encodeURIComponent(query)}&jurisdiction=ng`,snippet:'Click to search AfricanLII directly.',source:'AfricanLII',isLink:true},
+        {title:`Search "${query}" on PrimsCol`,court:'LawPavilion',year:'',url:'https://primsol.lawpavilion.com',snippet:'Comprehensive Nigerian cases 1960-present.',source:'PrimsCol',isLink:true},
+        {title:`Search "${query}" on Nigeria LII`,court:'NigeriaLII',year:'',url:`https://nigerialii.org/search?q=${encodeURIComponent(query)}`,snippet:'Free Nigerian legal materials.',source:'NigeriaLII',isLink:true}
+      ]);
+    }
     setLiveLoading(false);
   };
 
@@ -689,14 +861,32 @@ function NigerianCasesPage({t,onNavigate}){
         React.createElement(Lbl,{t},'Live Case Database'),
         !searched&&React.createElement('div',{style:{background:t.input,border:`1px solid ${t.border}`,borderRadius:10,padding:20,minHeight:180,display:'flex',alignItems:'center',justifyContent:'center',color:t.muted,fontSize:13.5,fontStyle:'italic'}},'Click Search Case Database to query Nigerian case law.'),
         liveLoading&&React.createElement('div',{style:{background:t.input,border:`1px solid ${t.border}`,borderRadius:10,padding:20,minHeight:180}},React.createElement(Pulse)),
-        searched&&!liveLoading&&React.createElement('div',{style:{background:t.input,border:`1px solid ${t.border}`,borderRadius:10,padding:16,minHeight:180,maxHeight:400,overflowY:'auto'}},
-          liveResults.length===0
-            ?React.createElement('p',{style:{color:t.dim,fontSize:13.5,lineHeight:1.7}},'No direct results found. Use the AI analysis on the left or open PrimsCol below.')
-            :liveResults.map((r,i)=>React.createElement('div',{key:i,style:{borderBottom:`1px solid ${t.border}`,paddingBottom:12,marginBottom:12}},
-                React.createElement('a',{href:r.url||'#',target:'_blank',rel:'noreferrer',style:{color:GOLD,fontWeight:600,fontSize:13.5,textDecoration:'none',lineHeight:1.4,display:'block',marginBottom:3}},r.title||'Untitled Case'),
-                React.createElement('div',{style:{fontSize:11.5,color:t.muted}},[r.court,r.year,r.source].filter(Boolean).join(' — ')),
-                r.snippet&&React.createElement('p',{style:{fontSize:12.5,color:t.dim,marginTop:5,lineHeight:1.55}},r.snippet)
-              ))
+        searched&&!liveLoading&&React.createElement('div',{style:{background:t.input,border:`1px solid ${t.border}`,borderRadius:10,padding:16,minHeight:180,maxHeight:400,overflowY:'auto',WebkitOverflowScrolling:'touch'}},
+          // Live results
+          liveResults.filter(r=>!r.isLink).length>0&&React.createElement('div',{style:{marginBottom:16}},
+            React.createElement('div',{style:{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'1px',color:t.muted,marginBottom:10}},'Live Results'),
+            liveResults.filter(r=>!r.isLink).map((r,i)=>React.createElement('div',{key:i,style:{borderBottom:`1px solid ${t.border}`,paddingBottom:10,marginBottom:10}},
+              React.createElement('a',{href:r.url||'#',target:'_blank',rel:'noreferrer',style:{color:GOLD,fontWeight:600,fontSize:13.5,textDecoration:'none',lineHeight:1.4,display:'block',marginBottom:3}},r.title),
+              React.createElement('div',{style:{fontSize:11.5,color:t.muted}},[r.court,r.year,r.source].filter(Boolean).join(' — ')),
+              r.snippet&&React.createElement('p',{style:{fontSize:12.5,color:t.dim,marginTop:4,lineHeight:1.5}},r.snippet)
+            ))
+          ),
+          // Search links - always shown
+          React.createElement('div',null,
+            liveResults.filter(r=>!r.isLink).length===0&&React.createElement('p',{style:{color:t.dim,fontSize:13,marginBottom:12,lineHeight:1.6}},'No live database results found. Use the AI analysis on the left, or search these databases directly:'),
+            liveResults.filter(r=>r.isLink).length>0&&React.createElement('div',{style:{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'1px',color:t.muted,marginBottom:10}},'Search Databases Directly'),
+            liveResults.filter(r=>r.isLink).map((r,i)=>React.createElement('a',{key:i,href:r.url,target:'_blank',rel:'noreferrer',
+              style:{display:'flex',alignItems:'center',gap:12,padding:'10px 12px',borderRadius:8,background:t.card,border:`1px solid ${t.border}`,marginBottom:8,textDecoration:'none',transition:'border-color 0.15s'},
+              onMouseEnter:e=>e.currentTarget.style.borderColor=GOLD,
+              onMouseLeave:e=>e.currentTarget.style.borderColor=t.border},
+              React.createElement('div',{style:{flex:1}},
+                React.createElement('div',{style:{fontSize:13,fontWeight:600,color:GOLD,marginBottom:2}},r.title),
+                React.createElement('div',{style:{fontSize:11,color:t.muted}},r.court),
+                React.createElement('p',{style:{fontSize:12,color:t.dim,marginTop:3,lineHeight:1.5}},r.snippet)
+              ),
+              React.createElement('span',{style:{color:GOLD,fontSize:18,flexShrink:0}},'→')
+            ))
+          )
         )
       )
     }),
@@ -712,20 +902,55 @@ function NigerianCasesPage({t,onNavigate}){
 
 // ── PrimsCol Embedded ──────────────────────────────────────────────────────────
 function PrimsolPage({t}){
+  const [iframeError, setIframeError] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const iframeRef = useRef();
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      // If iframe hasn't loaded after 5 seconds, show fallback
+      if (loading) setIframeError(true);
+    }, 8000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const handleLoad = () => setLoading(false);
+  const handleError = () => { setIframeError(true); setLoading(false); };
+
   return React.createElement('div',{className:'fade'},
     React.createElement(Hdr,{title:'PrimsCol — Nigerian Case Law',desc:'Access the full LawPavilion database with over 200,000 Nigerian judgments from 1960 to present.',t}),
     React.createElement('div',{style:{background:t.card,border:`1px solid ${t.border}`,borderRadius:10,padding:14,marginBottom:14,fontSize:13,color:t.dim,lineHeight:1.7}},
-      React.createElement('strong',{style:{color:GOLD}},'Log in below: '),
-      'PrimsCol loads inside this panel. Use your LawPavilion credentials to log in and search without leaving Verdict AI. Subscription required — visit ',
-      React.createElement('a',{href:'https://lawpavilion.com',target:'_blank',rel:'noreferrer'},'lawpavilion.com'),' to subscribe.'
+      React.createElement('strong',{style:{color:GOLD}},'How to use: '),
+      'Log in with your LawPavilion credentials in the panel below. If the panel does not load, click the button to open PrimsCol directly. Subscription required — visit ',
+      React.createElement('a',{href:'https://lawpavilion.com',target:'_blank',rel:'noreferrer',style:{color:GOLD}},'lawpavilion.com'),' to subscribe.'
     ),
-    React.createElement('div',{style:{position:'relative',width:'100%',height:'68vh',borderRadius:12,overflow:'hidden',border:`1px solid ${t.border}`}},
-      React.createElement('iframe',{src:'https://primsol.lawpavilion.com',style:{width:'100%',height:'100%',border:'none'},title:'PrimsCol',allow:'fullscreen'}),
-      React.createElement('div',{style:{position:'absolute',bottom:0,left:0,right:0,background:'rgba(7,16,28,0.85)',padding:'8px 14px',display:'flex',alignItems:'center',justifyContent:'space-between',fontSize:11.5,color:t.muted}},
-        React.createElement('span',null,'Log in with your LawPavilion credentials above.'),
-        React.createElement('a',{href:'https://primsol.lawpavilion.com',target:'_blank',rel:'noreferrer',style:{color:GOLD,fontSize:12}},'Open in new tab ↗')
-      )
-    )
+    iframeError
+      ? React.createElement('div',{style:{background:t.card,border:`1px solid ${t.border}`,borderRadius:12,padding:40,textAlign:'center'}},
+          React.createElement('div',{style:{fontSize:40,marginBottom:16}},'🔒'),
+          React.createElement('div',{style:{fontFamily:"'Playfair Display',serif",fontSize:20,marginBottom:8,color:t.text}},'PrimsCol cannot be embedded'),
+          React.createElement('p',{style:{fontSize:13.5,color:t.dim,marginBottom:24,lineHeight:1.7,maxWidth:400,margin:'0 auto 24px'}},'LawPavilion has blocked their site from loading inside other applications. This is a security restriction on their end. Click the button below to open PrimsCol directly in a new tab.'),
+          React.createElement('a',{href:'https://primsol.lawpavilion.com',target:'_blank',rel:'noreferrer',style:{display:'inline-flex',alignItems:'center',gap:8,padding:'13px 28px',borderRadius:8,background:`linear-gradient(135deg,${GOLD},${GOLD2})`,color:'#0D1B2E',fontWeight:700,fontSize:15,textDecoration:'none',fontFamily:"'DM Sans',sans-serif"}},'Open PrimsCol in New Tab ↗'),
+          React.createElement('p',{style:{fontSize:12,color:t.muted,marginTop:16}},'Your session will continue when you return to Verdict AI.')
+        )
+      : React.createElement('div',{style:{position:'relative',width:'100%',height:'68vh',borderRadius:12,overflow:'hidden',border:`1px solid ${t.border}`}},
+          loading && React.createElement('div',{style:{position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',background:t.card,zIndex:2,gap:12}},
+            React.createElement(Pulse),
+            React.createElement('span',{style:{fontSize:13,color:t.muted}},'Loading PrimsCol...')
+          ),
+          React.createElement('iframe',{
+            ref:iframeRef,
+            src:'https://primsol.lawpavilion.com',
+            style:{width:'100%',height:'100%',border:'none'},
+            title:'PrimsCol',
+            allow:'fullscreen',
+            onLoad:handleLoad,
+            onError:handleError,
+          }),
+          React.createElement('div',{style:{position:'absolute',bottom:0,left:0,right:0,background:'rgba(7,16,28,0.85)',padding:'8px 14px',display:'flex',alignItems:'center',justifyContent:'space-between',fontSize:11.5,color:t.muted}},
+            React.createElement('span',null,'Log in with your LawPavilion credentials above.'),
+            React.createElement('a',{href:'https://primsol.lawpavilion.com',target:'_blank',rel:'noreferrer',style:{color:GOLD,fontSize:12}},'Open in new tab ↗')
+          )
+        )
   );
 }
 
@@ -912,10 +1137,129 @@ function UpgradePage({t}){
   );
 }
 
+
+// ── Landing Page ───────────────────────────────────────────────────────────────
+function LandingPage({onGetStarted, t}) {
+  const features = [
+    {icon:'📄', title:'Document Analysis', desc:'Upload any PDF or paste any legal document. Get a complete structured analysis in seconds — parties, issues, risk flags, and recommended actions.'},
+    {icon:'🧠', title:'Case War Room', desc:'Get a complete strategic case analysis — your strongest arguments, your vulnerabilities, relevant precedents, and a step-by-step strategy.'},
+    {icon:'⚔️', title:'Opposing Counsel Simulator', desc:'Stress-test your arguments before court. See the strongest counter-arguments ranked by danger level and how to defeat each one.'},
+    {icon:'✍️', title:'Draft Documents', desc:'Generate complete, professionally drafted legal documents in seconds. 16 document types including briefs, contracts, affidavits, and more.'},
+    {icon:'🧬', title:'Clause DNA', desc:'Paste any contract clause and get a complete breakdown — risk score, standardness, jurisdiction bias, and specific negotiation strategy.'},
+    {icon:'⏰', title:'Deadline Intelligence', desc:'Extract every deadline from any legal document — explicit and implied — with stakes, consequences, and urgency classifications.'},
+  ];
+
+  const competitors = [
+    {name:'Harvey AI', price:'$200-500/mo', nigerian:'✗', allinone:'✓'},
+    {name:'LawPavilion', price:'NGN 15-25k/mo', nigerian:'✓', allinone:'✗'},
+    {name:'Verdict AI', price:'Free — NGN 8,000/mo', nigerian:'✓', allinone:'✓', highlight:true},
+  ];
+
+  return React.createElement('div',{style:{background:'#07101c',minHeight:'100vh',color:'#F0EDE6',fontFamily:"'DM Sans',sans-serif",overflowY:'auto',WebkitOverflowScrolling:'touch'}},
+    
+    // NAV
+    React.createElement('nav',{style:{padding:'18px 32px',display:'flex',alignItems:'center',justifyContent:'space-between',borderBottom:'1px solid rgba(30,52,82,0.6)',position:'sticky',top:0,background:'rgba(7,16,28,0.95)',backdropFilter:'blur(10px)',zIndex:50}},
+      React.createElement('div',{style:{display:'flex',alignItems:'center',gap:10}},
+        React.createElement('div',{style:{width:34,height:34,background:`linear-gradient(135deg,${GOLD},${GOLD2})`,borderRadius:9,display:'flex',alignItems:'center',justifyContent:'center',fontFamily:"'Playfair Display',serif",fontWeight:700,fontSize:17,color:'#0D1B2E',boxShadow:'0 4px 14px rgba(200,164,94,0.3)'}},'V'),
+        React.createElement('span',{style:{fontFamily:"'Playfair Display',serif",fontSize:19,fontWeight:700,color:'#F0EDE6'}},'Verdict',React.createElement('span',{style:{color:GOLD}},'AI'))
+      ),
+      React.createElement('button',{onClick:onGetStarted,style:{padding:'9px 22px',borderRadius:8,background:`linear-gradient(135deg,${GOLD},${GOLD2})`,color:'#0D1B2E',fontWeight:700,fontSize:13.5,border:'none',cursor:'pointer',fontFamily:"'DM Sans',sans-serif"}},'Get Started Free')
+    ),
+
+    // HERO
+    React.createElement('div',{style:{padding:'80px 32px 60px',maxWidth:860,margin:'0 auto',textAlign:'center'}},
+      React.createElement('div',{style:{display:'inline-block',background:'rgba(200,164,94,0.12)',border:'1px solid rgba(200,164,94,0.25)',borderRadius:100,padding:'5px 16px',fontSize:12,fontWeight:700,color:GOLD,letterSpacing:'1px',marginBottom:24}},'BUILT FOR NIGERIAN LAWYERS'),
+      React.createElement('h1',{style:{fontFamily:"'Playfair Display',serif",fontSize:'clamp(32px,6vw,56px)',fontWeight:700,lineHeight:1.15,marginBottom:20,color:'#F0EDE6'}},
+        'From Documents',React.createElement('br',null),React.createElement('span',{style:{color:GOLD}},'to Decisions.')
+      ),
+      React.createElement('p',{style:{fontSize:'clamp(15px,2.5vw,19px)',color:'rgba(240,237,230,0.6)',lineHeight:1.7,maxWidth:580,margin:'0 auto 36px'}},'The complete AI legal intelligence platform. Analyze documents, build case strategy, draft documents, and manage your practice — all in one place, at a price Nigerian lawyers can afford.'),
+      React.createElement('div',{style:{display:'flex',gap:12,justifyContent:'center',flexWrap:'wrap'}},
+        React.createElement('button',{onClick:onGetStarted,style:{padding:'14px 32px',borderRadius:8,background:`linear-gradient(135deg,${GOLD},${GOLD2})`,color:'#0D1B2E',fontWeight:700,fontSize:16,border:'none',cursor:'pointer',fontFamily:"'DM Sans',sans-serif",boxShadow:'0 6px 20px rgba(200,164,94,0.35)'}},'Start Free — No Credit Card'),
+        React.createElement('a',{href:'#features',style:{padding:'14px 32px',borderRadius:8,background:'transparent',color:'rgba(240,237,230,0.7)',fontWeight:600,fontSize:16,border:'1px solid rgba(30,52,82,0.9)',cursor:'pointer',fontFamily:"'DM Sans',sans-serif",textDecoration:'none'}},'See Features')
+      ),
+      React.createElement('div',{style:{display:'flex',gap:28,justifyContent:'center',marginTop:40,flexWrap:'wrap'}},
+        [{v:'40,000+',l:'Nigerian Lawyers'},{v:'13',l:'AI Features'},{v:'Free',l:'To Start'},{v:'NGN 8k',l:'Full Access'}].map((s,i)=>
+          React.createElement('div',{key:i,style:{textAlign:'center'}},
+            React.createElement('div',{style:{fontFamily:"'Playfair Display',serif",fontSize:26,fontWeight:700,color:GOLD}},s.v),
+            React.createElement('div',{style:{fontSize:12,color:'rgba(240,237,230,0.4)',marginTop:2}},s.l)
+          )
+        )
+      )
+    ),
+
+    // FEATURES
+    React.createElement('div',{id:'features',style:{padding:'60px 32px',background:'rgba(12,26,46,0.5)'}},
+      React.createElement('div',{style:{maxWidth:1000,margin:'0 auto'}},
+        React.createElement('h2',{style:{fontFamily:"'Playfair Display',serif",fontSize:32,fontWeight:700,textAlign:'center',marginBottom:8,color:'#F0EDE6'}},'Everything a Nigerian lawyer needs'),
+        React.createElement('p',{style:{textAlign:'center',color:'rgba(240,237,230,0.5)',fontSize:15,marginBottom:44}},'13 AI-powered features replacing every disconnected tool in your practice.'),
+        React.createElement('div',{style:{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(280px,1fr))',gap:16}},
+          features.map((f,i)=>React.createElement('div',{key:i,style:{background:'rgba(12,26,46,0.8)',border:'1px solid rgba(30,52,82,0.8)',borderRadius:12,padding:22,transition:'all 0.2s'},
+            onMouseEnter:e=>{e.currentTarget.style.borderColor=GOLD;e.currentTarget.style.transform='translateY(-2px)';},
+            onMouseLeave:e=>{e.currentTarget.style.borderColor='rgba(30,52,82,0.8)';e.currentTarget.style.transform='none';}},
+            React.createElement('div',{style:{fontSize:28,marginBottom:10}},f.icon),
+            React.createElement('div',{style:{fontFamily:"'Playfair Display',serif",fontSize:15,fontWeight:600,marginBottom:6,color:'#F0EDE6'}},f.title),
+            React.createElement('div',{style:{fontSize:13,color:'rgba(240,237,230,0.5)',lineHeight:1.6}},f.desc)
+          ))
+        )
+      )
+    ),
+
+    // COMPARISON
+    React.createElement('div',{style:{padding:'60px 32px'}},
+      React.createElement('div',{style:{maxWidth:700,margin:'0 auto'}},
+        React.createElement('h2',{style:{fontFamily:"'Playfair Display',serif",fontSize:32,fontWeight:700,textAlign:'center',marginBottom:8,color:'#F0EDE6'}},'Why Verdict AI'),
+        React.createElement('p',{style:{textAlign:'center',color:'rgba(240,237,230,0.5)',fontSize:15,marginBottom:36}},'Global tools price out Nigerian lawyers. Local tools lack AI. Verdict AI is both.'),
+        React.createElement('div',{style:{borderRadius:12,overflow:'hidden',border:'1px solid rgba(30,52,82,0.8)'}},
+          // Header
+          React.createElement('div',{style:{display:'grid',gridTemplateColumns:'2fr 1.5fr 1fr 1fr',background:'#0c1a2e',padding:'12px 16px'}},
+            ['Platform','Price','Nigerian Law','All-in-One'].map((h,i)=>React.createElement('div',{key:i,style:{fontSize:11,fontWeight:700,textTransform:'uppercase',letterSpacing:'1px',color:GOLD}},h))
+          ),
+          competitors.map((c,i)=>React.createElement('div',{key:i,style:{display:'grid',gridTemplateColumns:'2fr 1.5fr 1fr 1fr',padding:'14px 16px',background:c.highlight?'rgba(200,164,94,0.06)':'transparent',borderTop:'1px solid rgba(30,52,82,0.6)'}},
+            React.createElement('div',{style:{fontSize:14,fontWeight:c.highlight?700:400,color:c.highlight?GOLD:'#F0EDE6'}},c.name),
+            React.createElement('div',{style:{fontSize:13,color:c.highlight?GOLD:'rgba(240,237,230,0.6)',"fontWeight":c.highlight?600:400}},c.price),
+            React.createElement('div',{style:{fontSize:14,color:c.nigerian==='✓'?'#2ECC8A':'#E05252',fontWeight:700}},c.nigerian),
+            React.createElement('div',{style:{fontSize:14,color:c.allinone==='✓'?'#2ECC8A':'#E05252',fontWeight:700}},c.allinone)
+          ))
+        )
+      )
+    ),
+
+    // PRICING
+    React.createElement('div',{style:{padding:'60px 32px',background:'rgba(12,26,46,0.5)'}},
+      React.createElement('div',{style:{maxWidth:700,margin:'0 auto',textAlign:'center'}},
+        React.createElement('h2',{style:{fontFamily:"'Playfair Display',serif",fontSize:32,fontWeight:700,marginBottom:8,color:'#F0EDE6'}},'Simple, honest pricing'),
+        React.createElement('p',{style:{color:'rgba(240,237,230,0.5)',fontSize:15,marginBottom:40}},'Start free. Upgrade when you are ready.'),
+        React.createElement('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16,maxWidth:500,margin:'0 auto 36px'}},
+          [{name:'Free',price:'NGN 0',desc:'5 analyses per month. Try every feature.',color:'#4A9EE8'},
+           {name:'Solo',price:'NGN 8,000/mo',desc:'Unlimited access to all 13 features.',color:GOLD,recommended:true}
+          ].map((tier,i)=>React.createElement('div',{key:i,style:{background:'rgba(12,26,46,0.8)',border:`2px solid ${tier.recommended?tier.color:'rgba(30,52,82,0.8)'}`,borderRadius:12,padding:24,position:'relative'}},
+            tier.recommended&&React.createElement('div',{style:{position:'absolute',top:-12,left:'50%',transform:'translateX(-50%)',background:GOLD,color:'#0D1B2E',fontSize:9,fontWeight:700,padding:'3px 12px',borderRadius:100,whiteSpace:'nowrap'}},'MOST POPULAR'),
+            React.createElement('div',{style:{fontFamily:"'Playfair Display',serif",fontSize:18,fontWeight:700,color:tier.color,marginBottom:4}},tier.name),
+            React.createElement('div',{style:{fontFamily:"'Playfair Display',serif",fontSize:22,fontWeight:700,color:'#F0EDE6',marginBottom:8}},tier.price),
+            React.createElement('div',{style:{fontSize:13,color:'rgba(240,237,230,0.5)',lineHeight:1.6}},tier.desc)
+          ))
+        ),
+        React.createElement('button',{onClick:onGetStarted,style:{padding:'15px 40px',borderRadius:8,background:`linear-gradient(135deg,${GOLD},${GOLD2})`,color:'#0D1B2E',fontWeight:700,fontSize:16,border:'none',cursor:'pointer',fontFamily:"'DM Sans',sans-serif",boxShadow:'0 6px 20px rgba(200,164,94,0.35)'}},'Create Your Free Account')
+      )
+    ),
+
+    // FOOTER
+    React.createElement('div',{style:{padding:'32px',borderTop:'1px solid rgba(30,52,82,0.6)',display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:12}},
+      React.createElement('div',{style:{display:'flex',alignItems:'center',gap:10}},
+        React.createElement('div',{style:{width:28,height:28,background:`linear-gradient(135deg,${GOLD},${GOLD2})`,borderRadius:7,display:'flex',alignItems:'center',justifyContent:'center',fontFamily:"'Playfair Display',serif",fontWeight:700,fontSize:14,color:'#0D1B2E'}},'V'),
+        React.createElement('span',{style:{fontFamily:"'Playfair Display',serif",fontSize:15,fontWeight:700,color:'#F0EDE6'}},'Verdict',React.createElement('span',{style:{color:GOLD}},'AI'))
+      ),
+      React.createElement('div',{style:{fontSize:12,color:'rgba(240,237,230,0.3)',textAlign:'center'}},'Verdict AI provides AI-powered legal analysis for informational purposes only. Not legal advice.'),
+      React.createElement('button',{onClick:onGetStarted,style:{padding:'8px 18px',borderRadius:7,background:'transparent',color:GOLD,fontWeight:600,fontSize:13,border:`1px solid rgba(200,164,94,0.3)`,cursor:'pointer',fontFamily:"'DM Sans',sans-serif"}},'Sign In')
+    )
+  );
+}
+
 // ── App Shell ──────────────────────────────────────────────────────────────────
 function AppContent(){
   const {user,loading:authLoading}=useAuth();
   const [page,setPage]=useState('dashboard');
+  const [showAuth,setShowAuth]=useState(false);
   const [dark,setDark]=useState(true);
   const [sideOpen,setSideOpen]=useState(false);
   const [docs,setDocs]=useState([]);
@@ -976,9 +1320,15 @@ function AppContent(){
 
   const go=id=>{setPage(id);setSideOpen(false);};
 
-  if(authLoading)return React.createElement('div',{style:{display:'flex',alignItems:'center',justifyContent:'center',height:'100vh',background:'#07101c',color:GOLD,fontFamily:"'Playfair Display',serif",fontSize:18}},'Loading Verdict AI...');
+  if(authLoading)return React.createElement('div',{style:{display:'flex',alignItems:'center',justifyContent:'center',height:'100vh',background:'#07101c',color:GOLD,fontFamily:"'Playfair Display',serif",fontSize:18,flexDirection:'column',gap:16}},
+    React.createElement('div',{style:{width:52,height:52,background:`linear-gradient(135deg,${GOLD},${GOLD2})`,borderRadius:14,display:'flex',alignItems:'center',justifyContent:'center',fontFamily:"'Playfair Display',serif",fontWeight:700,fontSize:26,color:'#0D1B2E'}},'V'),
+    'Loading Verdict AI...'
+  );
 
-  if(!user)return React.createElement(AuthPage,{t:theme(true)});
+  if(!user){
+    if(showAuth) return React.createElement(AuthPage,{t:theme(true),onBack:()=>setShowAuth(false)});
+    return React.createElement(LandingPage,{onGetStarted:()=>setShowAuth(true),t:theme(true)});
+  }
 
   const renderPage=()=>{
     if(AI_PAGES[page])return React.createElement(AIPage,{cfg:AI_PAGES[page],t,onNavigate:go});
