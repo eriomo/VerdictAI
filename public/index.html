@@ -572,7 +572,7 @@ function AuthPage({t,onBack}){
           React.createElement("button",{onClick:()=>setMode(mode==="login"?"signup":"login"),style:{background:"none",border:"none",color:GOLD,cursor:"pointer",fontFamily:"inherit",fontSize:13,fontWeight:600}},mode==="login"?"Sign up free":"Log in")
         )
       ),
-      React.createElement("div",{style:{textAlign:"center",marginTop:14,fontSize:11,color:t.muted,lineHeight:1.6}},"Free tier: 5 analyses/month. No credit card required.")
+      React.createElement("div",{style:{textAlign:"center",marginTop:14,fontSize:11,color:t.muted,lineHeight:1.6}},"Free tier: 7 analyses/month. No credit card required.")
     )
   );
 }
@@ -635,14 +635,19 @@ function LandingPage({onGetStarted,t}){
         React.createElement("h2",{style:{fontFamily:"'Playfair Display',serif",fontSize:30,fontWeight:700,marginBottom:8}},"Simple, honest pricing"),
         React.createElement("p",{style:{color:"rgba(240,237,230,0.5)",fontSize:15,marginBottom:36}},"Start free. Upgrade when you are ready."),
         React.createElement("div",{style:{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))",gap:10,maxWidth:560,margin:"0 auto 32px"}},
-          [{name:"Free",price:"NGN 0",desc:"5 analyses/month",color:"#4A9EE8"},{name:"Solo",price:"NGN 8,000/mo",desc:"Unlimited — all 13 features",color:GOLD,rec:true}].map((tier,i)=>
-            React.createElement("div",{key:i,style:{background:"rgba(12,26,46,0.8)",border:`2px solid ${tier.rec?tier.color:"rgba(30,52,82,0.8)"}`,borderRadius:12,padding:22,position:"relative"}},
+          [
+            {name:"Free",price:"NGN 0",sub:"7 analyses/month",color:"#4A9EE8",desc:"Try everything"},
+            {name:"Solo",price:"NGN 12,000",sub:"per month",color:GOLD,rec:true,desc:"Every daily tool"},
+            {name:"Chambers",price:"NGN 20,000",sub:"per month",color:"#9B59B6",desc:"+ 5 litigation weapons"}
+          ].map(function(tier,i){
+            return React.createElement("div",{key:i,style:{background:"rgba(12,26,46,0.8)",border:"2px solid "+(tier.rec?tier.color:tier.color+"55"),borderRadius:12,padding:20,position:"relative",textAlign:"center"}},
               tier.rec&&React.createElement("div",{style:{position:"absolute",top:-12,left:"50%",transform:"translateX(-50%)",background:GOLD,color:"#0D1B2E",fontSize:9,fontWeight:700,padding:"3px 12px",borderRadius:100,whiteSpace:"nowrap"}},"MOST POPULAR"),
-              React.createElement("div",{style:{fontFamily:"'Playfair Display',serif",fontSize:18,fontWeight:700,color:tier.color,marginBottom:4}},tier.name),
-              React.createElement("div",{style:{fontFamily:"'Playfair Display',serif",fontSize:22,fontWeight:700,marginBottom:6}},tier.price),
-              React.createElement("div",{style:{fontSize:13,color:"rgba(240,237,230,0.5)"}},tier.desc)
-            )
-          )
+              React.createElement("div",{style:{fontFamily:"'Playfair Display',serif",fontSize:16,fontWeight:700,color:tier.color,marginBottom:6}},tier.name),
+              React.createElement("div",{style:{fontFamily:"'Playfair Display',serif",fontSize:20,fontWeight:700,color:"#F0EDE6",marginBottom:3}},tier.price),
+              React.createElement("div",{style:{fontSize:11,color:"rgba(240,237,230,0.4)",marginBottom:6}},tier.sub),
+              React.createElement("div",{style:{fontSize:12,color:"rgba(240,237,230,0.55)",fontStyle:"italic"}},tier.desc)
+            );
+          })
         ),
         React.createElement("button",{onClick:onGetStarted,style:{padding:"15px 40px",borderRadius:8,background:`linear-gradient(135deg,${GOLD},${GOLD2})`,color:"#0D1B2E",fontWeight:700,fontSize:15,border:"none",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}},"Create Your Free Account")
       )
@@ -1169,7 +1174,7 @@ function ProfilePage({profile,onUpdate,t,go}){
       React.createElement("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8}},
         React.createElement("div",null,
           React.createElement("div",{style:{fontSize:18,fontWeight:700,color:GOLD,marginBottom:2}},tier.charAt(0).toUpperCase()+tier.slice(1)+" Plan"),
-          React.createElement("div",{style:{fontSize:13,color:t.muted}},tier==="free"?`${profile?.usage_count||0} of 5 analyses used this month`:"Unlimited analyses")
+          React.createElement("div",{style:{fontSize:13,color:t.muted}},tier==="free"?(profile?.usage_count||0)+" of 7 analyses used this month":"Unlimited analyses")
         ),
         tier==="free"&&React.createElement(Btn,{onClick:()=>go("upgrade")},"Upgrade to Solo — NGN 12,000/mo")
       )
@@ -1195,13 +1200,13 @@ function ProfilePage({profile,onUpdate,t,go}){
 }
 
 // ── Upgrade Page ──────────────────────────────────────────────────────────────
-function UpgradePage({t}){
+function UpgradePage({t,go,userTier}){
   const [billing,setBilling]=useState("monthly");
   const plans=[
     {
       id:"free",name:"Free",color:"#4A9EE8",
       monthly:0,annual:0,
-      period:"forever",current:true,
+      period:"forever",current:!userTier||userTier==="free",
       features:["7 analyses per month","Document Analysis","Legal Q&A","Draft Documents (25 types)","Nigerian Case Law","Law Research Hub","Document Vault"],
       locked:["Matter Clock","All Power Tools","Court Simulator","AI Senior Partner","30 more features"],
       tag:null
@@ -1209,6 +1214,7 @@ function UpgradePage({t}){
     {
       id:"solo",name:"Solo",color:GOLD,
       monthly:12000,annual:108000,
+      current:userTier==="solo",
       period:billing==="annual"?"per year (NGN 9,000/mo)":"per month",
       features:["Unlimited analyses","All 30+ daily-use features","Matter Clock","Client Report Generator","Fee Note Builder","Client Intake Memo","Statute Explainer","Precedent Clause Library","Correspondence Tracker","Case War Room","Opposing Counsel","Clause DNA","WhatsApp Evidence","Contract Negotiation","Compliance Calendar","Document Vault + Workspaces","1 user"],
       locked:["Court Simulator","AI Senior Partner","Witness Forge","Evidence Analyser","Settlement Intelligence"],
@@ -1217,6 +1223,7 @@ function UpgradePage({t}){
     {
       id:"chambers",name:"Chambers",color:"#9B59B6",
       monthly:20000,annual:180000,
+      current:userTier==="chambers",
       period:billing==="annual"?"per year (NGN 15,000/mo)":"per month",
       features:["Everything in Solo","Court Simulator — live Nigerian courtroom","AI Senior Partner (Ade Bello SAN)","Witness Forge — full cross-exam prep","Evidence Analyser — EA 2011 compliance","Settlement Intelligence — BATNA & ZOPA","Up to 3 users"],
       locked:[],
@@ -1402,7 +1409,7 @@ function AppContent(){
       case "vault": return React.createElement(VaultPage,{docs,onDelete:deleteDoc,onRefresh:loadAll,t,go});
       case "cases": return React.createElement(CasesPage,{cases,onAdd:addCase,onUpdate:updateCase,onDelete:deleteCase,t});
       case "profile": return React.createElement(ProfilePage,{profile,onUpdate:updateProfile,t,go});
-      case "upgrade": return React.createElement(UpgradePage,{t});
+      case "upgrade": return React.createElement(UpgradePage,{t,go,userTier:tier});
       default: return React.createElement(Dashboard,{go,t,docCount:docs.length,caseCount:cases.length,profile});
     }
   };
