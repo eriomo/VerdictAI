@@ -1290,6 +1290,385 @@ function UpgradePage({t,go,userTier}){
 }
 
 
+
+// ── Matter Clock ──────────────────────────────────────────────────────────────
+function MatterClockPage({t,go}){
+  const [matters,setMatters]=usePersist("mc_matters",[]);
+  const [showAdd,setShowAdd]=useState(false);
+  const [nm,setNm]=useState({name:"",court:"",nextHearing:"",limitDate:"",lastAction:""});
+  const addMatter=function(){
+    if(!nm.name.trim())return;
+    setMatters(function(prev){return [{...nm,id:Date.now().toString(),lastUpdated:new Date().toISOString()},...prev];});
+    setNm({name:"",court:"",nextHearing:"",limitDate:"",lastAction:""});
+    setShowAdd(false);
+  };
+  const daysUntil=function(d){if(!d)return null;return Math.ceil((new Date(d).getTime()-Date.now())/(1000*60*60*24));};
+  const daysSince=function(d){if(!d)return null;return Math.floor((Date.now()-new Date(d).getTime())/(1000*60*60*24));};
+  const uc=function(days){if(days===null)return t.muted;if(days<0)return "#E05252";if(days<=7)return "#E05252";if(days<=30)return "#F0A500";return "#2ECC8A";};
+  return React.createElement("div",{className:"fade"},
+    React.createElement(Hdr,{title:"Matter Clock",desc:"Every active case on one board — next hearing, limitation countdown, last activity. Check this every morning.",isNew:true,t}),
+    React.createElement("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}},
+      React.createElement("div",{style:{fontSize:13,color:t.muted}},matters.length+" active matters"),
+      React.createElement(Btn,{onClick:function(){setShowAdd(function(p){return !p;});},sm:true},showAdd?"Cancel":"+ Add Matter")
+    ),
+    showAdd&&React.createElement("div",{style:{background:"rgba(200,164,94,0.06)",border:"1px solid rgba(200,164,94,0.2)",borderRadius:12,padding:20,marginBottom:20}},
+      React.createElement("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}},
+        React.createElement("div",null,React.createElement(Lbl,{t},"Matter Name"),React.createElement(Inp,{val:nm.name,set:function(v){setNm(function(p){return {...p,name:v};});},ph:"e.g. Adeyemi v. First Bank [2026]",t})),
+        React.createElement("div",null,React.createElement(Lbl,{t},"Court"),React.createElement(Inp,{val:nm.court,set:function(v){setNm(function(p){return {...p,court:v};});},ph:"e.g. FHC Lagos Div 3",t}))
+      ),
+      React.createElement("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}},
+        React.createElement("div",null,React.createElement(Lbl,{t},"Next Hearing Date"),React.createElement("input",{type:"date",value:nm.nextHearing,onChange:function(e){setNm(function(p){return {...p,nextHearing:e.target.value};});},style:{width:"100%",background:t.input,border:"1px solid "+t.border,borderRadius:8,padding:"11px 14px",fontFamily:"'DM Sans',sans-serif",fontSize:13.5,color:t.text,outline:"none",colorScheme:"dark"}})),
+        React.createElement("div",null,React.createElement(Lbl,{t},"Limitation Deadline"),React.createElement("input",{type:"date",value:nm.limitDate,onChange:function(e){setNm(function(p){return {...p,limitDate:e.target.value};});},style:{width:"100%",background:t.input,border:"1px solid "+t.border,borderRadius:8,padding:"11px 14px",fontFamily:"'DM Sans',sans-serif",fontSize:13.5,color:t.text,outline:"none",colorScheme:"dark"}}))
+      ),
+      React.createElement(Lbl,{t},"Last Action Taken"),
+      React.createElement(Inp,{val:nm.lastAction,set:function(v){setNm(function(p){return {...p,lastAction:v};});},ph:"e.g. Filed motion, appeared in court, sent demand letter...",t}),
+      React.createElement("div",{style:{height:12}}),
+      React.createElement(Btn,{onClick:addMatter},"Add to Matter Clock")
+    ),
+    matters.length===0&&React.createElement("div",{style:{textAlign:"center",padding:"60px 20px",color:t.muted}},
+      React.createElement("div",{style:{fontSize:48,marginBottom:12}},"⏱️"),
+      React.createElement("div",{style:{fontFamily:"'Playfair Display',serif",fontSize:18,marginBottom:8,color:t.dim}},"No matters on the clock yet"),
+      React.createElement("div",{style:{fontSize:13,marginBottom:20}},"Add your active cases. Check this every morning."),
+      React.createElement(Btn,{onClick:function(){setShowAdd(true);}},("+ Add Your First Matter"))
+    ),
+    React.createElement("div",{style:{display:"flex",flexDirection:"column",gap:12}},
+      matters.map(function(m){
+        var hd=daysUntil(m.nextHearing),ld=daysUntil(m.limitDate),ia=daysSince(m.lastUpdated);
+        var crit=(hd!==null&&hd<=7)||(ld!==null&&ld<=30);
+        return React.createElement("div",{key:m.id,style:{background:t.card,border:"1px solid "+(crit?"rgba(224,82,82,0.4)":t.border),borderRadius:12,padding:18}},
+          React.createElement("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}},
+            React.createElement("div",null,
+              React.createElement("div",{style:{fontFamily:"'Playfair Display',serif",fontSize:15,fontWeight:700,color:t.text,marginBottom:3}},m.name),
+              m.court&&React.createElement("div",{style:{fontSize:12,color:t.muted}},m.court)
+            ),
+            React.createElement("button",{onClick:function(){setMatters(function(prev){return prev.filter(function(x){return x.id!==m.id;});});},style:{background:"none",border:"none",color:t.muted,cursor:"pointer",fontSize:18,padding:0,lineHeight:1}},"×")
+          ),
+          React.createElement("div",{style:{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginBottom:m.lastAction?12:0}},
+            React.createElement("div",{style:{background:"rgba(0,0,0,0.15)",borderRadius:8,padding:"10px 12px",textAlign:"center"}},
+              React.createElement("div",{style:{fontSize:9,fontWeight:700,letterSpacing:"1px",color:t.muted,marginBottom:4}},"NEXT HEARING"),
+              hd===null?React.createElement("div",{style:{fontSize:13,color:t.muted}},"Not set"):React.createElement("div",null,React.createElement("div",{style:{fontFamily:"'Playfair Display',serif",fontSize:20,fontWeight:700,color:uc(hd)}},hd<0?"PAST":hd+"d"),React.createElement("div",{style:{fontSize:10,color:t.muted}},hd<0?"overdue":"remaining"))
+            ),
+            React.createElement("div",{style:{background:"rgba(0,0,0,0.15)",borderRadius:8,padding:"10px 12px",textAlign:"center"}},
+              React.createElement("div",{style:{fontSize:9,fontWeight:700,letterSpacing:"1px",color:t.muted,marginBottom:4}},"LIMITATION"),
+              ld===null?React.createElement("div",{style:{fontSize:13,color:t.muted}},"Not set"):React.createElement("div",null,React.createElement("div",{style:{fontFamily:"'Playfair Display',serif",fontSize:20,fontWeight:700,color:uc(ld)}},ld<0?"EXPIRED":ld+"d"),React.createElement("div",{style:{fontSize:10,color:t.muted}},ld<0?"expired":"remaining"))
+            ),
+            React.createElement("div",{style:{background:"rgba(0,0,0,0.15)",borderRadius:8,padding:"10px 12px",textAlign:"center"}},
+              React.createElement("div",{style:{fontSize:9,fontWeight:700,letterSpacing:"1px",color:t.muted,marginBottom:4}},"LAST ACTIVITY"),
+              React.createElement("div",{style:{fontFamily:"'Playfair Display',serif",fontSize:20,fontWeight:700,color:ia>14?"#E05252":ia>7?"#F0A500":"#2ECC8A"}},ia+"d"),
+              React.createElement("div",{style:{fontSize:10,color:t.muted}},"ago")
+            )
+          ),
+          m.lastAction&&React.createElement("div",{style:{fontSize:12,color:t.dim,borderTop:"1px solid "+t.border,paddingTop:10,display:"flex",justifyContent:"space-between",alignItems:"center"}},
+            React.createElement("span",null,"Last: "+m.lastAction),
+            React.createElement("button",{onClick:function(){var a=prompt("Update last action:");if(a){setMatters(function(prev){return prev.map(function(x){return x.id===m.id?{...x,lastAction:a,lastUpdated:new Date().toISOString()}:x;});});}},style:{background:"none",border:"none",color:"#C8A45E",cursor:"pointer",fontSize:11,fontFamily:"inherit"}},"Update")
+          )
+        );
+      })
+    )
+  );
+}
+
+// ── Witness Forge ─────────────────────────────────────────────────────────────
+function WitnessPage({t,go}){
+  const [witness,setWitness]=usePersist("wit_s","");
+  const [opp,setOpp]=usePersist("wit_o","");
+  const [role,setRole]=usePersist("wit_r","Claimant");
+  const [out,setOut]=usePersist("wit_out","");
+  const [loading,setLoading]=useState(false);
+  const [limitReached,setLimitReached]=useState(false);
+  const run=async function(){
+    if(!witness.trim())return;setLoading(true);setOut("");setLimitReached(false);
+    var sys=VOICE+"\n\nExpert witness preparation consultant.\n\nWITNESS VULNERABILITY ASSESSMENT:\nRate this witness credibility and vulnerability under cross-examination on a scale of 1-10.\n\nCRITICAL WEAKNESSES:\nEvery inconsistency, gap, or statement opposing counsel will exploit. Number each one.\n\nCROSS-EXAMINATION QUESTIONS:\nGenerate the 15 most dangerous questions opposing counsel will put to this witness. For each: the tactical objective and how it could damage the case.\n\nSUGGESTED ANSWERS:\nFor each of the 15 questions, the ideal answer — truthful, concise, non-combative, and defensible.\n\nWITNESS COACHING NOTES:\nSpecific instructions — tone, body language, how to handle aggressive questioning.\n\nREHEARSAL PLAN:\nStep-by-step plan for witness preparation sessions before trial.";
+    var msg="WITNESS STATEMENT:\n"+witness+"\n\nWITNESS ROLE: "+role+(opp?"\n\nOPPOSING CASE:\n"+opp:"");
+    try{await stream(sys,msg,function(v){setOut(v);});}catch(e){if(e.message==="FREE_LIMIT_REACHED")setLimitReached(true);else setOut("Error: "+e.message);}
+    setLoading(false);
+  };
+  const doClear=function(){setWitness("");setOpp("");setOut("");clearPersist("wit_s","wit_o","wit_out");};
+  var left=React.createElement("div",null,
+    React.createElement(Lbl,{t},"Witness Role"),
+    React.createElement(Sel,{val:role,set:setRole,opts:["Claimant","Defendant","Expert Witness","Eye Witness","Corporate Representative","Character Witness"],ph:"Select role...",t}),
+    React.createElement("div",{style:{height:10}}),
+    React.createElement(FileUpload,{t,label:"Import witness statement",onText:function(text){setWitness(text);}}),
+    React.createElement("div",{style:{textAlign:"center",color:t.muted,fontSize:12,margin:"4px 0"}},"— or paste witness statement —"),
+    React.createElement(Lbl,{t},"Witness Statement"),
+    React.createElement(Inp,{val:witness,set:setWitness,ph:"Paste the full witness statement here...",rows:8,t}),
+    React.createElement("div",{style:{height:8}}),
+    React.createElement(Lbl,{t},"Opposition Case (Optional)"),
+    React.createElement(Inp,{val:opp,set:setOpp,ph:"Summarise the opposing case, their key arguments and evidence...",rows:4,t}),
+    React.createElement("div",{style:{height:10}}),
+    React.createElement(Btn,{full:true,onClick:run,disabled:loading||!witness.trim()},loading?"Forging witness prep...":"Forge Witness Prep Kit")
+  );
+  var right=React.createElement("div",null,React.createElement(Lbl,{t},"Witness Preparation Report"),React.createElement(Out,{text:out,loading,ph:"Add the witness statement and click Forge.",t}),React.createElement(ExportBtns,{text:out,title:"Witness-Prep"}));
+  return React.createElement("div",{className:"fade"},React.createElement(Hdr,{title:"Witness Forge",desc:"Every cross-examination question your witness will face — before they enter the witness box.",isNew:true,t,onClear:doClear,hasContent:!!(witness||out)}),limitReached&&React.createElement(UpgradeBanner,{t,go}),React.createElement(Two,{l:left,r:right}));
+}
+
+// ── Evidence Analyser ─────────────────────────────────────────────────────────
+function EvidencePage({t,go}){
+  const [evid,setEvid]=usePersist("ev_t","");
+  const [evType,setEvType]=usePersist("ev_ty","");
+  const [ctx,setCtx]=usePersist("ev_c","");
+  const [out,setOut]=usePersist("ev_out","");
+  const [loading,setLoading]=useState(false);
+  const [limitReached,setLimitReached]=useState(false);
+  const EVTYPES=["Document (Contract/Agreement)","Electronic Mail","WhatsApp / Text Message Screenshot","Bank Statement","Deed / Certificate","Court Judgment / Order","Expert Report","Medical Report","Photograph / Video","Affidavit","Company Record (CAC)","Police Statement","Voicemail / Audio Recording","Social Media Post","Survey Report","Valuation Report","Business Records","Government Document / Gazette","Witness Oral Testimony","Hearsay Evidence"];
+  const run=async function(){
+    if(!evid.trim()||!evType)return;setLoading(true);setOut("");setLimitReached(false);
+    var sys=VOICE+"\n\nNigerian evidence law specialist. Apply the Evidence Act 2011.\n\nEVIDENCE CLASSIFICATION:\nClassify under the Evidence Act 2011.\n\nADMISSIBILITY RULING:\nYES, CONDITIONAL, or NO. Cite specific sections of the Evidence Act 2011.\n\nADMISSIBILITY SCORE:\nLikelihood of admissibility as a percentage with explanation.\n\nLEGAL FOUNDATION REQUIREMENTS:\nExactly what counsel must do before this evidence can be tendered.\n\nANTICIPATED OBJECTIONS:\nSpecific objections opponent will raise, the section they will cite, and how to overcome each.\n\nWEIGHT ASSESSMENT:\nAssuming admitted — how much weight will a court give this evidence?\n\nDIGITAL EVIDENCE:\nIf applicable — Section 84 Evidence Act 2011 compliance, certificate requirements.\n\nSTRATEGIC ADVICE:\nHow to present for maximum impact. How to attack it if you are the opponent.";
+    var msg="EVIDENCE TYPE: "+evType+"\n\nEVIDENCE:\n"+evid+(ctx?"\n\nCASE CONTEXT:\n"+ctx:"");
+    try{await stream(sys,msg,function(v){setOut(v);});}catch(e){if(e.message==="FREE_LIMIT_REACHED")setLimitReached(true);else setOut("Error: "+e.message);}
+    setLoading(false);
+  };
+  const doClear=function(){setEvid("");setEvType("");setCtx("");setOut("");clearPersist("ev_t","ev_ty","ev_c","ev_out");};
+  var left=React.createElement("div",null,React.createElement(Lbl,{t},"Type of Evidence"),React.createElement(Sel,{val:evType,set:setEvType,opts:EVTYPES,ph:"Select evidence type...",t}),React.createElement("div",{style:{height:10}}),React.createElement(FileUpload,{t,label:"Upload the evidence document",onText:function(text){setEvid(text);}}),React.createElement("div",{style:{textAlign:"center",color:t.muted,fontSize:12,margin:"4px 0"}},"— or describe / paste the evidence —"),React.createElement(Lbl,{t},"Evidence Description or Content"),React.createElement(Inp,{val:evid,set:setEvid,ph:"Paste the document or describe the evidence in detail...",rows:8,t}),React.createElement("div",{style:{height:8}}),React.createElement(Lbl,{t},"Case Context (Optional)"),React.createElement(Inp,{val:ctx,set:setCtx,ph:"Court, proceedings type, what the evidence is meant to prove...",rows:3,t}),React.createElement("div",{style:{height:10}}),React.createElement(Btn,{full:true,onClick:run,disabled:loading||!evid.trim()||!evType},loading?"Analysing admissibility...":"Analyse Evidence"));
+  var right=React.createElement("div",null,React.createElement(Lbl,{t},"Admissibility Report"),React.createElement(Out,{text:out,loading,ph:"Select evidence type, describe the evidence, click Analyse.",t}),React.createElement(ExportBtns,{text:out,title:"Evidence-Analysis"}));
+  return React.createElement("div",{className:"fade"},React.createElement(Hdr,{title:"Evidence Analyser",desc:"Admissibility ruling under Evidence Act 2011 before you tender anything in court.",isNew:true,t,onClear:doClear,hasContent:!!(evid||out)}),limitReached&&React.createElement(UpgradeBanner,{t,go}),React.createElement(Two,{l:left,r:right}));
+}
+
+// ── Settlement Intelligence ───────────────────────────────────────────────────
+function SettlementPage({t,go}){
+  const [facts,setFacts]=usePersist("set_f","");
+  const [claimant,setClaimant]=usePersist("set_c","");
+  const [defendant,setDefendant]=usePersist("set_d","");
+  const [out,setOut]=usePersist("set_out","");
+  const [loading,setLoading]=useState(false);
+  const [limitReached,setLimitReached]=useState(false);
+  const run=async function(){
+    if(!facts.trim())return;setLoading(true);setOut("");setLimitReached(false);
+    var sys=VOICE+"\n\nSenior settlement counsel.\n\nCASE SUMMARY:\nBrief summary of the dispute.\n\nLIKELY JUDICIAL OUTCOME:\nWhat a Nigerian court will most likely decide. Cite comparable cases.\n\nSETTLEMENT RANGE ANALYSIS:\n1. Claimant BATNA\n2. Defendant BATNA\n3. Zone of Possible Agreement (ZOPA)\n4. Most Likely Settlement Point\n\nCOST-BENEFIT ANALYSIS:\nFor each party: estimated litigation costs, time to judgment, enforcement risks.\n\nLEVERAGE ASSESSMENT:\nWho has more negotiating leverage and why.\n\nNEGOTIATION STRATEGY:\nSpecific tactical moves, sequencing, what to concede first, red lines to hold.\n\nMEDIATION READINESS:\nSuitable for formal mediation? Which ADR body to approach.";
+    var msg="CASE FACTS:\n"+facts+(claimant?"\n\nCLAIMANT POSITION:\n"+claimant:"")+(defendant?"\n\nDEFENDANT POSITION:\n"+defendant:"");
+    try{await stream(sys,msg,function(v){setOut(v);});}catch(e){if(e.message==="FREE_LIMIT_REACHED")setLimitReached(true);else setOut("Error: "+e.message);}
+    setLoading(false);
+  };
+  const doClear=function(){setFacts("");setClaimant("");setDefendant("");setOut("");clearPersist("set_f","set_c","set_d","set_out");};
+  var left=React.createElement("div",null,React.createElement(FileUpload,{t,label:"Import case documents",onText:function(text){setFacts(function(prev){return prev?prev+"\n\n"+text.slice(0,800):text.slice(0,800);});}}),React.createElement("div",{style:{textAlign:"center",color:t.muted,fontSize:12,margin:"4px 0"}},"— or enter case details directly —"),React.createElement(Lbl,{t},"Case Facts"),React.createElement(Inp,{val:facts,set:setFacts,ph:"Describe the dispute: parties, claims, reliefs sought, stage of proceedings...",rows:7,t}),React.createElement("div",{style:{height:8}}),React.createElement(Lbl,{t},"Claimant Opening Position"),React.createElement(Inp,{val:claimant,set:setClaimant,ph:"What the claimant is demanding...",rows:3,t}),React.createElement("div",{style:{height:8}}),React.createElement(Lbl,{t},"Defendant Opening Position"),React.createElement(Inp,{val:defendant,set:setDefendant,ph:"What the defendant has offered or their position...",rows:3,t}),React.createElement("div",{style:{height:10}}),React.createElement(Btn,{full:true,onClick:run,disabled:loading||!facts.trim()},loading?"Calculating settlement range...":"Run Settlement Analysis"));
+  var right=React.createElement("div",null,React.createElement(Lbl,{t},"Settlement Intelligence Report"),React.createElement(Out,{text:out,loading,ph:"Add case facts and click Run Settlement Analysis.",t}),React.createElement(ExportBtns,{text:out,title:"Settlement-Analysis"}));
+  return React.createElement("div",{className:"fade"},React.createElement(Hdr,{title:"Settlement Intelligence",desc:"BATNA, ZOPA, realistic settlement range, and full negotiation strategy.",isNew:true,t,onClear:doClear,hasContent:!!(facts||out)}),limitReached&&React.createElement(UpgradeBanner,{t,go}),React.createElement(Two,{l:left,r:right}));
+}
+
+// ── Contract Negotiation Tracker ──────────────────────────────────────────────
+function NegotiationPage({t,go}){
+  const [v1,setV1]=usePersist("neg_v1","");
+  const [v2,setV2]=usePersist("neg_v2","");
+  const [out,setOut]=usePersist("neg_out","");
+  const [loading,setLoading]=useState(false);
+  const [limitReached,setLimitReached]=useState(false);
+  const run=async function(){
+    if(!v1.trim()||!v2.trim())return;setLoading(true);setOut("");setLimitReached(false);
+    var sys=VOICE+"\n\nSenior commercial lawyer reviewing redlined contract changes.\n\nCHANGES IDENTIFIED:\nFor each change: the original wording, the new wording, and what changed.\n\nCLASSIFICATION OF EACH CHANGE:\nFor each change rate it as: ACCEPTABLE, PUSH BACK, or RED LINE. Explain why.\n\nMOST DANGEROUS CHANGES:\nThe 3 changes that carry the most legal risk for your client.\n\nCHANGES THEY SNUCK IN:\nSubtle changes that look minor but actually shift risk significantly.\n\nNEGOTIATION RESPONSE LETTER:\nDraft a formal response letter accepting acceptable changes, proposing alternative wording for push-back items, and firmly rejecting red-line items with explanation.";
+    var msg="ORIGINAL VERSION (our draft):\n\n"+v1+"\n\n---\n\nREDLINED VERSION (their changes):\n\n"+v2;
+    try{await stream(sys,msg,function(v){setOut(v);});}catch(e){if(e.message==="FREE_LIMIT_REACHED")setLimitReached(true);else setOut("Error: "+e.message);}
+    setLoading(false);
+  };
+  const doClear=function(){setV1("");setV2("");setOut("");clearPersist("neg_v1","neg_v2","neg_out");};
+  return React.createElement("div",{className:"fade"},
+    React.createElement(Hdr,{title:"Contract Negotiation Tracker",desc:"Paste two versions of a contract. AI flags every change, rates the risk, and drafts your response letter.",isNew:true,t,onClear:doClear,hasContent:!!(v1||v2||out)}),
+    limitReached&&React.createElement(UpgradeBanner,{t,go}),
+    React.createElement("div",{className:"two-col",style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:16}},
+      React.createElement("div",null,React.createElement(Lbl,{t},"Version 1 — Original (Your Draft)"),React.createElement(FileUpload,{t,label:"Import Version 1",onText:function(text){setV1(text);}}),React.createElement("div",{style:{textAlign:"center",color:t.muted,fontSize:12,margin:"4px 0"}},"— or paste directly —"),React.createElement(Inp,{val:v1,set:setV1,ph:"Paste the original contract text you sent...",rows:12,t})),
+      React.createElement("div",null,React.createElement(Lbl,{t},"Version 2 — Their Redline"),React.createElement(FileUpload,{t,label:"Import Version 2",onText:function(text){setV2(text);}}),React.createElement("div",{style:{textAlign:"center",color:t.muted,fontSize:12,margin:"4px 0"}},"— or paste directly —"),React.createElement(Inp,{val:v2,set:setV2,ph:"Paste the redlined version they sent back...",rows:12,t}))
+    ),
+    React.createElement(Btn,{full:true,onClick:run,disabled:loading||!v1.trim()||!v2.trim()},loading?"Analysing changes...":"Analyse Changes and Draft Response"),
+    out&&React.createElement("div",{style:{marginTop:20}},React.createElement(Lbl,{t},"Negotiation Analysis and Response Letter"),React.createElement(Out,{text:out,loading:false,t}),React.createElement(ExportBtns,{text:out,title:"Contract-Negotiation"}))
+  );
+}
+
+// ── WhatsApp Evidence Formatter ───────────────────────────────────────────────
+function WhatsAppPage({t,go}){
+  const [raw,setRaw]=usePersist("wa_raw","");
+  const [wctx,setWctx]=usePersist("wa_ctx","");
+  const [out,setOut]=usePersist("wa_out","");
+  const [loading,setLoading]=useState(false);
+  const [limitReached,setLimitReached]=useState(false);
+  const run=async function(){
+    if(!raw.trim())return;setLoading(true);setOut("");setLimitReached(false);
+    var sys=VOICE+"\n\nLegal document formatting specialist preparing electronic evidence for Nigerian court proceedings under Section 84 of the Evidence Act 2011.\n\nEXHIBIT COVER PAGE:\nDraft a formal exhibit cover identifying: the exhibit number, description of the document, the party tendering it, the witness through whom it will be tendered, and the date.\n\nFORMATTED CHAT TRANSCRIPT:\nFormat each message with: line number, date, time, sender name, and the exact message content.\n\nSECTION 84 CERTIFICATE REQUIREMENTS:\nDraft the required Section 84 Evidence Act 2011 certificate for electronic evidence.\n\nADMISSIBILITY NOTES:\nKey steps counsel must take to successfully tender this exhibit.\n\nHIGHLIGHT SUMMARY:\nIdentify the most legally significant messages and explain their evidential significance.";
+    var msg="RAW WHATSAPP EXPORT:\n\n"+raw+(wctx?"\n\nCASE CONTEXT:\n"+wctx:"");
+    try{await stream(sys,msg,function(v){setOut(v);});}catch(e){if(e.message==="FREE_LIMIT_REACHED")setLimitReached(true);else setOut("Error: "+e.message);}
+    setLoading(false);
+  };
+  const doClear=function(){setRaw("");setWctx("");setOut("");clearPersist("wa_raw","wa_ctx","wa_out");};
+  var left=React.createElement("div",null,
+    React.createElement("div",{style:{background:"rgba(46,204,138,0.06)",border:"1px solid rgba(46,204,138,0.2)",borderRadius:8,padding:"10px 12px",marginBottom:12,fontSize:12,color:t.dim,lineHeight:1.6}},React.createElement("strong",{style:{color:"#2ECC8A"}},"How to export: "),"On WhatsApp open the chat, tap the three dots, select More, then Export Chat, then Without Media. Paste the exported text below."),
+    React.createElement(Lbl,{t},"Raw WhatsApp Export"),React.createElement(Inp,{val:raw,set:setRaw,ph:"Paste the exported WhatsApp chat here...",rows:10,t}),
+    React.createElement("div",{style:{height:8}}),React.createElement(Lbl,{t},"Case Context (Optional)"),React.createElement(Inp,{val:wctx,set:setWctx,ph:"What this chat is meant to prove, parties names, case title...",rows:3,t}),
+    React.createElement("div",{style:{height:10}}),React.createElement(Btn,{full:true,onClick:run,disabled:loading||!raw.trim()},loading?"Formatting exhibit...":"Format as Court Exhibit")
+  );
+  var right=React.createElement("div",null,React.createElement(Lbl,{t},"Formatted Court Exhibit"),React.createElement(Out,{text:out,loading,ph:"Paste your WhatsApp export and click Format.",t}),React.createElement(ExportBtns,{text:out,title:"WhatsApp-Exhibit"}));
+  return React.createElement("div",{className:"fade"},React.createElement(Hdr,{title:"WhatsApp Evidence Formatter",desc:"Raw WhatsApp exports formatted into proper court exhibits with Section 84 compliance.",isNew:true,t,onClear:doClear,hasContent:!!(raw||out)}),limitReached&&React.createElement(UpgradeBanner,{t,go}),React.createElement(Two,{l:left,r:right}));
+}
+
+// ── AI Senior Partner ─────────────────────────────────────────────────────────
+function SeniorPartnerPage({t,go}){
+  const [messages,setMessages]=usePersist("sp_msgs",[]);
+  const [input,setInput]=useState("");
+  const [loading,setLoading]=useState(false);
+  const [limitReached,setLimitReached]=useState(false);
+  const endRef=useRef();
+  useEffect(function(){if(endRef.current)endRef.current.scrollIntoView({behavior:"smooth"});},[messages,loading]);
+  const SYS="You are Ade Bello, Senior Partner at a top-tier Nigerian commercial law firm with 28 years of practice. You specialise in commercial litigation, corporate transactions, and dispute resolution. You are sharp, direct, and do not sugarcoat your views. You ask follow-up questions like a real partner. You push back when you see a weak argument. You speak in a formal but warm collegial tone. You never use markdown, asterisks, or bullet dashes. You write in full sentences. You flag risks the junior has not considered. Always end with a question or a task that moves the matter forward.";
+  const send=async function(){
+    if(!input.trim()||loading)return;
+    var userMsg={role:"user",content:input,time:new Date().toLocaleTimeString()};
+    var newMsgs=[...messages,userMsg];
+    setMessages(newMsgs);setInput("");setLoading(true);setLimitReached(false);
+    var conv=newMsgs.map(function(m){return m.role+": "+m.content;}).join("\n\n");
+    var reply="";
+    try{await stream(SYS,conv,function(v){reply=v;});setMessages(function(prev){return [...prev,{role:"partner",content:reply,time:new Date().toLocaleTimeString()}];});}
+    catch(e){if(e.message==="FREE_LIMIT_REACHED")setLimitReached(true);else setMessages(function(prev){return [...prev,{role:"partner",content:"Error: "+e.message,time:""}];});}
+    setLoading(false);
+  };
+  const STARTERS=["I have a client meeting tomorrow and need to think through our strategy.","My client just received a suspicious contract — I want your read on it.","We are going to trial in 3 weeks. Walk me through what I should be doing.","The other side just made an offer. Help me think through whether to take it."];
+  return React.createElement("div",{className:"fade"},
+    React.createElement(Hdr,{title:"AI Senior Partner",desc:"Talk through any case with Ade Bello SAN — 28 years. He pushes back. He asks the questions you missed.",isNew:true,t,onClear:messages.length?function(){setMessages([]);clearPersist("sp_msgs");}:null,hasContent:messages.length>0}),
+    limitReached&&React.createElement(UpgradeBanner,{t,go}),
+    React.createElement("div",{style:{background:t.card,border:"2px solid rgba(200,164,94,0.3)",borderRadius:14,overflow:"hidden"}},
+      React.createElement("div",{style:{background:"linear-gradient(135deg,rgba(200,164,94,0.12),rgba(200,164,94,0.04))",padding:"14px 20px",borderBottom:"1px solid rgba(200,164,94,0.2)",display:"flex",alignItems:"center",gap:12}},
+        React.createElement("div",{style:{width:40,height:40,borderRadius:"50%",background:"linear-gradient(135deg,#C8A45E,#D4B474)",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Playfair Display',serif",fontSize:16,fontWeight:700,color:"#0D1B2E",flexShrink:0}},"AB"),
+        React.createElement("div",null,React.createElement("div",{style:{fontFamily:"'Playfair Display',serif",fontSize:15,fontWeight:700,color:t.text}},"Ade Bello, SAN"),React.createElement("div",{style:{fontSize:11,color:t.dim}},"Senior Partner · 28 Years · Commercial Litigation and Corporate")),
+        messages.length>0&&React.createElement("button",{onClick:function(){exportPDF(messages.map(function(m){return (m.role==="partner"?"BELLO SP: ":"YOU: ")+m.content;}).join("\n\n---\n\n"),"Senior-Partner-Session");},style:{marginLeft:"auto",padding:"6px 12px",borderRadius:7,background:"transparent",color:"#C8A45E",border:"1px solid rgba(200,164,94,0.3)",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}},"Export PDF")
+      ),
+      React.createElement("div",{style:{height:400,overflowY:"auto",padding:20,display:"flex",flexDirection:"column",gap:16}},
+        messages.length===0&&React.createElement("div",{style:{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",textAlign:"center",color:t.muted}},
+          React.createElement("div",{style:{fontSize:36,marginBottom:12}},"🤝"),
+          React.createElement("div",{style:{fontFamily:"'Playfair Display',serif",fontSize:18,fontWeight:600,color:t.dim,marginBottom:8}},"Good morning, Counsel"),
+          React.createElement("p",{style:{fontSize:13,lineHeight:1.7,maxWidth:400,marginBottom:16}},"Bring me a case, a clause, a strategy question, or a problem you are stuck on. I will ask you the hard questions."),
+          React.createElement("div",{style:{display:"flex",gap:8,flexWrap:"wrap",justifyContent:"center"}},STARTERS.map(function(q){return React.createElement("button",{key:q,onClick:function(){setInput(q);},style:{background:t.input,border:"1px solid "+t.border,borderRadius:8,padding:"8px 12px",fontSize:12,color:t.dim,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",textAlign:"left",lineHeight:1.4},onMouseEnter:function(e){e.target.style.borderColor="#C8A45E";},onMouseLeave:function(e){e.target.style.borderColor=t.border;}},q);}))
+        ),
+        messages.map(function(m,i){return React.createElement("div",{key:i,style:{display:"flex",gap:12,flexDirection:m.role==="user"?"row-reverse":"row",alignItems:"flex-start"}},React.createElement("div",{style:{width:32,height:32,borderRadius:"50%",background:m.role==="partner"?"linear-gradient(135deg,#C8A45E,#D4B474)":"rgba(200,164,94,0.15)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,color:m.role==="partner"?"#0D1B2E":"#C8A45E",flexShrink:0}},m.role==="partner"?"AB":"You"),React.createElement("div",{style:{maxWidth:"75%"}},React.createElement("div",{style:{background:m.role==="partner"?"rgba(200,164,94,0.08)":t.input,border:"1px solid "+(m.role==="partner"?"rgba(200,164,94,0.25)":t.border),borderRadius:m.role==="partner"?"4px 12px 12px 12px":"12px 4px 12px 12px",padding:"12px 16px",fontSize:13.5,lineHeight:1.8,color:t.text,whiteSpace:"pre-wrap"}},m.content),m.time&&React.createElement("div",{style:{fontSize:10,color:t.muted,marginTop:4,textAlign:m.role==="user"?"right":"left"}},m.time)));})
+        ,
+        loading&&React.createElement("div",{style:{display:"flex",gap:12,alignItems:"flex-start"}},React.createElement("div",{style:{width:32,height:32,borderRadius:"50%",background:"linear-gradient(135deg,#C8A45E,#D4B474)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,color:"#0D1B2E",flexShrink:0}},"AB"),React.createElement("div",{style:{background:"rgba(200,164,94,0.08)",border:"1px solid rgba(200,164,94,0.25)",borderRadius:"4px 12px 12px 12px",padding:16}},React.createElement(Pulse))),
+        React.createElement("div",{ref:endRef})
+      ),
+      React.createElement("div",{style:{borderTop:"1px solid "+t.border,padding:16,display:"flex",gap:10}},
+        React.createElement("textarea",{value:input,onChange:function(e){setInput(e.target.value);},placeholder:"Type your question or describe your situation...",onKeyDown:function(e){if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send();}},rows:2,style:{flex:1,background:t.input,border:"1px solid "+t.border,borderRadius:8,padding:"11px 14px",fontFamily:"'DM Sans',sans-serif",fontSize:13.5,color:t.text,outline:"none",resize:"none",lineHeight:1.6},onFocus:function(e){e.target.style.borderColor="#C8A45E";},onBlur:function(e){e.target.style.borderColor=t.border;}}),
+        React.createElement("button",{onClick:send,disabled:loading||!input.trim(),style:{padding:"0 20px",borderRadius:8,background:"linear-gradient(135deg,#C8A45E,#D4B474)",border:"none",color:"#0D1B2E",fontWeight:700,fontSize:13,cursor:loading||!input.trim()?"not-allowed":"pointer",opacity:loading||!input.trim()?0.5:1,fontFamily:"'DM Sans',sans-serif"}},"Send")
+      )
+    ),
+    React.createElement("div",{style:{fontSize:12,color:t.muted,textAlign:"center",marginTop:10,fontStyle:"italic"}},"Enter to send. Shift+Enter for new line. Conversation saved on this device.")
+  );
+}
+
+// ── Court Simulator ───────────────────────────────────────────────────────────
+const COURT_TYPES=["Magistrate Court","State High Court","Federal High Court","National Industrial Court","Investment and Securities Tribunal","Tax Appeal Tribunal","Court of Appeal","Supreme Court of Nigeria"];
+const MATTER_TYPES=["Civil — Contract Dispute","Civil — Property / Land","Civil — Negligence / Tort","Commercial — Company Law","Commercial — Banking and Finance","Criminal — Summary","Criminal — Indictable","Employment / Labour","Constitutional — Fundamental Rights","Family Law — Matrimonial Causes","Arbitration / ADR","Administrative Law"];
+
+function CourtSimPage({t,go}){
+  const [phase,setPhase]=useState("setup");
+  const [courtType,setCourtType]=usePersist("cs_court","State High Court");
+  const [matterType,setMatterType]=usePersist("cs_matter","");
+  const [userSide,setUserSide]=usePersist("cs_side","Claimant");
+  const [caseBrief,setCaseBrief]=usePersist("cs_brief","");
+  const [simMode,setSimMode]=usePersist("cs_mode","Full Trial");
+  const [transcript,setTranscript]=usePersist("cs_transcript",[]);
+  const [input,setInput]=useState("");
+  const [loading,setLoading]=useState(false);
+  const [limitReached,setLimitReached]=useState(false);
+  const [report,setReport]=useState("");
+  const [reportLoading,setReportLoading]=useState(false);
+  const endRef=useRef();
+  useEffect(function(){if(endRef.current)endRef.current.scrollIntoView({behavior:"smooth"});},[transcript,loading]);
+  const MODES=["Full Trial","Cross-Examination","Objections Drill","Opening Statement","Motion Practice"];
+  const QA=["My Lord, I humbly submit that this court has jurisdiction by virtue of...","My Lord, I object to that question on the grounds that it calls for hearsay evidence.","With leave of this honourable court, I wish to tender this document as exhibit...","My Lord, the defendant has failed to file and serve their witness statement on oath within time.","My Lord, I invite this court to take judicial notice of...","I concede the point, My Lord, but submit that notwithstanding..."];
+  const JUDGE_SYS="You are the Honourable Justice Okafor, a Judge of the "+courtType+" with 22 years on the bench. You enforce Nigerian court rules strictly. You sustain and overrule objections citing specific rule numbers. You speak with judicial authority — terse, precise, decisive. Never use markdown, asterisks, or bullet points. The matter type is: "+(matterType||"civil dispute")+". User appears for the "+userSide+".";
+  const OPP_SYS="You are Barrister Chibuike Nwosu, lead opposing counsel with 18 years of trial experience. You appear for the "+(userSide==="Claimant"?"Defendant":"Claimant")+". You are aggressive, well-prepared, and technically precise. You spot weaknesses instantly. You raise objections strategically. Never use markdown. Write as a barrister in live proceedings.";
+  const startTrial=async function(){
+    if(!caseBrief.trim()||!matterType)return;
+    setTranscript([]);setReport("");setPhase("trial");
+    setTranscript([{speaker:"COURT",content:"This matter comes up today for "+simMode+". Counsel, state your appearances for the record. Case: "+caseBrief.slice(0,200)+". You may proceed.",style:"judge"}]);
+  };
+  const handleAction=async function(actionText){
+    var text=actionText||input;if(!text.trim()||loading)return;
+    var newT=[...transcript,{speaker:"COUNSEL (YOU)",content:text,style:"user"}];
+    setTranscript(newT);setInput("");setLoading(true);setLimitReached(false);
+    var history=newT.map(function(m){return m.speaker+": "+m.content;}).join("\n\n");
+    var caseCtx="\n\nCASE: "+caseBrief.slice(0,400);
+    try{
+      var judgeReply="";
+      await stream(JUDGE_SYS,history+"\n\nRespond as the Judge to counsel last submission."+caseCtx,function(v){judgeReply=v;});
+      var newT2=[...newT,{speaker:"JUSTICE OKAFOR (JUDGE)",content:judgeReply,style:"judge"}];
+      setTranscript(newT2);
+      if(judgeReply.toLowerCase().includes("respond")||judgeReply.toLowerCase().includes("counsel")||Math.random()>0.45){
+        var oppReply="";
+        await stream(OPP_SYS,history+"\n\nJUDGE: "+judgeReply+"\n\nRespond as opposing counsel if invited or tactically warranted."+caseCtx,function(v){oppReply=v;});
+        if(oppReply.trim()&&oppReply.length>30){setTranscript(function(prev){return [...prev,{speaker:"OPP. COUNSEL NWOSU",content:oppReply,style:"opponent"}];});}
+      }
+    }catch(e){
+      if(e.message==="FREE_LIMIT_REACHED")setLimitReached(true);
+      else setTranscript(function(prev){return [...prev,{speaker:"SYSTEM",content:"Error: "+e.message,style:"system"}];});
+    }
+    setLoading(false);
+  };
+  const getReport=async function(){
+    if(!transcript.length)return;setReportLoading(true);setPhase("report");
+    var sys=VOICE+"\n\nTrial advocacy coach reviewing a courtroom simulation session.\n\nOVERALL PERFORMANCE GRADE:\nA, B, C, D, or F with explanation.\n\nSTRENGTHS DEMONSTRATED:\nSpecific moments with direct quotes from the transcript.\n\nCRITICAL WEAKNESSES:\nSpecific failures with what should have been said instead.\n\nPROCEDURAL ERRORS:\nAny failures to comply with Nigerian court procedure.\n\nMISSED OPPORTUNITIES:\nMoments where a stronger counsel would have done better.\n\nSPECIFIC IMPROVEMENT EXERCISES:\nFive concrete exercises to address the weaknesses identified.";
+    var conv="COURTROOM TRANSCRIPT:\n\n"+transcript.map(function(m){return m.speaker+": "+m.content;}).join("\n\n---\n\n");
+    try{await stream(sys,conv,function(v){setReport(v);});}catch(e){setReport("Error generating report: "+e.message);}
+    setReportLoading(false);
+  };
+  const reset=function(){setPhase("setup");setTranscript([]);setReport("");clearPersist("cs_transcript","cs_brief");};
+  var EC={judge:"rgba(200,164,94,0.09)",user:"rgba(74,158,232,0.08)",opponent:"rgba(224,82,82,0.08)",system:"rgba(100,100,100,0.05)"};
+  var EB={judge:"rgba(200,164,94,0.2)",user:"rgba(74,158,232,0.15)",opponent:"rgba(224,82,82,0.15)",system:"rgba(100,100,100,0.1)"};
+  var LC={judge:"#C8A45E",user:"#4A9EE8",opponent:"#E05252",system:t.muted};
+  if(phase==="setup")return React.createElement("div",{className:"fade"},
+    React.createElement("div",{style:{marginBottom:24}},
+      React.createElement("div",{style:{width:44,height:3,background:"linear-gradient(90deg,#C8A45E,transparent)",borderRadius:100,marginBottom:14}}),
+      React.createElement("div",{style:{display:"flex",alignItems:"center",gap:12,marginBottom:8}},React.createElement("h1",{style:{fontFamily:"'Playfair Display',serif",fontSize:26,fontWeight:700,color:t.text}},"Live Court Simulator"),React.createElement("span",{style:{background:"rgba(224,82,82,0.13)",color:"#E05252",fontSize:9,fontWeight:700,padding:"3px 9px",borderRadius:100}},"LIVE")),
+      React.createElement("p",{style:{color:t.dim,fontSize:13.5,lineHeight:1.6,maxWidth:600}},"The first AI-powered Nigerian courtroom. Justice Okafor enforces procedure. Opposing counsel Nwosu argues back. Practice until you are ready to win.")
+    ),
+    React.createElement("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:14}},
+      React.createElement("div",null,React.createElement(Lbl,{t},"Court"),React.createElement(Sel,{val:courtType,set:setCourtType,opts:COURT_TYPES,ph:"Select court...",t})),
+      React.createElement("div",null,React.createElement(Lbl,{t},"Matter Type"),React.createElement(Sel,{val:matterType,set:setMatterType,opts:MATTER_TYPES,ph:"Select matter type...",t}))
+    ),
+    React.createElement("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:14}},
+      React.createElement("div",null,React.createElement(Lbl,{t},"You Appear For"),React.createElement(Sel,{val:userSide,set:setUserSide,opts:["Claimant","Defendant","Applicant","Respondent","Prosecution","Defence"],ph:"Select side...",t})),
+      React.createElement("div",null,React.createElement(Lbl,{t},"Simulation Mode"),React.createElement("div",{style:{display:"flex",flexWrap:"wrap",gap:6,marginTop:4}},MODES.map(function(m){return React.createElement("button",{key:m,onClick:function(){setSimMode(m);},style:{padding:"6px 12px",borderRadius:7,border:"1px solid "+(simMode===m?"#C8A45E":t.border),background:simMode===m?"rgba(200,164,94,0.1)":t.input,color:simMode===m?"#C8A45E":t.dim,fontSize:12,fontWeight:simMode===m?600:400,cursor:"pointer",fontFamily:"inherit",transition:"all 0.15s"}},m);})))
+    ),
+    React.createElement(Lbl,{t},"Case Brief"),
+    React.createElement(FileUpload,{t,label:"Import case documents",onText:function(text){setCaseBrief(function(prev){return prev?prev+"\n\n"+text.slice(0,600):text.slice(0,600);});}}),
+    React.createElement("div",{style:{textAlign:"center",color:t.muted,fontSize:12,margin:"4px 0"}},"— or describe the case directly —"),
+    React.createElement(Inp,{val:caseBrief,set:setCaseBrief,ph:"Parties, what happened, the claim, reliefs sought, legal issues...",rows:7,t}),
+    React.createElement("div",{style:{height:16}}),
+    React.createElement("div",{style:{background:"rgba(200,164,94,0.06)",border:"1px solid rgba(200,164,94,0.2)",borderRadius:10,padding:14,marginBottom:20,fontSize:13,color:t.dim,lineHeight:1.7}},React.createElement("strong",{style:{color:"#C8A45E"}},"What to expect: "),"Justice Okafor will open. You speak as counsel using proper Nigerian court language (My Lord, I humbly submit...). The Judge rules. Nwosu challenges you. Every word is scored at the end."),
+    React.createElement(Btn,{full:true,onClick:startTrial,disabled:!caseBrief.trim()||!matterType},"Enter the Courtroom")
+  );
+  if(phase==="trial")return React.createElement("div",{className:"fade"},
+    React.createElement("div",{style:{background:t.card,border:"2px solid rgba(200,164,94,0.35)",borderRadius:14,overflow:"hidden"}},
+      React.createElement("div",{style:{background:"linear-gradient(135deg,rgba(12,26,46,0.95),rgba(16,31,53,0.95))",padding:"12px 20px",borderBottom:"1px solid rgba(200,164,94,0.25)",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8}},
+        React.createElement("div",{style:{display:"flex",alignItems:"center",gap:12}},
+          React.createElement("div",{style:{width:8,height:8,borderRadius:"50%",background:"#E05252",animation:"redPulse 2s infinite"}}),
+          React.createElement("div",null,React.createElement("div",{style:{fontFamily:"'Playfair Display',serif",fontSize:14,fontWeight:700,color:"#F0EDE6"}},"LIVE — "+courtType),React.createElement("div",{style:{fontSize:11,color:"rgba(200,164,94,0.7)"}},"Justice Okafor  ·  Opp: Nwosu  ·  You: "+userSide+" counsel"))
+        ),
+        React.createElement("div",{style:{display:"flex",gap:8}},
+          React.createElement("button",{onClick:getReport,style:{padding:"6px 14px",borderRadius:7,background:"linear-gradient(135deg,#C8A45E,#D4B474)",border:"none",color:"#0D1B2E",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}},"End and Get Report"),
+          React.createElement("button",{onClick:reset,style:{padding:"6px 12px",borderRadius:7,background:"transparent",border:"1px solid rgba(224,82,82,0.3)",color:"#E05252",fontSize:11,cursor:"pointer",fontFamily:"inherit"}},"Exit")
+        )
+      ),
+      React.createElement("div",{style:{height:"45vh",overflowY:"auto",padding:20,display:"flex",flexDirection:"column",gap:14}},
+        transcript.map(function(entry,i){return React.createElement("div",{key:i,style:{borderRadius:10,padding:"12px 16px",border:"1px solid "+(EB[entry.style]||EB.system),background:EC[entry.style]||EC.system}},React.createElement("div",{style:{fontSize:9,fontWeight:800,letterSpacing:"1.5px",color:LC[entry.style]||t.muted,marginBottom:6,textTransform:"uppercase"}},entry.speaker),React.createElement("div",{style:{fontSize:13.5,lineHeight:1.9,color:t.text,whiteSpace:"pre-wrap"}},entry.content));}),
+        loading&&React.createElement("div",{style:{borderRadius:10,padding:"12px 16px",border:"1px solid rgba(200,164,94,0.2)",background:"rgba(200,164,94,0.09)"}},React.createElement("div",{style:{fontSize:9,fontWeight:800,letterSpacing:"1.5px",color:"#C8A45E",marginBottom:6}},"COURT IS CONSIDERING..."),React.createElement(Pulse)),
+        limitReached&&React.createElement("div",{style:{padding:"0 0 10px"}},React.createElement(UpgradeBanner,{t,go})),
+        React.createElement("div",{ref:endRef})
+      ),
+      React.createElement("div",{style:{borderTop:"1px solid "+t.border,padding:"10px 16px"}},
+        React.createElement("div",{style:{fontSize:9,fontWeight:700,letterSpacing:"1px",color:t.muted,marginBottom:6}},"QUICK SUBMISSIONS"),
+        React.createElement("div",{style:{display:"flex",gap:6,flexWrap:"wrap"}},QA.map(function(qa,i){return React.createElement("button",{key:i,onClick:function(){handleAction(qa);},disabled:loading,style:{padding:"5px 10px",borderRadius:6,background:t.input,border:"1px solid "+t.border,color:t.dim,fontSize:11,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",whiteSpace:"nowrap"},onMouseEnter:function(e){e.target.style.borderColor="#C8A45E";},onMouseLeave:function(e){e.target.style.borderColor=t.border;}},qa.slice(0,48)+"...");}))
+      ),
+      React.createElement("div",{style:{borderTop:"1px solid "+t.border,padding:"12px 16px",display:"flex",gap:10,alignItems:"flex-end"}},
+        React.createElement("div",{style:{flex:1}},
+          React.createElement("div",{style:{fontSize:10,fontWeight:700,letterSpacing:"1px",color:t.muted,marginBottom:5}},"YOUR SUBMISSION"),
+          React.createElement("textarea",{value:input,onChange:function(e){setInput(e.target.value);},placeholder:"My Lord, I humbly submit that...",onKeyDown:function(e){if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();handleAction();}},rows:3,style:{width:"100%",background:t.input,border:"1px solid "+t.border,borderRadius:8,padding:"10px 14px",fontFamily:"'DM Sans',sans-serif",fontSize:13.5,color:t.text,outline:"none",resize:"none",lineHeight:1.6},onFocus:function(e){e.target.style.borderColor="#C8A45E";},onBlur:function(e){e.target.style.borderColor=t.border;}})
+        ),
+        React.createElement("button",{onClick:function(){handleAction();},disabled:loading||!input.trim(),style:{padding:"12px 20px",borderRadius:8,background:"linear-gradient(135deg,#C8A45E,#D4B474)",border:"none",color:"#0D1B2E",fontWeight:700,fontSize:13,cursor:loading||!input.trim()?"not-allowed":"pointer",opacity:loading||!input.trim()?0.5:1,fontFamily:"'DM Sans',sans-serif",whiteSpace:"nowrap"}},"Submit")
+      )
+    )
+  );
+  if(phase==="report")return React.createElement("div",{className:"fade"},
+    React.createElement(Hdr,{title:"Courtroom Performance Report",desc:"Your session has been graded.",t}),
+    reportLoading?React.createElement("div",{style:{display:"flex",flexDirection:"column",alignItems:"center",gap:16,padding:60}},React.createElement(Pulse),React.createElement("div",{style:{fontSize:13,color:t.dim}},"Reviewing the session...")):React.createElement("div",null,React.createElement(Out,{text:report,loading:false,ph:"",t}),React.createElement("div",{style:{display:"flex",gap:10,marginTop:12,flexWrap:"wrap"}},React.createElement(Btn,{onClick:reset},"New Session"),React.createElement(Btn,{variant:"ghost",onClick:function(){setPhase("trial");setReport("");}},("Review Transcript")),React.createElement(Btn,{variant:"ghost",sm:true,onClick:function(){exportPDF(report,"Courtroom-Performance-Report");}},"Export PDF")))
+  );
+  return null;
+}
+
 function AppContent(){
   const {user,loading:authLoading}=useAuth();
   const [page,setPage]=useState("dashboard");
