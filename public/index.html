@@ -1683,7 +1683,7 @@ function EvidencePage({t,go}){
         React.createElement(Lbl,{t},"Case Context (Optional)"),
         React.createElement(Inp,{val:ctx,set:setCtx,ph:"Court, proceedings type, what the evidence is meant to prove...",rows:3,t}),
         React.createElement("div",{style:{height:10}}),
-        React.createElement(Btn,{full:true,onClick:run,disabled:loading||!evid.trim()||!evType},loading?"Analysing...","Analyse Evidence")
+        React.createElement(Btn,{full:true,onClick:run,disabled:loading||!evid.trim()||!evType},loading?"Analysing...":"Analyse Evidence")
       ),
       r:React.createElement(SmartOutputPanel,{text:out,loading,ph:"Select evidence type, describe the evidence, click Analyse.",t,go,title:"Evidence-Analysis"})
     })
