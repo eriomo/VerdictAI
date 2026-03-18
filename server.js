@@ -73,11 +73,11 @@ app.post('/api/ai', requireAuth, async (req, res) => {
         profile.usage_count = 0;
       }
 
-      // Enforce free tier limit
-      if (profile.tier === 'free' && profile.usage_count >= 5) {
+      // Enforce free tier limit — FIXED: was 5, now correctly 7
+      if (profile.tier === 'free' && profile.usage_count >= 7) {
         return res.status(403).json({
           error: 'FREE_LIMIT_REACHED',
-          message: 'You have used all 5 free analyses this month. Upgrade to Solo to continue.'
+          message: 'You have used all 7 free analyses this month. Upgrade to Solo to continue.'
         });
       }
 
@@ -257,7 +257,7 @@ app.get('/api/cases/search', requireAuth, async (req, res) => {
   try {
     const afRes = await fetch(
       `https://africanlii.org/search?q=${encodeURIComponent(q)}&jurisdiction=ng&type=judgment`,
-      { headers: { 'User-Agent': 'VerdictAI/3.0' }, timeout: 8000 }
+      { headers: { 'User-Agent': 'VerdictAI/4.0' }, timeout: 8000 }
     );
     if (afRes.ok) {
       const ct = afRes.headers.get('content-type') || '';
@@ -279,7 +279,7 @@ app.get('/api/cases/search', requireAuth, async (req, res) => {
 
   results.push(
     { title: `Search "${q}" on AfricanLII`, court: 'External', year: '', url: `https://africanlii.org/search?q=${encodeURIComponent(q)}&jurisdiction=ng`, snippet: 'Free Nigerian case law database', source: 'AfricanLII', isLink: true },
-    { title: `Search "${q}" on PrimsCol`, court: 'LawPavilion', year: '', url: 'https://primsol.lawpavilion.com', snippet: 'Comprehensive Nigerian cases 1960–present (subscription required)', source: 'PrimsCol', isLink: true }
+    { title: `Search "${q}" on PrimsCol`, court: 'LawPavilion', year: '', url: 'https://primsol.lawpavilion.com', snippet: 'Comprehensive Nigerian cases 1960-present (subscription required)', source: 'PrimsCol', isLink: true }
   );
 
   res.json({ results, count: results.filter(r => !r.isLink).length });
@@ -287,7 +287,7 @@ app.get('/api/cases/search', requireAuth, async (req, res) => {
 
 // ── Health ────────────────────────────────────────────────────────────────────
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', version: '3.0.0' });
+  res.json({ status: 'ok', version: '4.0.0' });
 });
 
 // ── Serve frontend ────────────────────────────────────────────────────────────
@@ -295,4 +295,4 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-app.listen(PORT, () => console.log(`Verdict AI v3.0 running on port ${PORT}`));
+app.listen(PORT, () => console.log(`Verdict AI v4.0 running on port ${PORT}`));
