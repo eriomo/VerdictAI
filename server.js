@@ -76,9 +76,12 @@ app.post('/api/ai', requireAuth, async (req, res) => {
   const attemptGroq = async (retries = 3) => {
     for (let i = 0; i < retries; i++) {
       try {
+        const controller = new AbortController();
+        const fetchTimeout = setTimeout(() => controller.abort(), 60000);
         const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+          signal: controller.signal,
           body: JSON.stringify({
             model: 'llama-3.3-70b-versatile',
             messages: [
@@ -90,6 +93,7 @@ app.post('/api/ai', requireAuth, async (req, res) => {
             stream: true
           })
         });
+        clearTimeout(fetchTimeout);
         if (groqRes.status === 429) {
           const retryAfter = parseInt(groqRes.headers.get('retry-after') || '10') * 1000;
           await new Promise(r => setTimeout(r, retryAfter));
@@ -114,10 +118,34 @@ app.post('/api/ai', requireAuth, async (req, res) => {
     res.setHeader('Connection', 'keep-alive');
     res.setHeader('X-Accel-Buffering', 'no');
     const groqRes = await attemptGroq();
+
+    // Hard timeout — if stream stalls for 90 seconds, kill it
+    const timeout = setTimeout(() => {
+      console.log('Stream timeout — terminating');
+      try { groqRes.body.destroy(); } catch {}
+      if (!res.writableEnded) res.end();
+    }, 90000);
+
     groqRes.body.pipe(res);
-    groqRes.body.on('error', () => res.end());
+
+    groqRes.body.on('error', (err) => {
+      clearTimeout(timeout);
+      console.log('Stream error:', err.message);
+      if (!res.writableEnded) res.end();
+    });
+
+    groqRes.body.on('end', () => {
+      clearTimeout(timeout);
+    });
+
+    res.on('close', () => {
+      clearTimeout(timeout);
+      try { groqRes.body.destroy(); } catch {}
+    });
+
   } catch (err) {
     if (!res.headersSent) res.status(500).json({ error: err.message });
+    else res.end();
   }
 });
 
