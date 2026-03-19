@@ -1,7 +1,7 @@
 const express = require('express');
-const fetch = require('node-fetch');
 const cors = require('cors');
 const path = require('path');
+const https = require('https');
 const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
@@ -13,6 +13,28 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
+// ── Simple HTTPS request helper — no external dependencies ───────────────────
+function httpsPost(hostname, path, headers, body) {
+  return new Promise((resolve, reject) => {
+    const bodyStr = typeof body === 'string' ? body : JSON.stringify(body);
+    const options = {
+      hostname,
+      path,
+      method: 'POST',
+      headers: { ...headers, 'Content-Length': Buffer.byteLength(bodyStr) },
+      timeout: 50000
+    };
+    const req = https.request(options, (res) => {
+      resolve(res);
+    });
+    req.on('error', reject);
+    req.on('timeout', () => { req.destroy(); reject(new Error('Request timed out')); });
+    req.write(bodyStr);
+    req.end();
+  });
+}
+
+// ── Auth middleware ───────────────────────────────────────────────────────────
 async function requireAuth(req, res, next) {
   const token = req.headers.authorization?.replace('Bearer ', '');
   if (!token) return res.status(401).json({ error: 'Not authenticated' });
@@ -28,12 +50,13 @@ function resetMinuteIfNeeded() {
   if (Date.now() - minuteStart > 60000) { requestsThisMinute = 0; minuteStart = Date.now(); }
 }
 
+// ── AI Proxy ──────────────────────────────────────────────────────────────────
 app.post('/api/ai', requireAuth, async (req, res) => {
   const { system, user } = req.body;
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) return res.status(500).json({ error: 'API key not configured' });
 
-  // ── Tier / usage check ────────────────────────────────────────────────────
+  // ── Usage check ───────────────────────────────────────────────────────────
   try {
     const { data: profile } = await supabase
       .from('profiles')
@@ -55,7 +78,7 @@ app.post('/api/ai', requireAuth, async (req, res) => {
     }
   } catch (e) { console.log('Profile check error:', e.message); }
 
-  // ── Rate limiting ─────────────────────────────────────────────────────────
+  // ── Rate limit ────────────────────────────────────────────────────────────
   resetMinuteIfNeeded();
   if (requestsThisMinute >= 25) {
     const wait = 60000 - (Date.now() - minuteStart) + 500;
@@ -63,18 +86,18 @@ app.post('/api/ai', requireAuth, async (req, res) => {
     resetMinuteIfNeeded();
   }
 
-  // ── Call Groq with hard timeout ───────────────────────────────────────────
+  // ── Stream from Groq ──────────────────────────────────────────────────────
   const attemptGroq = async (retries = 3) => {
     for (let i = 0; i < retries; i++) {
       try {
-        const controller = new AbortController();
-        // Kill fetch after 45s — well within Render's 60s request timeout
-        const fetchTimeout = setTimeout(() => controller.abort(), 45000);
-        const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-          signal: controller.signal,
-          body: JSON.stringify({
+        const groqRes = await httpsPost(
+          'api.groq.com',
+          '/openai/v1/chat/completions',
+          {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+          },
+          {
             model: 'llama-3.3-70b-versatile',
             messages: [
               { role: 'system', content: system },
@@ -83,31 +106,33 @@ app.post('/api/ai', requireAuth, async (req, res) => {
             temperature: 0.2,
             max_tokens: 8000,
             stream: true
-          })
-        });
-        clearTimeout(fetchTimeout);
+          }
+        );
 
-        if (groqRes.status === 429) {
-          const retryAfter = parseInt(groqRes.headers.get('retry-after') || '15') * 1000;
+        if (groqRes.statusCode === 429) {
+          const retryAfter = parseInt(groqRes.headers['retry-after'] || '15') * 1000;
           console.log(`Groq 429 — waiting ${retryAfter}ms`);
+          // Drain the response
+          groqRes.resume();
           await new Promise(r => setTimeout(r, retryAfter));
           continue;
         }
-        if (!groqRes.ok) {
-          const err = await groqRes.json().catch(() => ({}));
-          throw new Error(err.error?.message || `Groq error ${groqRes.status}`);
+
+        if (groqRes.statusCode !== 200) {
+          let errBody = '';
+          for await (const chunk of groqRes) errBody += chunk;
+          throw new Error(`Groq error ${groqRes.statusCode}: ${errBody.slice(0, 200)}`);
         }
+
         requestsThisMinute++;
         return groqRes;
       } catch (err) {
-        if (err.name === 'AbortError') throw new Error('Request timed out — please try again');
         if (i === retries - 1) throw err;
         await new Promise(r => setTimeout(r, 2000 * (i + 1)));
       }
     }
   };
 
-  // ── Stream response ───────────────────────────────────────────────────────
   try {
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
@@ -116,33 +141,36 @@ app.post('/api/ai', requireAuth, async (req, res) => {
 
     const groqRes = await attemptGroq();
 
-    // Kill stream if it stalls for 30s mid-response
+    // Kill stalled stream after 30s of no data
     let lastActivity = Date.now();
     const stallCheck = setInterval(() => {
       if (Date.now() - lastActivity > 30000) {
         clearInterval(stallCheck);
         console.log('Stream stalled — terminating');
-        try { groqRes.body.destroy(); } catch {}
+        groqRes.destroy();
         if (!res.writableEnded) res.end();
       }
     }, 5000);
 
-    groqRes.body.on('data', () => { lastActivity = Date.now(); });
-    groqRes.body.pipe(res);
+    groqRes.on('data', (chunk) => {
+      lastActivity = Date.now();
+      res.write(chunk);
+    });
 
-    groqRes.body.on('error', (err) => {
+    groqRes.on('end', () => {
+      clearInterval(stallCheck);
+      if (!res.writableEnded) res.end();
+    });
+
+    groqRes.on('error', (err) => {
       clearInterval(stallCheck);
       console.log('Stream error:', err.message);
       if (!res.writableEnded) res.end();
     });
 
-    groqRes.body.on('end', () => {
-      clearInterval(stallCheck);
-    });
-
     res.on('close', () => {
       clearInterval(stallCheck);
-      try { groqRes.body.destroy(); } catch {}
+      groqRes.destroy();
     });
 
   } catch (err) {
@@ -152,7 +180,7 @@ app.post('/api/ai', requireAuth, async (req, res) => {
   }
 });
 
-// ── Documents ────────────────────────────────────────────────────────────────
+// ── Documents ─────────────────────────────────────────────────────────────────
 app.get('/api/documents', requireAuth, async (req, res) => {
   const { data, error } = await supabase.from('documents').select('*').eq('user_id', req.user.id).order('created_at', { ascending: false });
   if (error) return res.status(500).json({ error: error.message });
@@ -172,7 +200,7 @@ app.delete('/api/documents/:id', requireAuth, async (req, res) => {
   res.json({ success: true });
 });
 
-// ── Cases ────────────────────────────────────────────────────────────────────
+// ── Cases ─────────────────────────────────────────────────────────────────────
 app.get('/api/cases', requireAuth, async (req, res) => {
   const { data, error } = await supabase.from('cases').select('*').eq('user_id', req.user.id).order('created_at', { ascending: false });
   if (error) return res.status(500).json({ error: error.message });
@@ -213,38 +241,23 @@ app.patch('/api/profile', requireAuth, async (req, res) => {
   res.json(data);
 });
 
-// ── Nigerian Case Search ──────────────────────────────────────────────────────
+// ── Case Search ───────────────────────────────────────────────────────────────
 app.get('/api/cases/search', requireAuth, async (req, res) => {
   const { q } = req.query;
   if (!q) return res.json({ results: [] });
   const results = [];
-  try {
-    const ctrl = new AbortController();
-    setTimeout(() => ctrl.abort(), 8000);
-    const afRes = await fetch(`https://africanlii.org/search?q=${encodeURIComponent(q)}&jurisdiction=ng&type=judgment`, {
-      headers: { 'User-Agent': 'VerdictAI/4.2' }, signal: ctrl.signal
-    });
-    if (afRes.ok) {
-      const ct = afRes.headers.get('content-type') || '';
-      if (ct.includes('json')) {
-        const data = await afRes.json();
-        (data.results || data.items || []).slice(0, 8).forEach(item => {
-          results.push({ title: item.title || 'Untitled Case', court: item.court || 'Nigerian Court', year: item.year || '', url: item.url || 'https://africanlii.org', snippet: item.snippet || '', source: 'AfricanLII' });
-        });
-      }
-    }
-  } catch (e) {}
   results.push(
-    { title: `Search "${q}" on AfricanLII`, court: 'External', year: '', url: `https://africanlii.org/search?q=${encodeURIComponent(q)}&jurisdiction=ng`, snippet: 'Free Nigerian case law database', source: 'AfricanLII', isLink: true },
-    { title: `Search "${q}" on PrimsCol`, court: 'LawPavilion', year: '', url: 'https://primsol.lawpavilion.com', snippet: 'Comprehensive Nigerian cases 1960-present (subscription required)', source: 'PrimsCol', isLink: true }
+    { title: `Search "${q}" on AfricanLII`, court: 'Free Nigerian Case Law', url: `https://africanlii.org/search?q=${encodeURIComponent(q)}&jurisdiction=ng`, snippet: 'Thousands of Nigerian judgments — free access', source: 'AfricanLII', isLink: true },
+    { title: `Search "${q}" on PrimsCol`, court: 'LawPavilion', url: 'https://primsol.lawpavilion.com', snippet: 'Comprehensive Nigerian cases 1960-present (subscription required)', source: 'PrimsCol', isLink: true },
+    { title: `Search "${q}" on NigeriaLII`, court: 'NigeriaLII', url: `https://nigerialii.org/search?q=${encodeURIComponent(q)}`, snippet: 'Free Nigerian legal materials', source: 'NigeriaLII', isLink: true }
   );
-  res.json({ results, count: results.filter(r => !r.isLink).length });
+  res.json({ results, count: 0 });
 });
 
-// ── Health ─────────────────────────────────────────────────────────────────────
+// ── Health ────────────────────────────────────────────────────────────────────
 app.get('/api/health', (req, res) => res.json({ status: 'ok', version: '4.2.0', model: 'llama-3.3-70b-versatile' }));
 
 // ── Frontend ──────────────────────────────────────────────────────────────────
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 
-app.listen(PORT, () => console.log(`Verdict AI v4.2 — Groq — port ${PORT}`));
+app.listen(PORT, () => console.log(`Verdict AI v4.2 running on port ${PORT}`));
