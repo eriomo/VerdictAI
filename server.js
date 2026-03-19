@@ -110,10 +110,14 @@ app.post('/api/ai', requireAuth, async (req, res) => {
         );
 
         if (groqRes.statusCode === 429) {
-          const retryAfter = parseInt(groqRes.headers['retry-after'] || '15') * 1000;
-          console.log(`Groq 429 — waiting ${retryAfter}ms`);
-          // Drain the response
+          const retryAfter = parseInt(groqRes.headers['retry-after'] || '10') * 1000;
           groqRes.resume();
+          // If Groq wants us to wait more than 30s, the daily limit is hit — tell user immediately
+          if (retryAfter > 30000) {
+            console.log(`Groq daily limit hit — retry-after: ${retryAfter}ms`);
+            throw new Error('DAILY_LIMIT');
+          }
+          console.log(`Groq 429 — waiting ${retryAfter}ms`);
           await new Promise(r => setTimeout(r, retryAfter));
           continue;
         }
@@ -175,8 +179,12 @@ app.post('/api/ai', requireAuth, async (req, res) => {
 
   } catch (err) {
     console.log('AI error:', err.message);
-    if (!res.headersSent) res.status(500).json({ error: err.message });
-    else res.end();
+    if (!res.headersSent) {
+      if (err.message === 'DAILY_LIMIT') {
+        return res.status(429).json({ error: 'The AI service has reached its daily limit. Usage resets at midnight. Please try again later or upgrade your Groq API plan at console.groq.com.' });
+      }
+      res.status(500).json({ error: err.message });
+    } else res.end();
   }
 });
 
