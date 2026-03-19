@@ -85,7 +85,7 @@ app.post('/api/ai', requireAuth, async (req, res) => {
               { role: 'system', content: system },
               { role: 'user', content: user }
             ],
-            temperature: 0.35,
+            temperature: 0.2,
             max_tokens: 8000,
             stream: true
           })
