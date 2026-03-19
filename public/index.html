@@ -225,8 +225,7 @@ Never omit "not," "never," "shall not," "must not." A missing negation reverses 
 CALCULATIONS:
 Write weights as decimals with leading zeros: (0.25 x score) not (025 x score). Never garble numbers mid-calculation.
 
-Do not write a disclaimer. The system appends it automatically.
-
+Do not write a disclaimer. The system appends it automatically.`;
 
 // ── NAV ───────────────────────────────────────────────────────────────────────
 const NAV=[
@@ -801,7 +800,7 @@ function AIPage({cfg,t,go,pageId}){
   );
 }
 
-// ── Auth ──────────────────────────────────────────────────────────────────────
+// ── Auth Page ─────────────────────────────────────────────────────────────────
 function AuthPage({t,onBack}){
   const {signIn,signUp}=useAuth();
   const [mode,setMode]=useState("login");
@@ -917,7 +916,6 @@ function Dashboard({go,t,docCount,caseCount,profile}){
         )
       )
     ),
-
     React.createElement("h2",{style:{fontFamily:"'Playfair Display',serif",fontSize:17,marginBottom:12,color:t.text}},"All Features"),
     React.createElement("div",{className:"feat-grid",style:{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10}},
       [{id:"reader",icon:"📄",title:"Document Analysis",color:"#4A9EE8",tag:"Reader"},{id:"warroom",icon:"🧠",title:"Case War Room",color:GOLD,tag:"Thinker"},{id:"opposing",icon:"⚔️",title:"Opposing Counsel",color:"#E05252",tag:"Thinker"},{id:"strength",icon:"⚖️",title:"Strength Assessment",color:"#2ECC8A",tag:"Thinker"},{id:"draft",icon:"✍️",title:"Draft Documents",color:"#9B59B6",tag:"Creator"},{id:"clausedna",icon:"🧬",title:"Clause DNA",color:"#E67E22",tag:"Intel"},{id:"crossexam",icon:"🔥",title:"Witness Cross-Examiner",color:"#E05252",tag:"Trial"},{id:"motionammo",icon:"🎯",title:"Motion Ammunition",color:GOLD,tag:"Trial"},{id:"claimanalyser",icon:"📋",title:"Claim Analyser",color:"#9B59B6",tag:"Trial"},{id:"clientprep",icon:"🧑‍⚖️",title:"Client Prep Coach",color:"#2ECC8A",tag:"Trial"},{id:"nigeriancases",icon:"📖",title:"Nigerian Case Law",color:"#C0392B",tag:"Research"},{id:"seniorpartner",icon:"🤝",title:"AI Senior Partner",color:GOLD,tag:"Chambers"}].map(f=>
@@ -998,17 +996,7 @@ function QAPage({t,go}){
     const q2=question||q;if(!q2.trim())return;
     setLoading(true);setOut("");setLimitReached(false);
     const ctx=lastAnalysis?`\n\nContext from current session (${lastAnalysis.title}):\n${lastAnalysis.text.slice(0,600)}`:"";
-    const sys=VOICE+`\n\nAnswer this legal question at the level of a senior Nigerian lawyer advising a client paying for elite counsel. Begin immediately with the answer — no introduction.\n\nDIRECT ANSWER: State the answer immediately in the first paragraph.
-
-LEGAL FRAMEWORK: The statutory provisions and principles governing this issue. Full Act names and section numbers. Never invent statute names.
-
-IN PRACTICE: What actually happens in Nigerian practice. The gap between law on paper and law in action.
-
-KILLER INSIGHT: The one thing most lawyers miss. The nuance or trap that makes the difference.
-
-RISKS: The specific risks from this legal position.
-
-NEXT STEPS: Numbered specific actions the client or lawyer should take. legal position.\n\nPRACTICAL NEXT STEPS: Exact numbered actions the client or lawyer should take.`+ctx;
+    const sys=VOICE+`\n\nAnswer this legal question at the level of a senior Nigerian lawyer advising a client paying for elite counsel. Begin immediately with the answer — no introduction.\n\nDIRECT ANSWER: State the answer immediately in the first paragraph.\n\nLEGAL FRAMEWORK: The statutory provisions and principles governing this issue. Full Act names and section numbers. Never invent statute names.\n\nIN PRACTICE: What actually happens in Nigerian practice. The gap between law on paper and law in action.\n\nKILLER INSIGHT: The one thing most lawyers miss. The nuance or trap that makes the difference.\n\nRISKS: The specific risks from this legal position.\n\nNEXT STEPS: Numbered specific actions the client or lawyer should take.`+ctx;
     try{await stream(sys,q2,s=>setOut(s));}
     catch(e){if(e.message==="FREE_LIMIT_REACHED")setLimitReached(true);else setOut("Error: "+e.message);}
     setLoading(false);
@@ -1496,7 +1484,7 @@ IF THE COURT IS HESITANT: The fallback submissions. What counsel says when the j
 
 RELIEFS SOUGHT: Exact reliefs matching this specific motion type. Number each with a complete operative verb. INJUNCTION: Relief 1 restraining order with operative verb restraining, Relief 2 Applicant undertaking as to damages to Respondent, Relief 3 costs. JURISDICTION, STAY, OR STRIKING-OUT: Relief 1 order staying or striking out the suit, Relief 2 referral to arbitration only if the contract provides for it, Relief 3 costs. Never include an undertaking as to damages in a non-injunction motion.
 
-CONCLUDING SUBMISSION: The formal close urging the court to grant the relief. The final sentence must be a hard, persuasive closing that a judge remembers. Example of the standard required: "This Honourable Court cannot allow the Respondent to retain both the property and the Applicant's money. The interlocutory injunction sought is the minimum necessary to preserve the Applicant's rights pending trial. It is humbly so urged." Every word in the conclusion must earn its place. No repetition of points already made.`;
+CONCLUDING SUBMISSION: The formal close urging the court to grant the relief. The final sentence must be a hard, persuasive closing that a judge remembers.`;
     const msg="MOTION TYPE: "+motionType+"\n\nFACTS AND GROUNDS:\n"+facts+authSection;
     try{await stream(sys,msg,v=>setOut(v));}catch(e){if(e.message==="FREE_LIMIT_REACHED")setLimitReached(true);else setOut("Error: "+e.message);}
     setLoading(false);
@@ -1535,21 +1523,21 @@ You appear for the ${side}. Dismantle this claim completely. Court-ready output 
 
 CLAIM STRENGTH SCORE: Rate the opposing claim from 0 to 100 percent. Break down the score: legal foundation strength out of 10, evidence adequacy out of 10, pleading completeness out of 10, damages particularity out of 10. Show the weighted calculation explicitly. Explain what makes the claim strong and what makes it weak in full prose paragraphs.
 
-WHAT THEY MUST PROVE: Every element the claimant must establish to succeed. For each element, assess whether the pleading actually establishes it. Do not include mitigation points or defence arguments in this section — only state what the claimant must prove to succeed.
+WHAT THEY MUST PROVE: Every element the claimant must establish to succeed. For each element, assess whether the pleading actually establishes it.
 
 FATAL DEFICIENCIES: Every legal element missing, every factual gap, every procedural defect that actually exists in the claim provided. Rate each FATAL or AMENDABLE. Write each as a full paragraph. Do not invent deficiencies that are not supported by the claim as drafted.
 
-KILLER DEFENCE POINTS: The arguments that defeat this claim. For each: the precise legal or factual basis from the documents provided and how to deploy it. Written as full prose paragraphs.
+KILLER DEFENCE POINTS: The arguments that defeat this claim. For each: the precise legal or factual basis from the documents provided and how to deploy it.
 
-THE 15 CROSS-EXAMINATION QUESTIONS: Every single question must be a LEADING question — it suggests the answer, can be answered yes or no, and gives the witness no room to expand. A leading question sounds like: "You had no written agreement with this alleged buyer, correct?" An open question sounds like: "Can you explain your relationship with the buyer?" — open questions are banned. No questions calling for legal conclusions — those are for the judge. For each question: state the exact leading question and precisely what it achieves.
+THE 15 CROSS-EXAMINATION QUESTIONS: Every single question must be a LEADING question. No questions calling for legal conclusions. For each question: state the exact leading question and precisely what it achieves.
 
-PRELIMINARY OBJECTIONS: Only objections available on the claim as drafted — do not invent any. For each: the basis, the applicable rule by correct name, realistic likelihood of success as a percentage.
+PRELIMINARY OBJECTIONS: Only objections available on the claim as drafted. For each: the basis, the applicable rule by correct name, realistic likelihood of success as a percentage.
 
 LEGAL DEFENCES: For each cause of action: the formal defence in court-ready language using the correct Nigerian legal framework.
 
-COUNTERCLAIM OPPORTUNITIES: Read the facts carefully. Only identify a counterclaim with an actual factual basis in the documents. If the facts show the claimant paid in full and on time, do not generate a counterclaim for non-payment or interest — that would contradict the stated facts. If no genuine counterclaim exists on the facts, say so rather than inventing one. State the counterclaim, its exact factual basis from the documents provided, and the legal principle.
+COUNTERCLAIM OPPORTUNITIES: Only identify a counterclaim with an actual factual basis in the documents. If no genuine counterclaim exists on the facts, say so rather than inventing one.
 
-DRAFT STATEMENT OF DEFENCE: A complete Draft Statement of Defence in proper Nigerian court format. Full court heading with suit number and parties spelled exactly as in the claim. Respond paragraph by paragraph. Traverse all material allegations. Plead all available defences. Every paragraph must be a complete grammatical sentence. Check that every admission and denial is consistent with the facts in the documents provided.`;
+DRAFT STATEMENT OF DEFENCE: A complete Draft Statement of Defence in proper Nigerian court format. Full court heading with suit number and parties spelled exactly as in the claim. Respond paragraph by paragraph. Traverse all material allegations. Plead all available defences.`;
     const msg="YOU APPEAR FOR: "+side+"\n\nSTATEMENT OF CLAIM:\n"+claim+authSection;
     try{await stream(sys,msg,v=>setOut(v));}catch(e){if(e.message==="FREE_LIMIT_REACHED")setLimitReached(true);else setOut("Error: "+e.message);}
     setLoading(false);
@@ -1588,25 +1576,25 @@ function ClientPrepPage({t,go}){
 
 These are Nigerian court proceedings before a judge. There is no jury. All references must be to the judge only.
 
-Prepare this specific client for hostile cross-examination. Remove all generic advice. Every instruction must be specific to this client's personality, role, and the facts described. Model answers must be truthful but must protect the client's legal position — never concede negligence, contributory fault, or admit the client should have done something differently unless that concession is strategically necessary and unavoidable.
+Prepare this specific client for hostile cross-examination. Remove all generic advice. Every instruction must be specific to this client's personality, role, and the facts described.
 
-COURT PREPARATION: Describe exactly what will happen in this specific hearing type — not generic proceedings. State the precise sequence: who enters first, when the client is called, what oath is taken, what the first question from opposing counsel will likely be. Every sentence must be specific to this hearing type and these facts.
+COURT PREPARATION: Describe exactly what will happen in this specific hearing type — not generic proceedings.
 
-BEHAVIOUR COACHING: Exact instructions specific to this client. Sit upright, hands on lap. Look at the JUDGE when answering — not at counsel. Before every single answer, count silently to three — this prevents volunteering and arguing back. When confused say: Could you ask counsel to repeat the question, My Lord. Every instruction must be specific to this client.
+BEHAVIOUR COACHING: Exact instructions specific to this client. Look at the JUDGE when answering — not at counsel. Before every single answer, count silently to three.
 
-PERSONALITY CORRECTIONS: The specific personality mistakes this client makes and will make in court based on the facts provided. For each mistake: exactly what it looks like, why it is dangerous to the case, and the precise correction including a physical or verbal technique to implement it.
+PERSONALITY CORRECTIONS: The specific personality mistakes this client makes and will make in court based on the facts provided.
 
-DANGEROUS QUESTIONS: Produce exactly 10 numbered questions. For each: the exact hostile question, why it is dangerous in one sentence, and the model answer in one to two sentences. Reframe every attack using the other party's conduct. Never concede negligence or reference unexhibited evidence. WRONG: I should have waited. CORRECT: I paid because the vendor assured me the consent was almost ready.
+DANGEROUS QUESTIONS: Produce exactly 10 numbered questions. For each: the exact hostile question, why it is dangerous in one sentence, and the model answer. Reframe every attack using the other party's conduct. Never concede negligence.
 
-PHRASES TO USE: The exact words this client can say in court when confused or under pressure. Plain natural language — not formal legal language. Short phrases only.
+PHRASES TO USE: The exact words this client can say in court when confused or under pressure.
 
-DANGER ZONES: The five most dangerous statements this client is likely to make. Number each as a paragraph — never use asterisks, bullets, or dashes. For each: quote the exact phrase to avoid and explain in the next sentence exactly why it destroys the case.
+DANGER ZONES: The five most dangerous statements this client is likely to make. For each: the exact phrase to avoid and why it destroys the case.
 
-IF FLUSTERED OR RATTLED: The exact sequence of what to say and what to do physically, specific to this client's personality. Word for word.
+IF FLUSTERED OR RATTLED: The exact sequence of what to say and what to do physically, specific to this client's personality.
 
-RED FLAGS TO AVOID: Specific behaviours and statements that will signal dishonesty or unreliability to the judge in this case. Each explained with what it signals and how to avoid it.
+RED FLAGS TO AVOID: Specific behaviours and statements that will signal dishonesty or unreliability to the judge.
 
-CONFIDENCE BRIEF: Two or three things to remember above everything. The final point must name the single most powerful document or fact in their favour — be specific by name. Example: Your strongest weapon is the WhatsApp message of 25 April. Everything comes back to that message. Anchor to the specific facts provided.`;
+CONFIDENCE BRIEF: Two or three things to remember above everything. The final point must name the single most powerful document or fact in their favour — be specific by name.`;
     const msg="CLIENT ROLE: "+(role||"not specified")+"\nHEARING TYPE: "+(hearing||"not specified")+"\n\nCASE FACTS AND CLIENT SITUATION:\n"+facts+authSection;
     try{await stream(sys,msg,v=>setOut(v));}catch(e){if(e.message==="FREE_LIMIT_REACHED")setLimitReached(true);else setOut("Error: "+e.message);}
     setLoading(false);
@@ -1640,7 +1628,7 @@ function WitnessPage({t,go}){
   const [loading,setLoading]=useState(false);const [limitReached,setLimitReached]=useState(false);
   const run=async()=>{
     if(!witness.trim())return;setLoading(true);setOut("");setLimitReached(false);
-    const sys=VOICE+`\n\nExpert witness preparation consultant. These are Nigerian court proceedings before a judge — no jury.\n\nWITNESS VULNERABILITY ASSESSMENT: Rate this witness from 1 to 10 for credibility risk. State the single most exploitable weakness.\n\nCRITICAL WEAKNESSES: Every inconsistency, gap, or dangerous statement in the statement. Number each and write as full paragraphs.\n\nCROSS-EXAMINATION QUESTIONS: The 15 most dangerous questions opposing counsel will put to this witness. Every question must be a LEADING question — it suggests the answer and can be answered yes or no. CORRECT: "You never told the buyer about the government acquisition before they paid, correct?" INCORRECT: "Did you tell the buyer?" Write every question in leading format. For each: the tactical objective and how it damages the case.\n\nSUGGESTED ANSWERS: For each of the 15 questions, the ideal answer — truthful, concise, non-combative, and protective of the client's legal position. Never concede negligence or fault.\n\nWITNESS COACHING NOTES: Tone, body language, how to handle aggressive questioning. Specific to this witness type.\n\nREHEARSAL PLAN: Step-by-step plan for witness preparation sessions before trial.`;
+    const sys=VOICE+`\n\nExpert witness preparation consultant. These are Nigerian court proceedings before a judge — no jury.\n\nWITNESS VULNERABILITY ASSESSMENT: Rate this witness from 1 to 10 for credibility risk. State the single most exploitable weakness.\n\nCRITICAL WEAKNESSES: Every inconsistency, gap, or dangerous statement in the statement.\n\nCROSS-EXAMINATION QUESTIONS: The 15 most dangerous questions opposing counsel will put to this witness. Every question must be a LEADING question. For each: the tactical objective and how it damages the case.\n\nSUGGESTED ANSWERS: For each of the 15 questions, the ideal answer — truthful, concise, non-combative, and protective of the client's legal position. Never concede negligence or fault.\n\nWITNESS COACHING NOTES: Tone, body language, how to handle aggressive questioning.\n\nREHEARSAL PLAN: Step-by-step plan for witness preparation sessions before trial.`;
     const msg="WITNESS STATEMENT:\n"+witness+"\n\nWITNESS ROLE: "+role+(opp?"\n\nOPPOSING CASE:\n"+opp:"");
     try{await stream(sys,msg,v=>setOut(v));}catch(e){if(e.message==="FREE_LIMIT_REACHED")setLimitReached(true);else setOut("Error: "+e.message);}
     setLoading(false);
@@ -1676,7 +1664,7 @@ function EvidencePage({t,go}){
   const EVTYPES=["Document (Contract/Agreement)","Electronic Mail","WhatsApp / Text Message Screenshot","Bank Statement","Deed / Certificate","Court Judgment / Order","Expert Report","Medical Report","Photograph / Video","Affidavit","Company Record (CAC)","Police Statement","Voicemail / Audio Recording","Social Media Post","Survey Report","Valuation Report","Business Records","Government Document / Gazette","Witness Oral Testimony","Hearsay Evidence"];
   const run=async()=>{
     if(!evid.trim()||!evType)return;setLoading(true);setOut("");setLimitReached(false);
-    const sys=VOICE+`\n\nNigerian evidence law specialist. Apply the Evidence Act 2011. These are Nigerian court proceedings before a judge only — no jury.\n\nEVIDENCE CLASSIFICATION: Classify under the Evidence Act 2011.\n\nADMISSIBILITY RULING: YES, CONDITIONAL, or NO. Cite the specific section of the Evidence Act 2011 by full name and number — for electronic evidence this is Section 84(1) and Section 84(2) of the Evidence Act 2011.\n\nADMISSIBILITY PROBABILITY: Rate the likelihood of successful tendering as a percentage with full explanation.\n\nLEGAL FOUNDATION REQUIREMENTS: Every step counsel must take before tendering — including whether the original device or a forensic extraction certificate is required.\n\nANTICIPATED OBJECTIONS: Every specific objection opposing counsel will raise for this type of evidence. For each: the section they will cite and the precise response.\n\nWEIGHT ASSESSMENT: How much weight a Nigerian judge will give this evidence if admitted.\n\nDIGITAL EVIDENCE COMPLIANCE: If electronic — full Section 84(2) Evidence Act 2011 certificate requirements, all four elements that must be certified.\n\nWITHOUT PREJUDICE RISK: If this is a communication — assess whether it may be characterised as a without-prejudice communication and therefore inadmissible.\n\nSTRATEGIC ADVICE: How to present for maximum impact. How to attack it if appearing for the opponent.`;
+    const sys=VOICE+`\n\nNigerian evidence law specialist. Apply the Evidence Act 2011. These are Nigerian court proceedings before a judge only — no jury.\n\nEVIDENCE CLASSIFICATION: Classify under the Evidence Act 2011.\n\nADMISSIBILITY RULING: YES, CONDITIONAL, or NO. Cite the specific section of the Evidence Act 2011 by full name and number — for electronic evidence this is Section 84(1) and Section 84(2) of the Evidence Act 2011.\n\nADMISSIBILITY PROBABILITY: Rate the likelihood of successful tendering as a percentage with full explanation.\n\nLEGAL FOUNDATION REQUIREMENTS: Every step counsel must take before tendering.\n\nANTICIPATED OBJECTIONS: Every specific objection opposing counsel will raise for this type of evidence. For each: the section they will cite and the precise response.\n\nWEIGHT ASSESSMENT: How much weight a Nigerian judge will give this evidence if admitted.\n\nDIGITAL EVIDENCE COMPLIANCE: If electronic — full Section 84(2) Evidence Act 2011 certificate requirements, all four elements that must be certified.\n\nWITHOUT PREJUDICE RISK: If this is a communication — assess whether it may be characterised as a without-prejudice communication and therefore inadmissible.\n\nSTRATEGIC ADVICE: How to present for maximum impact. How to attack it if appearing for the opponent.`;
     const msg="EVIDENCE TYPE: "+evType+"\n\nEVIDENCE:\n"+evid+(ctx?"\n\nCASE CONTEXT:\n"+ctx:"");
     try{await stream(sys,msg,v=>setOut(v));}catch(e){if(e.message==="FREE_LIMIT_REACHED")setLimitReached(true);else setOut("Error: "+e.message);}
     setLoading(false);
@@ -1711,7 +1699,7 @@ function SettlementPage({t,go}){
   const [loading,setLoading]=useState(false);const [limitReached,setLimitReached]=useState(false);
   const run=async()=>{
     if(!facts.trim())return;setLoading(true);setOut("");setLimitReached(false);
-    const sys=VOICE+`\n\nSenior settlement counsel.\n\nCASE SUMMARY: Brief summary of the dispute and what is at stake.\n\nLIKELY JUDICIAL OUTCOME: What a Nigerian court will most likely decide and why. Include the probability as a percentage.\n\nSETTLEMENT RANGE ANALYSIS: State the Claimant BATNA (Best Alternative To a Negotiated Agreement) in naira. State the Defendant BATNA in naira. State the Zone of Possible Agreement in naira. State the most likely settlement point in naira.\n\nCOST-BENEFIT ANALYSIS: For each party: estimated litigation costs to trial in naira, time to judgment in months, enforcement risks, and the net value of litigating versus settling.\n\nLEVERAGE ASSESSMENT: Who has more negotiating leverage and precisely why. What is creating pressure on each side.\n\nNEGOTIATION STRATEGY: Specific tactical moves, sequencing, what to concede first, red lines to hold.\n\nMEDIATION READINESS: Whether this matter is suitable for formal mediation. Which ADR body to approach.`;
+    const sys=VOICE+`\n\nSenior settlement counsel.\n\nCASE SUMMARY: Brief summary of the dispute and what is at stake.\n\nLIKELY JUDICIAL OUTCOME: What a Nigerian court will most likely decide and why. Include the probability as a percentage.\n\nSETTLEMENT RANGE ANALYSIS: State the Claimant BATNA in naira. State the Defendant BATNA in naira. State the Zone of Possible Agreement in naira. State the most likely settlement point in naira.\n\nCOST-BENEFIT ANALYSIS: For each party: estimated litigation costs to trial in naira, time to judgment in months, enforcement risks, and the net value of litigating versus settling.\n\nLEVERAGE ASSESSMENT: Who has more negotiating leverage and precisely why.\n\nNEGOTIATION STRATEGY: Specific tactical moves, sequencing, what to concede first, red lines to hold.\n\nMEDIATION READINESS: Whether this matter is suitable for formal mediation. Which ADR body to approach.`;
     const msg="CASE FACTS:\n"+facts+(claimant?"\n\nCLAIMANT POSITION:\n"+claimant:"")+(defendant?"\n\nDEFENDANT POSITION:\n"+defendant:"");
     try{await stream(sys,msg,v=>setOut(v));}catch(e){if(e.message==="FREE_LIMIT_REACHED")setLimitReached(true);else setOut("Error: "+e.message);}
     setLoading(false);
@@ -1772,17 +1760,17 @@ function WhatsAppPage({t,go}){
     if(!raw.trim())return;setLoading(true);setOut("");setLimitReached(false);
     const sys=VOICE+`
 
-Format these WhatsApp messages as a complete court exhibit for Nigerian court proceedings. Produce the actual documents — not descriptions of what the documents should contain.
+Format these WhatsApp messages as a complete court exhibit for Nigerian court proceedings.
 
 EXHIBIT COVER PAGE: Draft the complete formal exhibit cover page text in proper Nigerian court format including: Exhibit Number, Description of the Exhibit, Case Title and Suit Number, Tendering Party, the Witness through whom it will be tendered, and Date.
 
-FORMATTED TRANSCRIPT: Format every single message — skip none. Exact format for each line: [Number]. [DD/MM/YYYY], [HH:MM:SS], [Sender Full Name]: [Message verbatim]. Full timestamp always — never truncate. Every message must appear in full.
+FORMATTED TRANSCRIPT: Format every single message. Exact format for each line: [Number]. [DD/MM/YYYY], [HH:MM:SS], [Sender Full Name]: [Message verbatim].
 
-SECTION 84(2) CERTIFICATE — EVIDENCE ACT 2011: Draft the complete certificate text in full. Head it clearly as "CERTIFICATE PURSUANT TO SECTION 84(2) OF THE EVIDENCE ACT 2011." The certificate must certify all four elements exactly as required by Section 84(2): first, that the computer or device was used to store or process information in the course of activities regularly carried on over the period in question; second, that the information was supplied to the computer in the ordinary course of those activities; third, that throughout the material part of the period the computer was operating properly, or if not, that any respect in which it was not operating properly or was out of operation was not such as to affect the production of the document or the accuracy of its contents; and fourth, that the information contained in the statement reproduces or is derived from information supplied to the computer in the ordinary course of those activities. State Section 84(2) of the Evidence Act 2011 in full in the closing line. Note that the certificate must be signed by a person occupying a responsible position in relation to the operation of the relevant device.
+SECTION 84(2) CERTIFICATE — EVIDENCE ACT 2011: Draft the complete certificate text in full. Head it clearly as "CERTIFICATE PURSUANT TO SECTION 84(2) OF THE EVIDENCE ACT 2011." The certificate must certify all four elements exactly as required by Section 84(2).
 
-WITHOUT PREJUDICE RISK: Assess whether any of these messages may be characterised as without-prejudice communications and therefore inadmissible. State the specific messages at risk and the legal basis.
+WITHOUT PREJUDICE RISK: Assess whether any of these messages may be characterised as without-prejudice communications and therefore inadmissible.
 
-ADMISSIBILITY STEPS: The exact steps counsel must take before tendering — including whether the originating device must be produced or a forensic extraction certificate obtained.
+ADMISSIBILITY STEPS: The exact steps counsel must take before tendering.
 
 HIGHLIGHT SUMMARY: The three most legally significant messages, why each is significant, and its evidential value.`;
     const msg="RAW WHATSAPP EXPORT:\n\n"+raw+(wctx?"\n\nCASE CONTEXT:\n"+wctx:"");
@@ -1815,7 +1803,7 @@ function SeniorPartnerPage({t,go}){
   const [input,setInput]=useState("");const [loading,setLoading]=useState(false);const [limitReached,setLimitReached]=useState(false);
   const endRef=useRef();
   useEffect(()=>{if(endRef.current)endRef.current.scrollIntoView({behavior:"smooth"});},[messages,loading]);
-  const SYS=`You are Ade Bello, Senior Partner at a top-tier Nigerian commercial law firm, 28 years in commercial litigation and corporate transactions. Sharp, direct, zero sugarcoating. Give your view first — never lead with a question. Push back by name: "That position is wrong and here is why." Calculate what delay costs per month and state the number. End every response with one concrete task. No markdown, asterisks, or bullets. Full sentences only. Nigerian proceedings have no juries — judge only. Calculate the monthly cost of delay in naira and state the exact number before giving any strategic recommendation. No statute called the Contract Act.y the one thing the junior has not thought about — the financial calculation, the procedural gap, the tactical lever — and you present it as a number or a specific action. You identify the single financial number that changes the entire analysis — if the client is paying interest, you calculate what delay costs per month and state that number. You tell the junior what to do before the next conversation: specific tasks, specific documents to pull, specific calculations to make. You end every response with one concrete task or question that moves the matter forward today. You speak in a formal but warm collegial tone. You never use markdown, asterisks, or bullet dashes. You write in full sentences and paragraphs. You always end with a specific task or question that moves the matter forward. You do not ask questions without first giving your view. NIGERIAN LAW SPECIFICS: You know that Nigerian civil proceedings have no juries — all references are to the judge only. You know that Nigerian contract law is governed by common law principles — there is no statute called the Contract Act.`;
+  const SYS=`You are Ade Bello, Senior Partner at a top-tier Nigerian commercial law firm, 28 years in commercial litigation and corporate transactions. Sharp, direct, zero sugarcoating. Give your view first — never lead with a question. Push back by name. Calculate what delay costs per month and state the number. End every response with one concrete task. No markdown, asterisks, or bullets. Full sentences only. Nigerian proceedings have no juries — judge only. No statute called the Contract Act.`;
   const send=async()=>{
     if(!input.trim()||loading)return;
     const userMsg={role:"user",content:input,time:new Date().toLocaleTimeString()};
