@@ -22,13 +22,25 @@ async function requireAuth(req, res, next) {
   next();
 }
 
+let requestsThisMinute = 0;
+let minuteStart = Date.now();
+function resetMinuteIfNeeded() {
+  if (Date.now() - minuteStart > 60000) { requestsThisMinute = 0; minuteStart = Date.now(); }
+}
+
 app.post('/api/ai', requireAuth, async (req, res) => {
   const { system, user } = req.body;
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) return res.status(500).json({ error: 'API key not configured' });
 
+  // ── Tier / usage check ────────────────────────────────────────────────────
   try {
-    const { data: profile } = await supabase.from('profiles').select('tier, usage_count, usage_reset_date').eq('id', req.user.id).single();
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('tier, usage_count, usage_reset_date')
+      .eq('id', req.user.id)
+      .single();
+
     if (profile) {
       const resetDate = new Date(profile.usage_reset_date || 0);
       const now = new Date();
@@ -43,109 +55,104 @@ app.post('/api/ai', requireAuth, async (req, res) => {
     }
   } catch (e) { console.log('Profile check error:', e.message); }
 
-  const controller = new AbortController();
-  const fetchTimeout = setTimeout(() => { controller.abort(); }, 55000);
+  // ── Rate limiting ─────────────────────────────────────────────────────────
+  resetMinuteIfNeeded();
+  if (requestsThisMinute >= 25) {
+    const wait = 60000 - (Date.now() - minuteStart) + 500;
+    await new Promise(r => setTimeout(r, wait));
+    resetMinuteIfNeeded();
+  }
 
-  const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?alt=sse&key=${apiKey}`;
+  // ── Call Groq with hard timeout ───────────────────────────────────────────
+  const attemptGroq = async (retries = 3) => {
+    for (let i = 0; i < retries; i++) {
+      try {
+        const controller = new AbortController();
+        // Kill fetch after 45s — well within Render's 60s request timeout
+        const fetchTimeout = setTimeout(() => controller.abort(), 45000);
+        const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+          signal: controller.signal,
+          body: JSON.stringify({
+            model: 'llama-3.3-70b-versatile',
+            messages: [
+              { role: 'system', content: system },
+              { role: 'user', content: user }
+            ],
+            temperature: 0.2,
+            max_tokens: 8000,
+            stream: true
+          })
+        });
+        clearTimeout(fetchTimeout);
 
-  let geminiRes;
+        if (groqRes.status === 429) {
+          const retryAfter = parseInt(groqRes.headers.get('retry-after') || '15') * 1000;
+          console.log(`Groq 429 — waiting ${retryAfter}ms`);
+          await new Promise(r => setTimeout(r, retryAfter));
+          continue;
+        }
+        if (!groqRes.ok) {
+          const err = await groqRes.json().catch(() => ({}));
+          throw new Error(err.error?.message || `Groq error ${groqRes.status}`);
+        }
+        requestsThisMinute++;
+        return groqRes;
+      } catch (err) {
+        if (err.name === 'AbortError') throw new Error('Request timed out — please try again');
+        if (i === retries - 1) throw err;
+        await new Promise(r => setTimeout(r, 2000 * (i + 1)));
+      }
+    }
+  };
+
+  // ── Stream response ───────────────────────────────────────────────────────
   try {
-    geminiRes = await fetch(GEMINI_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      signal: controller.signal,
-      body: JSON.stringify({
-        system_instruction: { parts: [{ text: system }] },
-        contents: [{ role: 'user', parts: [{ text: user }] }],
-        generationConfig: { temperature: 0.2, maxOutputTokens: 8192, candidateCount: 1 },
-        safetySettings: [
-          { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
-          { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
-          { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
-          { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' }
-        ]
-      })
-    });
-    clearTimeout(fetchTimeout);
-  } catch (err) {
-    clearTimeout(fetchTimeout);
-    if (!res.headersSent) {
-      if (err.name === 'AbortError') return res.status(504).json({ error: 'Request timed out. Please try again.' });
-      return res.status(500).json({ error: err.message });
-    }
-    return;
-  }
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
 
-  if (!geminiRes.ok) {
-    let errMsg = `Gemini error ${geminiRes.status}`;
-    try {
-      const errBody = await geminiRes.json();
-      errMsg = errBody.error?.message || errMsg;
-      if (geminiRes.status === 429) errMsg = 'Rate limit reached. Please wait a moment and try again.';
-    } catch {}
-    console.log('Gemini error:', errMsg);
-    if (!res.headersSent) return res.status(geminiRes.status === 429 ? 429 : 500).json({ error: errMsg });
-    return;
-  }
+    const groqRes = await attemptGroq();
 
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-  res.setHeader('X-Accel-Buffering', 'no');
+    // Kill stream if it stalls for 30s mid-response
+    let lastActivity = Date.now();
+    const stallCheck = setInterval(() => {
+      if (Date.now() - lastActivity > 30000) {
+        clearInterval(stallCheck);
+        console.log('Stream stalled — terminating');
+        try { groqRes.body.destroy(); } catch {}
+        if (!res.writableEnded) res.end();
+      }
+    }, 5000);
 
-  let lastActivity = Date.now();
-  const streamTimeout = setInterval(() => {
-    if (Date.now() - lastActivity > 30000) {
-      clearInterval(streamTimeout);
-      try { geminiRes.body.destroy(); } catch {}
+    groqRes.body.on('data', () => { lastActivity = Date.now(); });
+    groqRes.body.pipe(res);
+
+    groqRes.body.on('error', (err) => {
+      clearInterval(stallCheck);
+      console.log('Stream error:', err.message);
       if (!res.writableEnded) res.end();
-    }
-  }, 5000);
+    });
 
-  let buffer = '';
+    groqRes.body.on('end', () => {
+      clearInterval(stallCheck);
+    });
 
-  geminiRes.body.on('data', (chunk) => {
-    lastActivity = Date.now();
-    buffer += chunk.toString();
-    const lines = buffer.split('\n');
-    buffer = lines.pop();
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (!trimmed.startsWith('data:')) continue;
-      const dataStr = trimmed.slice(5).trim();
-      if (dataStr === '[DONE]') { res.write('data: [DONE]\n\n'); continue; }
-      try {
-        const parsed = JSON.parse(dataStr);
-        const text = parsed?.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (text) res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: text } }] })}\n\n`);
-      } catch {}
-    }
-  });
+    res.on('close', () => {
+      clearInterval(stallCheck);
+      try { groqRes.body.destroy(); } catch {}
+    });
 
-  geminiRes.body.on('end', () => {
-    clearInterval(streamTimeout);
-    if (buffer.trim().startsWith('data:')) {
-      try {
-        const parsed = JSON.parse(buffer.trim().slice(5).trim());
-        const text = parsed?.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (text) res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: text } }] })}\n\n`);
-      } catch {}
-    }
-    res.write('data: [DONE]\n\n');
-    if (!res.writableEnded) res.end();
-  });
-
-  geminiRes.body.on('error', (err) => {
-    clearInterval(streamTimeout);
-    if (!res.writableEnded) res.end();
-  });
-
-  res.on('close', () => {
-    clearInterval(streamTimeout);
-    try { geminiRes.body.destroy(); } catch {}
-  });
+  } catch (err) {
+    console.log('AI error:', err.message);
+    if (!res.headersSent) res.status(500).json({ error: err.message });
+    else res.end();
+  }
 });
 
+// ── Documents ────────────────────────────────────────────────────────────────
 app.get('/api/documents', requireAuth, async (req, res) => {
   const { data, error } = await supabase.from('documents').select('*').eq('user_id', req.user.id).order('created_at', { ascending: false });
   if (error) return res.status(500).json({ error: error.message });
@@ -165,6 +172,7 @@ app.delete('/api/documents/:id', requireAuth, async (req, res) => {
   res.json({ success: true });
 });
 
+// ── Cases ────────────────────────────────────────────────────────────────────
 app.get('/api/cases', requireAuth, async (req, res) => {
   const { data, error } = await supabase.from('cases').select('*').eq('user_id', req.user.id).order('created_at', { ascending: false });
   if (error) return res.status(500).json({ error: error.message });
@@ -191,6 +199,7 @@ app.delete('/api/cases/:id', requireAuth, async (req, res) => {
   res.json({ success: true });
 });
 
+// ── Profile ───────────────────────────────────────────────────────────────────
 app.get('/api/profile', requireAuth, async (req, res) => {
   const { data, error } = await supabase.from('profiles').select('*').eq('id', req.user.id).single();
   if (error) return res.status(500).json({ error: error.message });
@@ -204,6 +213,7 @@ app.patch('/api/profile', requireAuth, async (req, res) => {
   res.json(data);
 });
 
+// ── Nigerian Case Search ──────────────────────────────────────────────────────
 app.get('/api/cases/search', requireAuth, async (req, res) => {
   const { q } = req.query;
   if (!q) return res.json({ results: [] });
@@ -211,7 +221,9 @@ app.get('/api/cases/search', requireAuth, async (req, res) => {
   try {
     const ctrl = new AbortController();
     setTimeout(() => ctrl.abort(), 8000);
-    const afRes = await fetch(`https://africanlii.org/search?q=${encodeURIComponent(q)}&jurisdiction=ng&type=judgment`, { headers: { 'User-Agent': 'VerdictAI/4.2' }, signal: ctrl.signal });
+    const afRes = await fetch(`https://africanlii.org/search?q=${encodeURIComponent(q)}&jurisdiction=ng&type=judgment`, {
+      headers: { 'User-Agent': 'VerdictAI/4.2' }, signal: ctrl.signal
+    });
     if (afRes.ok) {
       const ct = afRes.headers.get('content-type') || '';
       if (ct.includes('json')) {
@@ -229,6 +241,10 @@ app.get('/api/cases/search', requireAuth, async (req, res) => {
   res.json({ results, count: results.filter(r => !r.isLink).length });
 });
 
-app.get('/api/health', (req, res) => res.json({ status: 'ok', version: '4.2.0', model: 'gemini-2.0-flash' }));
+// ── Health ─────────────────────────────────────────────────────────────────────
+app.get('/api/health', (req, res) => res.json({ status: 'ok', version: '4.2.0', model: 'llama-3.3-70b-versatile' }));
+
+// ── Frontend ──────────────────────────────────────────────────────────────────
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
-app.listen(PORT, () => console.log(`Verdict AI v4.2 — Gemini 2.0 Flash — port ${PORT}`));
+
+app.listen(PORT, () => console.log(`Verdict AI v4.2 — Groq — port ${PORT}`));
