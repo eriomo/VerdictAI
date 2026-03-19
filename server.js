@@ -11,13 +11,8 @@ app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// ── Supabase ──────────────────────────────────────────────────────────────────
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_KEY
-);
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
-// ── Auth middleware ───────────────────────────────────────────────────────────
 async function requireAuth(req, res, next) {
   const token = req.headers.authorization?.replace('Bearer ', '');
   if (!token) return res.status(401).json({ error: 'Not authenticated' });
@@ -27,36 +22,13 @@ async function requireAuth(req, res, next) {
   next();
 }
 
-// ── Rate limit ────────────────────────────────────────────────────────────────
-let requestsThisMinute = 0;
-let minuteStart = Date.now();
-function resetMinuteIfNeeded() {
-  if (Date.now() - minuteStart > 60000) {
-    requestsThisMinute = 0;
-    minuteStart = Date.now();
-  }
-}
-
-// ── AI Proxy ──────────────────────────────────────────────────────────────────
 app.post('/api/ai', requireAuth, async (req, res) => {
   const { system, user } = req.body;
-  const apiKey = process.env.GROQ_API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return res.status(500).json({ error: 'API key not configured' });
 
-  resetMinuteIfNeeded();
-  if (requestsThisMinute >= 25) {
-    const wait = 60000 - (Date.now() - minuteStart) + 500;
-    await new Promise(r => setTimeout(r, wait));
-    resetMinuteIfNeeded();
-  }
-
   try {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('tier, usage_count, usage_reset_date')
-      .eq('id', req.user.id)
-      .single();
-
+    const { data: profile } = await supabase.from('profiles').select('tier, usage_count, usage_reset_date').eq('id', req.user.id).single();
     if (profile) {
       const resetDate = new Date(profile.usage_reset_date || 0);
       const now = new Date();
@@ -69,87 +41,111 @@ app.post('/api/ai', requireAuth, async (req, res) => {
       }
       await supabase.from('profiles').update({ usage_count: (profile.usage_count || 0) + 1 }).eq('id', req.user.id);
     }
-  } catch (e) {
-    console.log('Profile check error:', e.message);
-  }
+  } catch (e) { console.log('Profile check error:', e.message); }
 
-  const attemptGroq = async (retries = 3) => {
-    for (let i = 0; i < retries; i++) {
-      try {
-        const controller = new AbortController();
-        const fetchTimeout = setTimeout(() => controller.abort(), 60000);
-        const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-          signal: controller.signal,
-          body: JSON.stringify({
-            model: 'llama-3.3-70b-versatile',
-            messages: [
-              { role: 'system', content: system },
-              { role: 'user', content: user }
-            ],
-            temperature: 0.2,
-            max_tokens: 8000,
-            stream: true
-          })
-        });
-        clearTimeout(fetchTimeout);
-        if (groqRes.status === 429) {
-          const retryAfter = parseInt(groqRes.headers.get('retry-after') || '10') * 1000;
-          await new Promise(r => setTimeout(r, retryAfter));
-          continue;
-        }
-        if (!groqRes.ok) {
-          const err = await groqRes.json();
-          throw new Error(err.error?.message || `Groq error ${groqRes.status}`);
-        }
-        requestsThisMinute++;
-        return groqRes;
-      } catch (err) {
-        if (i === retries - 1) throw err;
-        await new Promise(r => setTimeout(r, 2000 * (i + 1)));
-      }
-    }
-  };
+  const controller = new AbortController();
+  const fetchTimeout = setTimeout(() => { controller.abort(); }, 55000);
 
+  const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?alt=sse&key=${apiKey}`;
+
+  let geminiRes;
   try {
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
-    res.setHeader('X-Accel-Buffering', 'no');
-    const groqRes = await attemptGroq();
-
-    // Hard timeout — if stream stalls for 90 seconds, kill it
-    const timeout = setTimeout(() => {
-      console.log('Stream timeout — terminating');
-      try { groqRes.body.destroy(); } catch {}
-      if (!res.writableEnded) res.end();
-    }, 90000);
-
-    groqRes.body.pipe(res);
-
-    groqRes.body.on('error', (err) => {
-      clearTimeout(timeout);
-      console.log('Stream error:', err.message);
-      if (!res.writableEnded) res.end();
+    geminiRes = await fetch(GEMINI_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      signal: controller.signal,
+      body: JSON.stringify({
+        system_instruction: { parts: [{ text: system }] },
+        contents: [{ role: 'user', parts: [{ text: user }] }],
+        generationConfig: { temperature: 0.2, maxOutputTokens: 8192, candidateCount: 1 },
+        safetySettings: [
+          { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
+          { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
+          { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
+          { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' }
+        ]
+      })
     });
-
-    groqRes.body.on('end', () => {
-      clearTimeout(timeout);
-    });
-
-    res.on('close', () => {
-      clearTimeout(timeout);
-      try { groqRes.body.destroy(); } catch {}
-    });
-
+    clearTimeout(fetchTimeout);
   } catch (err) {
-    if (!res.headersSent) res.status(500).json({ error: err.message });
-    else res.end();
+    clearTimeout(fetchTimeout);
+    if (!res.headersSent) {
+      if (err.name === 'AbortError') return res.status(504).json({ error: 'Request timed out. Please try again.' });
+      return res.status(500).json({ error: err.message });
+    }
+    return;
   }
+
+  if (!geminiRes.ok) {
+    let errMsg = `Gemini error ${geminiRes.status}`;
+    try {
+      const errBody = await geminiRes.json();
+      errMsg = errBody.error?.message || errMsg;
+      if (geminiRes.status === 429) errMsg = 'Rate limit reached. Please wait a moment and try again.';
+    } catch {}
+    console.log('Gemini error:', errMsg);
+    if (!res.headersSent) return res.status(geminiRes.status === 429 ? 429 : 500).json({ error: errMsg });
+    return;
+  }
+
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+
+  let lastActivity = Date.now();
+  const streamTimeout = setInterval(() => {
+    if (Date.now() - lastActivity > 30000) {
+      clearInterval(streamTimeout);
+      try { geminiRes.body.destroy(); } catch {}
+      if (!res.writableEnded) res.end();
+    }
+  }, 5000);
+
+  let buffer = '';
+
+  geminiRes.body.on('data', (chunk) => {
+    lastActivity = Date.now();
+    buffer += chunk.toString();
+    const lines = buffer.split('\n');
+    buffer = lines.pop();
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed.startsWith('data:')) continue;
+      const dataStr = trimmed.slice(5).trim();
+      if (dataStr === '[DONE]') { res.write('data: [DONE]\n\n'); continue; }
+      try {
+        const parsed = JSON.parse(dataStr);
+        const text = parsed?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (text) res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: text } }] })}\n\n`);
+      } catch {}
+    }
+  });
+
+  geminiRes.body.on('end', () => {
+    clearInterval(streamTimeout);
+    if (buffer.trim().startsWith('data:')) {
+      try {
+        const parsed = JSON.parse(buffer.trim().slice(5).trim());
+        const text = parsed?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (text) res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: text } }] })}\n\n`);
+      } catch {}
+    }
+    res.write('data: [DONE]\n\n');
+    if (!res.writableEnded) res.end();
+  });
+
+  geminiRes.body.on('error', (err) => {
+    clearInterval(streamTimeout);
+    if (!res.writableEnded) res.end();
+  });
+
+  res.on('close', () => {
+    clearInterval(streamTimeout);
+    try { geminiRes.body.destroy(); } catch {}
+  });
 });
 
-// ── Documents CRUD ────────────────────────────────────────────────────────────
 app.get('/api/documents', requireAuth, async (req, res) => {
   const { data, error } = await supabase.from('documents').select('*').eq('user_id', req.user.id).order('created_at', { ascending: false });
   if (error) return res.status(500).json({ error: error.message });
@@ -169,7 +165,6 @@ app.delete('/api/documents/:id', requireAuth, async (req, res) => {
   res.json({ success: true });
 });
 
-// ── Cases CRUD ────────────────────────────────────────────────────────────────
 app.get('/api/cases', requireAuth, async (req, res) => {
   const { data, error } = await supabase.from('cases').select('*').eq('user_id', req.user.id).order('created_at', { ascending: false });
   if (error) return res.status(500).json({ error: error.message });
@@ -196,7 +191,6 @@ app.delete('/api/cases/:id', requireAuth, async (req, res) => {
   res.json({ success: true });
 });
 
-// ── Profile ───────────────────────────────────────────────────────────────────
 app.get('/api/profile', requireAuth, async (req, res) => {
   const { data, error } = await supabase.from('profiles').select('*').eq('id', req.user.id).single();
   if (error) return res.status(500).json({ error: error.message });
@@ -210,13 +204,14 @@ app.patch('/api/profile', requireAuth, async (req, res) => {
   res.json(data);
 });
 
-// ── Nigerian Case Search ──────────────────────────────────────────────────────
 app.get('/api/cases/search', requireAuth, async (req, res) => {
   const { q } = req.query;
   if (!q) return res.json({ results: [] });
   const results = [];
   try {
-    const afRes = await fetch(`https://africanlii.org/search?q=${encodeURIComponent(q)}&jurisdiction=ng&type=judgment`, { headers: { 'User-Agent': 'VerdictAI/4.1' }, timeout: 8000 });
+    const ctrl = new AbortController();
+    setTimeout(() => ctrl.abort(), 8000);
+    const afRes = await fetch(`https://africanlii.org/search?q=${encodeURIComponent(q)}&jurisdiction=ng&type=judgment`, { headers: { 'User-Agent': 'VerdictAI/4.2' }, signal: ctrl.signal });
     if (afRes.ok) {
       const ct = afRes.headers.get('content-type') || '';
       if (ct.includes('json')) {
@@ -234,10 +229,6 @@ app.get('/api/cases/search', requireAuth, async (req, res) => {
   res.json({ results, count: results.filter(r => !r.isLink).length });
 });
 
-// ── Health ────────────────────────────────────────────────────────────────────
-app.get('/api/health', (req, res) => res.json({ status: 'ok', version: '4.1.0' }));
-
-// ── Serve frontend ────────────────────────────────────────────────────────────
+app.get('/api/health', (req, res) => res.json({ status: 'ok', version: '4.2.0', model: 'gemini-2.0-flash' }));
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
-
-app.listen(PORT, () => console.log(`Verdict AI v4.1 running on port ${PORT}`));
+app.listen(PORT, () => console.log(`Verdict AI v4.2 — Gemini 2.0 Flash — port ${PORT}`));
