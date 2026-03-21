@@ -1509,82 +1509,25 @@ function ProfilePage({profile,onUpdate,t,go}){
 const PAYSTACK_PUBLIC_KEY="pk_test_9350625f99f53492513183dc686348d291b11617";
 
 function UpgradePage({t,go,userTier,userEmail,onUpgradeSuccess}){
+  const [billing,setBilling]=useState("monthly");
+  const [autoRenew,setAutoRenew]=useState(true);
   const [paying,setPaying]=useState(null);
   const [error,setError]=useState("");
+  const tierRank={free:0,solo:1,chambers:2};
+  const currentRank=tierRank[userTier||"free"];
+  const canUpgrade=(planTier)=>tierRank[planTier]>currentRank;
   const plans=[
-    {id:"free",name:"Free",color:"#4A9EE8",amount:0,period:"forever",current:!userTier||userTier==="free",features:["7 analyses per month","Document Analysis","Legal Q&A","Draft Documents","Nigerian Case Law","Law Research Hub","Document Vault"],locked:["Matter Clock","All Power Tools","Trial Prep Suite","AI Senior Partner"],tag:null},
-    {id:"solo",name:"Solo",color:GOLD,amount:12000,period:"per month",current:userTier==="solo",features:["Unlimited analyses","All 30+ daily-use features","Matter Clock","Case War Room","Opposing Counsel","Clause DNA","WhatsApp Evidence","Contract Negotiation","Compliance Calendar","Pleadings Checker","Document Vault + Workspaces"],locked:["Trial Prep Suite","AI Senior Partner","Witness Forge","Evidence Analyser","Settlement Intelligence"],tag:"MOST POPULAR",rec:true},
-    {id:"chambers",name:"Chambers",color:"#9B59B6",amount:20000,period:"per month",current:userTier==="chambers",features:["Everything in Solo","Witness Cross-Examiner","Motion Ammunition","Claim Analyser","Client Prep Coach","AI Senior Partner (Ade Bello SAN)","Witness Forge","Evidence Analyser","Settlement Intelligence","Up to 3 users"],locked:[],tag:"COMPLETE ARSENAL"}
+    {id:"free",name:"Free",color:"#4A9EE8",monthly:0,annual:0,features:["7 analyses/month","Document Analysis","Legal Q&A","Draft Documents","Nigerian Case Law","Document Vault"],locked:["Matter Clock","All Power Tools","Trial Prep Suite","AI Senior Partner"]},
+    {id:"solo",name:"Solo",color:GOLD,monthly:12000,annual:120000,planKey_monthly:"solo_monthly",planKey_annual:"solo_annual",features:["Unlimited analyses","All 30+ daily-use features","Matter Clock","Case War Room","Opposing Counsel","Clause DNA","WhatsApp Evidence","Contract Negotiation","Compliance Calendar","Pleadings Checker"],locked:["Trial Prep Suite","AI Senior Partner","Witness Forge","Evidence Analyser"],tag:"MOST POPULAR",rec:true,saving:"Save NGN 24,000/yr"},
+    {id:"chambers",name:"Chambers",color:"#9B59B6",monthly:20000,annual:200000,planKey_monthly:"chambers_monthly",planKey_annual:"chambers_annual",features:["Everything in Solo","Witness Cross-Examiner","Motion Ammunition","Claim Analyser","Client Prep Coach","AI Senior Partner","Witness Forge","Evidence Analyser","Settlement Intelligence","Up to 3 users"],locked:[],tag:"COMPLETE ARSENAL",saving:"Save NGN 40,000/yr"},
   ];
   const fmt=n=>n===0?"Free":"NGN "+n.toLocaleString();
-  const pay=async(plan)=>{
-    if(plan.id==="free"||plan.current)return;
-    setPaying(plan.id);setError("");
-    try{
-      if(typeof PaystackPop==="undefined"){
-        throw new Error("Paystack script not loaded. Please refresh the page and try again.");
-      }
-      const {data:{session}}=await sb.auth.getSession();
-      if(!session?.access_token)throw new Error("Not logged in. Please refresh and log in again.");
-
-      const res=await fetch("/api/payments/initialize",{
-        method:"POST",
-        headers:{"Content-Type":"application/json","Authorization":`Bearer ${session.access_token}`},
-        body:JSON.stringify({plan:plan.id})
-      });
-      const data=await res.json();
-      if(!res.ok)throw new Error(data.error||"Server error: "+res.status);
-
-      // Store reference and plan in sessionStorage so we can verify after redirect
-      sessionStorage.setItem("vd_pay_ref", data.reference);
-      sessionStorage.setItem("vd_pay_plan", plan.id);
-
-      const handler=PaystackPop.setup({
-        key:PAYSTACK_PUBLIC_KEY,
-        email:userEmail,
-        amount:plan.amount*100,
-        ref:data.reference,
-        currency:"NGN",
-        channels:["card","bank_transfer","ussd","bank"],
-        onSuccess:(transaction)=>{
-          const ref=transaction?.reference||transaction?.trxref||data.reference;
-          sessionStorage.setItem("vd_pay_ref", ref);
-          // Verify immediately
-          verifyPayment(ref, session.access_token, plan.id);
-        },
-        onClose:()=>{
-          // Paystack closed — check if payment went through anyway
-          const savedRef=sessionStorage.getItem("vd_pay_ref");
-          if(savedRef&&savedRef===data.reference){
-            // Try verifying anyway after a short delay
-            setTimeout(async()=>{
-              const {data:{session:s2}}=await sb.auth.getSession();
-              if(s2?.access_token) verifyPayment(savedRef, s2.access_token, plan.id);
-            }, 1500);
-          } else {
-            setPaying(null);
-          }
-        },
-        onCancel:()=>setPaying(null),
-      });
-      handler.openIframe();
-    }catch(e){
-      console.error("Payment error:",e);
-      setError(e.message);
-      setPaying(null);
-    }
-  };
-
-  const verifyPayment=async(ref, token, planId)=>{
+  const verifyPayment=async(ref,token)=>{
     setPaying("verifying");
-    console.log("Verifying payment, ref:", ref);
     try{
       await new Promise(r=>setTimeout(r,1500));
-      const vRes=await fetch(`/api/payments/verify/${ref}`,{
-        headers:{"Authorization":`Bearer ${token}`}
-      });
+      const vRes=await fetch(`/api/payments/verify/${ref}`,{headers:{"Authorization":`Bearer ${token}`}});
       const vData=await vRes.json();
-      console.log("Verify result:", vData);
       if(vData.success){
         sessionStorage.removeItem("vd_pay_ref");
         sessionStorage.removeItem("vd_pay_plan");
@@ -1596,36 +1539,95 @@ function UpgradePage({t,go,userTier,userEmail,onUpgradeSuccess}){
         setPaying(null);
       }
     }catch(e){
-      console.error("Verify error:", e);
-      setError("Payment received. Your account will upgrade within 1 minute. If not, email trigxyfn@gmail.com with ref: "+ref);
+      setError("Payment received. If plan does not update, email trigxyfn@gmail.com with ref: "+ref);
       setPaying(null);
     }
   };
+  const pay=async(plan)=>{
+    if(plan.id==="free"||!canUpgrade(plan.id))return;
+    setPaying(plan.id);setError("");
+    try{
+      if(typeof PaystackPop==="undefined")throw new Error("Paystack script not loaded. Please refresh.");
+      const {data:{session}}=await sb.auth.getSession();
+      if(!session?.access_token)throw new Error("Not logged in. Please refresh.");
+      const planKey=billing==="annual"?plan.planKey_annual:plan.planKey_monthly;
+      const res=await fetch("/api/payments/initialize",{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${session.access_token}`},body:JSON.stringify({plan:planKey})});
+      const data=await res.json();
+      if(!res.ok)throw new Error(data.error||"Server error: "+res.status);
+      sessionStorage.setItem("vd_pay_ref",data.reference);
+      sessionStorage.setItem("vd_pay_plan",planKey);
+      const handler=PaystackPop.setup({
+        key:PAYSTACK_PUBLIC_KEY,
+        email:userEmail,
+        amount:(billing==="annual"?plan.annual:plan.monthly)*100,
+        ref:data.reference,
+        currency:"NGN",
+        channels:["card","bank_transfer","ussd","bank"],
+        onSuccess:(transaction)=>{
+          const ref=transaction?.reference||transaction?.trxref||data.reference;
+          sessionStorage.setItem("vd_pay_ref",ref);
+          verifyPayment(ref,session.access_token);
+        },
+        onClose:()=>{
+          const savedRef=sessionStorage.getItem("vd_pay_ref");
+          if(savedRef===data.reference){
+            setTimeout(async()=>{
+              const {data:{session:s2}}=await sb.auth.getSession();
+              if(s2?.access_token)verifyPayment(savedRef,s2.access_token);
+              else setPaying(null);
+            },1500);
+          } else setPaying(null);
+        },
+        onCancel:()=>setPaying(null),
+      });
+      handler.openIframe();
+    }catch(e){setError(e.message);setPaying(null);}
+  };
   return React.createElement("div",{className:"fade"},
-    React.createElement(Hdr,{title:"Choose Your Plan",desc:"Pay with card or bank transfer. Upgrade is instant.",t}),
+    React.createElement(Hdr,{title:"Choose Your Plan",desc:"Auto-renews every month or year. Cancel anytime from your profile.",t}),
     error&&React.createElement("div",{style:{background:"rgba(224,82,82,0.1)",border:"1px solid rgba(224,82,82,0.3)",borderRadius:9,padding:"12px 16px",marginBottom:16,fontSize:13,color:"#E05252"}},error),
+    React.createElement("div",{style:{display:"flex",justifyContent:"center",marginBottom:20}},
+      React.createElement("div",{style:{display:"flex",background:t.input,border:"1px solid "+t.border,borderRadius:100,padding:4,gap:4}},
+        React.createElement("button",{onClick:()=>setBilling("monthly"),style:{padding:"9px 22px",borderRadius:100,border:"none",fontFamily:"'DM Sans',sans-serif",fontSize:13,fontWeight:600,cursor:"pointer",background:billing==="monthly"?`linear-gradient(135deg,${GOLD},${GOLD2})`:"transparent",color:billing==="monthly"?"#0D1B2E":t.muted}},"Monthly"),
+        React.createElement("button",{onClick:()=>setBilling("annual"),style:{padding:"9px 22px",borderRadius:100,border:"none",fontFamily:"'DM Sans',sans-serif",fontSize:13,fontWeight:600,cursor:"pointer",background:billing==="annual"?`linear-gradient(135deg,${GOLD},${GOLD2})`:"transparent",color:billing==="annual"?"#0D1B2E":t.muted,display:"flex",alignItems:"center",gap:6}},"Annual",React.createElement("span",{style:{background:"rgba(46,204,138,0.2)",color:"#2ECC8A",fontSize:9,fontWeight:700,padding:"2px 6px",borderRadius:100}},"SAVE 2 MONTHS"))
+      )
+    ),
+    React.createElement("div",{style:{display:"flex",alignItems:"center",justifyContent:"center",gap:12,marginBottom:8}},
+      React.createElement("span",{style:{fontSize:13,color:t.dim}},"Auto-renew"),
+      React.createElement("div",{onClick:()=>setAutoRenew(p=>!p),style:{width:44,height:24,background:autoRenew?GOLD:t.border,borderRadius:100,position:"relative",cursor:"pointer",transition:"background 0.3s"}},
+        React.createElement("div",{style:{position:"absolute",top:3,left:autoRenew?22:3,width:18,height:18,background:"#fff",borderRadius:"50%",transition:"left 0.3s",boxShadow:"0 1px 4px rgba(0,0,0,0.3)"}})
+      ),
+      React.createElement("span",{style:{fontSize:12,color:autoRenew?"#2ECC8A":t.muted,fontWeight:600}},autoRenew?"ON — charged automatically":"OFF")
+    ),
+    React.createElement("p",{style:{textAlign:"center",fontSize:12,color:t.muted,marginBottom:24}},"Auto-renew is "+(autoRenew?"on":"off")+". You can change this anytime from your Profile page."),
     React.createElement("div",{className:"plan-grid",style:{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:16,marginBottom:28}},
       plans.map(plan=>React.createElement("div",{key:plan.id,style:{background:t.card,border:"2px solid "+(plan.rec?GOLD:plan.id==="chambers"?"rgba(155,89,182,0.5)":t.border),borderRadius:14,padding:24,position:"relative"}},
         plan.tag&&React.createElement("div",{style:{position:"absolute",top:-13,left:"50%",transform:"translateX(-50%)",background:plan.rec?GOLD:"#9B59B6",color:"#fff",fontSize:9,fontWeight:700,padding:"3px 14px",borderRadius:100,whiteSpace:"nowrap"}},plan.tag),
         React.createElement("div",{style:{textAlign:"center",marginBottom:16}},
           React.createElement("div",{style:{fontFamily:"'Playfair Display',serif",fontSize:22,fontWeight:700,color:plan.color,marginBottom:8}},plan.name),
-          React.createElement("div",{style:{fontFamily:"'Playfair Display',serif",fontSize:32,fontWeight:700,color:t.text,marginBottom:4}},fmt(plan.amount)),
-          React.createElement("div",{style:{fontSize:11,color:t.muted,fontStyle:"italic"}},plan.period)
+          React.createElement("div",{style:{fontFamily:"'Playfair Display',serif",fontSize:32,fontWeight:700,color:t.text,marginBottom:2}},fmt(billing==="annual"?plan.annual:plan.monthly)),
+          React.createElement("div",{style:{fontSize:11,color:t.muted}},billing==="annual"?"per year":"per month"),
+          billing==="annual"&&plan.saving&&React.createElement("div",{style:{fontSize:11,color:"#2ECC8A",fontWeight:700,marginTop:4}},plan.saving)
         ),
         React.createElement("div",{style:{height:1,background:plan.color,opacity:0.25,marginBottom:16}}),
         plan.features.map((f,j)=>React.createElement("div",{key:j,style:{fontSize:12.5,color:t.dim,marginBottom:7,display:"flex",gap:8}},React.createElement("span",{style:{color:plan.color,fontWeight:700}},"✓"),f)),
-        plan.locked.length>0&&React.createElement("div",null,React.createElement("div",{style:{height:1,background:t.border,margin:"12px 0"}}),plan.locked.map((f,j)=>React.createElement("div",{key:j,style:{fontSize:12,color:t.muted,marginBottom:5,display:"flex",gap:8,opacity:0.7}},React.createElement("span",null,"🔒"),f))),
+        plan.locked&&plan.locked.length>0&&React.createElement("div",null,React.createElement("div",{style:{height:1,background:t.border,margin:"12px 0"}}),plan.locked.map((f,j)=>React.createElement("div",{key:j,style:{fontSize:12,color:t.muted,marginBottom:5,display:"flex",gap:8,opacity:0.7}},React.createElement("span",null,"🔒"),f))),
         React.createElement("div",{style:{marginTop:20}}),
-        plan.current
-          ?React.createElement("div",{style:{textAlign:"center",fontSize:12,color:t.muted,fontStyle:"italic",padding:"11px"}},"Your current plan")
-          :plan.id!=="free"&&React.createElement("button",{onClick:()=>pay(plan),disabled:!!paying,style:{display:"block",width:"100%",textAlign:"center",padding:"13px",borderRadius:8,background:plan.id==="chambers"?"linear-gradient(135deg,#9B59B6,#8E44AD)":`linear-gradient(135deg,${GOLD},${GOLD2})`,color:"#fff",fontWeight:700,fontSize:13,border:"none",cursor:paying?"not-allowed":"pointer",fontFamily:"'DM Sans',sans-serif",opacity:paying?0.6:1}},paying===plan.id?"Opening payment...":"Pay — Card or Bank Transfer")
+        plan.id==="free"
+          ?React.createElement("div",{style:{textAlign:"center",fontSize:12,color:t.muted,fontStyle:"italic",padding:"11px"}},"Always free")
+          :userTier===plan.id
+            ?React.createElement("div",{style:{textAlign:"center",fontSize:12,color:"#2ECC8A",fontWeight:700,padding:"11px"}},"✓ Your current plan")
+            :canUpgrade(plan.id)
+              ?React.createElement("button",{onClick:()=>pay(plan),disabled:!!paying,style:{display:"block",width:"100%",textAlign:"center",padding:"13px",borderRadius:8,background:plan.id==="chambers"?"linear-gradient(135deg,#9B59B6,#8E44AD)":`linear-gradient(135deg,${GOLD},${GOLD2})`,color:"#fff",fontWeight:700,fontSize:13,border:"none",cursor:paying?"not-allowed":"pointer",fontFamily:"'DM Sans',sans-serif",opacity:paying?0.6:1}},paying===plan.id?"Opening payment...":paying==="verifying"?"Upgrading...":"Subscribe — "+fmt(billing==="annual"?plan.annual:plan.monthly))
+              :React.createElement("div",{style:{textAlign:"center",fontSize:12,color:t.muted,fontStyle:"italic",padding:"11px"}},"Included in your plan")
       ))
     ),
     React.createElement("div",{style:{background:"rgba(200,164,94,0.06)",border:"1px solid rgba(200,164,94,0.2)",borderRadius:12,padding:20,textAlign:"center"}},
-      React.createElement("p",{style:{fontSize:13,color:t.dim,lineHeight:1.8}},"Payments secured by Paystack. Card and bank transfer accepted. Upgrade is instant. Contact: ",React.createElement("a",{href:"mailto:trigxyfn@gmail.com",style:{color:GOLD,fontWeight:600}},"trigxyfn@gmail.com"))
+      React.createElement("p",{style:{fontSize:13,color:t.dim,lineHeight:1.8}},"Payments secured by Paystack. Card and bank transfer. Cancel anytime. Contact: ",React.createElement("a",{href:"mailto:trigxyfn@gmail.com",style:{color:GOLD,fontWeight:600}},"trigxyfn@gmail.com"))
     )
   );
 }
+
 
 // ── Matter Clock ──────────────────────────────────────────────────────────────
 function MatterClockPage({t}){
