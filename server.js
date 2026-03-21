@@ -20,8 +20,13 @@ const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY;
 const DISCLAIMER = '\n\nDISCLAIMER: This analysis is for informational purposes only and does not constitute legal advice. Verify all legal authorities on PrimsCol or current Nigerian law reports before relying on them in proceedings.';
 
 const PLANS = {
-  solo:     { amount: 1200000, name: 'Solo',     tier: 'solo' },
-  chambers: { amount: 2000000, name: 'Chambers', tier: 'chambers' },
+  solo_monthly:     { amount: 1200000,  name: 'Solo Monthly',     tier: 'solo',     planCode: 'PLN_hu4h4wc91ytd9pr', interval: 'monthly' },
+  solo_annual:      { amount: 12000000, name: 'Solo Annual',      tier: 'solo',     planCode: 'PLN_leetl92la6olnpi', interval: 'annually' },
+  chambers_monthly: { amount: 2000000,  name: 'Chambers Monthly', tier: 'chambers', planCode: 'PLN_4o67le1fhg5acpp', interval: 'monthly' },
+  chambers_annual:  { amount: 20000000, name: 'Chambers Annual',  tier: 'chambers', planCode: 'PLN_kigvazgutnu4bww', interval: 'annually' },
+  // Legacy keys for backwards compatibility
+  solo:     { amount: 1200000,  name: 'Solo Monthly',     tier: 'solo',     planCode: 'PLN_hu4h4wc91ytd9pr', interval: 'monthly' },
+  chambers: { amount: 2000000,  name: 'Chambers Monthly', tier: 'chambers', planCode: 'PLN_4o67le1fhg5acpp', interval: 'monthly' },
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -229,10 +234,12 @@ app.post('/api/payments/initialize', requireAuth, async (req, res) => {
         email: req.user.email,
         amount: planData.amount,
         currency: 'NGN',
+        plan: planData.planCode,
         metadata: {
           user_id: req.user.id,
           plan: plan,
           plan_name: planData.name,
+          tier: planData.tier,
           email: req.user.email,
         },
         channels: ['card', 'bank_transfer', 'ussd', 'bank'],
@@ -309,27 +316,81 @@ app.post('/api/payments/webhook', async (req, res) => {
     const event = JSON.parse(req.body.toString());
     if (event.event !== 'charge.success') return;
 
-    const { user_id, plan } = event.data.metadata || {};
-    if (!user_id || !plan) return;
+    const { user_id, plan, tier } = event.data.metadata || {};
+    if (!user_id) return;
 
-    const planData = PLANS[plan];
-    if (!planData) return;
+    const resolvedTier = tier || (plan && PLANS[plan]?.tier);
+    if (!resolvedTier) return;
 
     const expiry = new Date();
     expiry.setDate(expiry.getDate() + 31);
 
-    await supabase.from('profiles').update({
-      tier: planData.tier,
+    const updateData = {
+      tier: resolvedTier,
       tier_expiry: expiry.toISOString(),
-    }).eq('id', user_id);
+      auto_renew: true,
+    };
 
-    console.log(`Webhook upgraded ${user_id} to ${planData.tier}`);
+    // Save subscription code if available
+    if (event.data.subscription_code) updateData.subscription_code = event.data.subscription_code;
+    if (event.data.plan?.token) updateData.email_token = event.data.plan.token;
+
+    await supabase.from('profiles').update(updateData).eq('id', user_id);
+    console.log(`Webhook upgraded ${user_id} to ${resolvedTier}`);
   } catch (err) {
     console.log('Webhook error:', err.message);
   }
 });
 
-// ── Documents ─────────────────────────────────────────────────────────────────
+// ── PAYSTACK — Cancel subscription ───────────────────────────────────────────
+app.post('/api/payments/cancel', requireAuth, async (req, res) => {
+  if (!PAYSTACK_SECRET) return res.status(500).json({ error: 'Payment not configured' });
+  try {
+    const { data: profile } = await supabase.from('profiles').select('subscription_code, email_token').eq('id', req.user.id).single();
+    if (!profile?.subscription_code) return res.status(400).json({ error: 'No active subscription found' });
+
+    const paystackRes = await httpsPost(
+      'api.paystack.co',
+      '/subscription/disable',
+      { 'Content-Type': 'application/json', 'Authorization': `Bearer ${PAYSTACK_SECRET}` },
+      { code: profile.subscription_code, token: profile.email_token }
+    );
+    const data = await readBody(paystackRes);
+    if (!data.status) return res.status(400).json({ error: data.message || 'Failed to cancel subscription' });
+
+    await supabase.from('profiles').update({ auto_renew: false }).eq('id', req.user.id);
+    res.json({ success: true });
+  } catch (err) {
+    console.log('Cancel error:', err.message);
+    res.status(500).json({ error: 'Failed to cancel: ' + err.message });
+  }
+});
+
+// ── PAYSTACK — Re-enable subscription ────────────────────────────────────────
+app.post('/api/payments/reactivate', requireAuth, async (req, res) => {
+  if (!PAYSTACK_SECRET) return res.status(500).json({ error: 'Payment not configured' });
+  try {
+    const { data: profile } = await supabase.from('profiles').select('subscription_code, email_token').eq('id', req.user.id).single();
+    if (!profile?.subscription_code) return res.status(400).json({ error: 'No subscription found' });
+
+    const paystackRes = await httpsPost(
+      'api.paystack.co',
+      '/subscription/enable',
+      { 'Content-Type': 'application/json', 'Authorization': `Bearer ${PAYSTACK_SECRET}` },
+      { code: profile.subscription_code, token: profile.email_token }
+    );
+    const data = await readBody(paystackRes);
+    if (!data.status) return res.status(400).json({ error: data.message || 'Failed to reactivate' });
+
+    await supabase.from('profiles').update({ auto_renew: true }).eq('id', req.user.id);
+    res.json({ success: true });
+  } catch (err) {
+    console.log('Reactivate error:', err.message);
+    res.status(500).json({ error: 'Failed to reactivate: ' + err.message });
+  }
+});
+
+
 app.get('/api/documents', requireAuth, async (req, res) => {
   const { data, error } = await supabase.from('documents').select('*').eq('user_id', req.user.id).order('created_at', { ascending: false });
   if (error) return res.status(500).json({ error: error.message });
