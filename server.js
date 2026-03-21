@@ -2,18 +2,28 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const https = require('https');
+const crypto = require('crypto');
 const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// ── Paystack webhook needs raw body ───────────────────────────────────────────
+app.use('/api/payments/webhook', express.raw({ type: 'application/json' }));
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
+const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY;
 const DISCLAIMER = '\n\nDISCLAIMER: This analysis is for informational purposes only and does not constitute legal advice. Verify all legal authorities on PrimsCol or current Nigerian law reports before relying on them in proceedings.';
+
+// Plans in kobo (Paystack uses kobo)
+const PLANS = {
+  solo:     { amount: 1200000, name: 'Solo',     tier: 'solo' },
+  chambers: { amount: 2000000, name: 'Chambers', tier: 'chambers' },
+};
 
 function httpsPost(hostname, urlPath, headers, body) {
   return new Promise((resolve, reject) => {
@@ -28,6 +38,26 @@ function httpsPost(hostname, urlPath, headers, body) {
     req.on('timeout', () => { req.destroy(); reject(new Error('Request timed out')); });
     req.write(bodyStr);
     req.end();
+  });
+}
+
+function httpsGet(hostname, urlPath, headers) {
+  return new Promise((resolve, reject) => {
+    const options = { hostname, path: urlPath, method: 'GET', headers, timeout: 30000 };
+    const req = https.request(options, resolve);
+    req.on('error', reject);
+    req.on('timeout', () => { req.destroy(); reject(new Error('Request timed out')); });
+    req.end();
+  });
+}
+
+async function readBody(res) {
+  return new Promise((resolve) => {
+    let data = '';
+    res.on('data', chunk => data += chunk);
+    res.on('end', () => {
+      try { resolve(JSON.parse(data)); } catch { resolve({}); }
+    });
   });
 }
 
@@ -46,6 +76,7 @@ function resetMinute() {
   if (Date.now() - minuteStart > 60000) { requestsThisMinute = 0; minuteStart = Date.now(); }
 }
 
+// ── AI ────────────────────────────────────────────────────────────────────────
 app.post('/api/ai', requireAuth, async (req, res) => {
   const { system, user } = req.body;
   const apiKey = process.env.GROQ_API_KEY;
@@ -113,9 +144,6 @@ app.post('/api/ai', requireAuth, async (req, res) => {
     res.setHeader('X-Accel-Buffering', 'no');
 
     const groqRes = await attemptGroq();
-
-    // ── Collect full response then append hardcoded disclaimer ────────────────
-    // This guarantees the disclaimer is always complete regardless of token limit
     let fullText = '';
     let buffer = '';
 
@@ -142,7 +170,6 @@ app.post('/api/ai', requireAuth, async (req, res) => {
           const delta = JSON.parse(data).choices?.[0]?.delta?.content || '';
           if (delta) {
             fullText += delta;
-            // Stream each chunk immediately to browser
             res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: delta } }] })}\n\n`);
           }
         } catch {}
@@ -151,34 +178,131 @@ app.post('/api/ai', requireAuth, async (req, res) => {
 
     groqRes.on('end', () => {
       clearInterval(stallCheck);
-      // Strip any partial disclaimer the model may have started writing
       const stripped = fullText.replace(/DISCLAIMER[\s\S]*$/i, '').trimEnd();
-      // Now append the complete, correct disclaimer as a final chunk
       const disclaimerChunk = JSON.stringify({ choices: [{ delta: { content: DISCLAIMER } }] });
       res.write(`data: ${disclaimerChunk}\n\n`);
       res.write('data: [DONE]\n\n');
       if (!res.writableEnded) res.end();
     });
 
-    groqRes.on('error', (err) => {
-      clearInterval(stallCheck);
-      if (!res.writableEnded) res.end();
-    });
-
-    res.on('close', () => {
-      clearInterval(stallCheck);
-      groqRes.destroy();
-    });
+    groqRes.on('error', () => { clearInterval(stallCheck); if (!res.writableEnded) res.end(); });
+    res.on('close', () => { clearInterval(stallCheck); groqRes.destroy(); });
 
   } catch (err) {
     console.log('AI error:', err.message);
     if (!res.headersSent) {
-      if (err.message === 'DAILY_LIMIT') return res.status(429).json({ error: 'Daily analysis limit reached. Resets at midnight UTC. Upgrade at console.groq.com for unlimited access.' });
+      if (err.message === 'DAILY_LIMIT') return res.status(429).json({ error: 'Daily limit reached. Resets at midnight UTC.' });
       res.status(500).json({ error: err.message });
     } else res.end();
   }
 });
 
+// ── PAYSTACK — Initialize payment ─────────────────────────────────────────────
+app.post('/api/payments/initialize', requireAuth, async (req, res) => {
+  const { plan } = req.body;
+  const planData = PLANS[plan];
+  if (!planData) return res.status(400).json({ error: 'Invalid plan' });
+  if (!PAYSTACK_SECRET) return res.status(500).json({ error: 'Payment not configured' });
+
+  try {
+    const paystackRes = await httpsPost(
+      'api.paystack.co',
+      '/transaction/initialize',
+      { 'Content-Type': 'application/json', 'Authorization': `Bearer ${PAYSTACK_SECRET}` },
+      {
+        email: req.user.email,
+        amount: planData.amount,
+        currency: 'NGN',
+        metadata: {
+          user_id: req.user.id,
+          plan: plan,
+          plan_name: planData.name,
+          email: req.user.email,
+        },
+        callback_url: `${process.env.APP_URL || 'https://verdict-ai.onrender.com'}/payment-success`,
+        channels: ['card', 'bank_transfer', 'ussd', 'bank'],
+      }
+    );
+
+    const data = await readBody(paystackRes);
+    if (!data.status) return res.status(400).json({ error: data.message || 'Payment initialization failed' });
+    res.json({ authorization_url: data.data.authorization_url, access_code: data.data.access_code, reference: data.data.reference });
+  } catch (err) {
+    console.log('Paystack init error:', err.message);
+    res.status(500).json({ error: 'Payment initialization failed' });
+  }
+});
+
+// ── PAYSTACK — Verify payment (called after redirect) ─────────────────────────
+app.get('/api/payments/verify/:reference', requireAuth, async (req, res) => {
+  if (!PAYSTACK_SECRET) return res.status(500).json({ error: 'Payment not configured' });
+  try {
+    const paystackRes = await httpsGet(
+      'api.paystack.co',
+      `/transaction/verify/${req.params.reference}`,
+      { 'Authorization': `Bearer ${PAYSTACK_SECRET}` }
+    );
+    const data = await readBody(paystackRes);
+    if (!data.status || data.data.status !== 'success') return res.status(400).json({ error: 'Payment not successful' });
+
+    const { user_id, plan } = data.data.metadata;
+    const planData = PLANS[plan];
+    if (!planData) return res.status(400).json({ error: 'Invalid plan in payment' });
+
+    // Calculate expiry — 31 days from now
+    const expiry = new Date();
+    expiry.setDate(expiry.getDate() + 31);
+
+    await supabase.from('profiles').update({
+      tier: planData.tier,
+      tier_expiry: expiry.toISOString(),
+    }).eq('id', user_id);
+
+    res.json({ success: true, tier: planData.tier });
+  } catch (err) {
+    console.log('Verify error:', err.message);
+    res.status(500).json({ error: 'Verification failed' });
+  }
+});
+
+// ── PAYSTACK — Webhook (auto-upgrade on payment) ──────────────────────────────
+app.post('/api/payments/webhook', async (req, res) => {
+  // Verify webhook is from Paystack
+  const hash = crypto.createHmac('sha512', PAYSTACK_SECRET)
+    .update(req.body)
+    .digest('hex');
+
+  if (hash !== req.headers['x-paystack-signature']) {
+    return res.status(400).send('Invalid signature');
+  }
+
+  res.status(200).send('OK'); // Respond immediately
+
+  try {
+    const event = JSON.parse(req.body.toString());
+    if (event.event !== 'charge.success') return;
+
+    const { user_id, plan } = event.data.metadata || {};
+    if (!user_id || !plan) return;
+
+    const planData = PLANS[plan];
+    if (!planData) return;
+
+    const expiry = new Date();
+    expiry.setDate(expiry.getDate() + 31);
+
+    await supabase.from('profiles').update({
+      tier: planData.tier,
+      tier_expiry: expiry.toISOString(),
+    }).eq('id', user_id);
+
+    console.log(`✅ Upgraded user ${user_id} to ${planData.tier}`);
+  } catch (err) {
+    console.log('Webhook error:', err.message);
+  }
+});
+
+// ── Documents ─────────────────────────────────────────────────────────────────
 app.get('/api/documents', requireAuth, async (req, res) => {
   const { data, error } = await supabase.from('documents').select('*').eq('user_id', req.user.id).order('created_at', { ascending: false });
   if (error) return res.status(500).json({ error: error.message });
@@ -196,6 +320,7 @@ app.delete('/api/documents/:id', requireAuth, async (req, res) => {
   res.json({ success: true });
 });
 
+// ── Cases ─────────────────────────────────────────────────────────────────────
 app.get('/api/cases', requireAuth, async (req, res) => {
   const { data, error } = await supabase.from('cases').select('*').eq('user_id', req.user.id).order('created_at', { ascending: false });
   if (error) return res.status(500).json({ error: error.message });
@@ -219,6 +344,7 @@ app.delete('/api/cases/:id', requireAuth, async (req, res) => {
   res.json({ success: true });
 });
 
+// ── Profile ───────────────────────────────────────────────────────────────────
 app.get('/api/profile', requireAuth, async (req, res) => {
   const { data, error } = await supabase.from('profiles').select('*').eq('id', req.user.id).single();
   if (error) return res.status(500).json({ error: error.message });
@@ -231,6 +357,7 @@ app.patch('/api/profile', requireAuth, async (req, res) => {
   res.json(data);
 });
 
+// ── Case search ───────────────────────────────────────────────────────────────
 app.get('/api/cases/search', requireAuth, async (req, res) => {
   const { q } = req.query;
   if (!q) return res.json({ results: [] });
@@ -242,6 +369,6 @@ app.get('/api/cases/search', requireAuth, async (req, res) => {
   res.json({ results, count: 0 });
 });
 
-app.get('/api/health', (req, res) => res.json({ status: 'ok', version: '4.3.0', model: 'llama-3.3-70b-versatile' }));
+app.get('/api/health', (req, res) => res.json({ status: 'ok', version: '4.4.0', model: 'llama-3.3-70b-versatile' }));
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
-app.listen(PORT, () => console.log(`Verdict AI v4.3 running on port ${PORT}`));
+app.listen(PORT, () => console.log(`Verdict AI v4.4 running on port ${PORT}`));
