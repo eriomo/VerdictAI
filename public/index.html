@@ -1466,9 +1466,23 @@ function ProfilePage({profile,onUpdate,t,go}){
   const {user}=useAuth();
   const [name,setName]=useState(profile?.full_name||"");const [firm,setFirm]=useState(profile?.firm_name||"");const [area,setArea]=useState(profile?.practice_area||"");
   const [saved,setSaved]=useState(false);const [cleared,setCleared]=useState(false);
+  const [cancelLoading,setCancelLoading]=useState(false);const [cancelMsg,setCancelMsg]=useState("");
   const save=async()=>{await onUpdate({full_name:name,firm_name:firm,practice_area:area});setSaved(true);setTimeout(()=>setSaved(false),3000);};
   const handleClearAll=()=>{if(confirm("Clear all saved page content?")){clearAllPageStates();setCleared(true);setTimeout(()=>setCleared(false),3000);}};
   const tier=profile?.tier||"free";
+  const autoRenew=profile?.auto_renew!==false;
+  const toggleAutoRenew=async()=>{
+    setCancelLoading(true);setCancelMsg("");
+    try{
+      const {data:{session}}=await sb.auth.getSession();
+      const endpoint=autoRenew?"/api/payments/cancel":"/api/payments/reactivate";
+      const res=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${session?.access_token}`}});
+      const data=await res.json();
+      if(data.success){await onUpdate({auto_renew:!autoRenew});setCancelMsg(autoRenew?"Auto-renew turned off. Your plan stays active until end of current period.":"Auto-renew turned on.");}
+      else setCancelMsg(data.error||"Could not update. Email trigxyfn@gmail.com for help.");
+    }catch(e){setCancelMsg("Error: "+e.message);}
+    setCancelLoading(false);
+  };
   return React.createElement("div",{className:"fade",style:{maxWidth:540}},
     React.createElement(Hdr,{title:"My Profile",desc:"Manage your account and subscription.",t}),
     React.createElement("div",{style:{background:t.card,border:`1px solid ${t.border}`,borderRadius:12,padding:22,marginBottom:16}},
@@ -1480,13 +1494,28 @@ function ProfilePage({profile,onUpdate,t,go}){
       React.createElement(Btn,{onClick:save},saved?"✓ Saved!":"Save Changes")
     ),
     React.createElement("div",{style:{background:t.card,border:`1px solid ${t.border}`,borderRadius:12,padding:22,marginBottom:16}},
-      React.createElement("h3",{style:{fontFamily:"'Playfair Display',serif",fontSize:16,marginBottom:8,color:t.text}},"Subscription"),
-      React.createElement("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8}},
+      React.createElement("h3",{style:{fontFamily:"'Playfair Display',serif",fontSize:16,marginBottom:12,color:t.text}},"Subscription"),
+      React.createElement("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8,marginBottom:tier!=="free"?14:0}},
         React.createElement("div",null,
           React.createElement("div",{style:{fontSize:18,fontWeight:700,color:GOLD,marginBottom:2}},tier.charAt(0).toUpperCase()+tier.slice(1)+" Plan"),
           React.createElement("div",{style:{fontSize:13,color:t.muted}},tier==="free"?(profile?.usage_count||0)+" of 7 analyses used":"Unlimited analyses")
         ),
-        tier==="free"&&React.createElement(Btn,{onClick:()=>go("upgrade")},"Upgrade")
+        tier==="free"?React.createElement(Btn,{onClick:()=>go("upgrade")},"Upgrade"):React.createElement(Btn,{variant:"ghost",onClick:()=>go("upgrade"),sm:true},"Change Plan")
+      ),
+      tier!=="free"&&React.createElement("div",null,
+        cancelMsg&&React.createElement("div",{style:{background:cancelMsg.includes("Error")?"rgba(224,82,82,0.1)":"rgba(46,204,138,0.1)",border:"1px solid "+(cancelMsg.includes("Error")?"rgba(224,82,82,0.3)":"rgba(46,204,138,0.3)"),borderRadius:7,padding:"9px 12px",marginBottom:12,fontSize:12.5,color:cancelMsg.includes("Error")?"#E05252":"#2ECC8A"}},cancelMsg),
+        React.createElement("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:10}},
+          React.createElement("div",null,
+            React.createElement("div",{style:{fontSize:13,fontWeight:600,color:t.text,marginBottom:2}},"Auto-renew"),
+            React.createElement("div",{style:{fontSize:12,color:t.muted}},autoRenew?"Renews automatically each period":"Auto-renew off — expires at period end")
+          ),
+          React.createElement("div",{style:{display:"flex",alignItems:"center",gap:10}},
+            React.createElement("div",{onClick:cancelLoading?null:toggleAutoRenew,style:{width:44,height:24,background:autoRenew?GOLD:t.border,borderRadius:100,position:"relative",cursor:cancelLoading?"not-allowed":"pointer",transition:"background 0.3s",opacity:cancelLoading?0.5:1}},
+              React.createElement("div",{style:{position:"absolute",top:3,left:autoRenew?22:3,width:18,height:18,background:"#fff",borderRadius:"50%",transition:"left 0.3s",boxShadow:"0 1px 4px rgba(0,0,0,0.3)"}})
+            ),
+            React.createElement("span",{style:{fontSize:12,fontWeight:600,color:autoRenew?"#2ECC8A":"#E05252"}},cancelLoading?"...":(autoRenew?"ON":"OFF"))
+          )
+        )
       )
     ),
     React.createElement("div",{style:{background:t.card,border:`1px solid ${t.border}`,borderRadius:12,padding:22,marginBottom:16}},
@@ -1496,7 +1525,7 @@ function ProfilePage({profile,onUpdate,t,go}){
     ),
     React.createElement("div",{style:{background:t.card,border:`1px solid ${t.border}`,borderRadius:12,padding:22}},
       React.createElement("h3",{style:{fontFamily:"'Playfair Display',serif",fontSize:16,marginBottom:12,color:t.text}},"About"),
-      [["Version","4.1.0"],["AI Model","Llama 3.3 70B via Groq"],["Max Output","8,000 tokens"],["Storage","Supabase Cloud"]].map(([k,v])=>
+      [["Version","4.5.0"],["AI Model","Llama 3.3 70B via Groq"],["Max Output","8,000 tokens"],["Storage","Supabase Cloud"]].map(([k,v])=>
         React.createElement("div",{key:k,style:{display:"flex",gap:8,marginBottom:7,fontSize:13}},React.createElement("span",{style:{color:t.muted,minWidth:100}},k+":"),React.createElement("span",{style:{color:t.dim}},v))
       ),
       React.createElement("div",{style:{marginTop:14}}),
