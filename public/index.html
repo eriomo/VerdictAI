@@ -42,6 +42,11 @@ select option{background:#0c1a2e;color:#F0EDE6}
   .content-area{padding:16px 12px!important;}
   .topbar{height:52px!important;}
   textarea,input,select{font-size:16px!important;}
+  .hamburger-btn{display:flex!important;}
+  .desktop-nav-links{display:none!important;}
+}
+@media(min-width:769px){
+  .hamburger-btn{display:none!important;}
 }
 @media(max-width:480px){
   .feat-grid{grid-template-columns:1fr 1fr!important;}
@@ -860,6 +865,7 @@ function AuthPage({t,onBack}){
 // ── Landing ───────────────────────────────────────────────────────────────────
 function LandingPage({onGetStarted,t}){
   const [openFaq,setOpenFaq]=useState(null);
+  const [mobileMenuOpen,setMobileMenuOpen]=useState(false);
   const features=[
     {icon:"📄",title:"Document Analysis",desc:"Upload any PDF or DOCX. Get complete risk rating, hidden traps, and killer negotiation points in seconds."},
     {icon:"🧠",title:"Case War Room",desc:"Weighted probability score, outcome scenarios with exact naira figures, and a full strategic roadmap."},
@@ -884,75 +890,86 @@ function LandingPage({onGetStarted,t}){
     {q:"What happens when I reach my free limit?",a:"You get 7 analyses per month on the free tier. Once reached, you can upgrade to Solo for unlimited access. Your saved documents remain in your vault."},
     {q:"How does payment work?",a:"Payments are processed by Paystack — Nigeria's leading payment gateway. You can pay by card or bank transfer. Your account upgrades instantly after payment."},
   ];
+  const navLinks=["Features","How It Works","Pricing","FAQ","Contact"];
+  const scrollTo=id=>{
+    setMobileMenuOpen(false);
+    const el=document.getElementById(id.toLowerCase().replace(/ /g,"-").replace("how-it-works","how"));
+    if(el)el.scrollIntoView({behavior:"smooth"});
+    else onGetStarted();
+  };
+
   return React.createElement("div",{style:{background:"#07101c",minHeight:"100vh",color:"#F0EDE6",fontFamily:"'DM Sans',sans-serif",overflowY:"auto"}},
 
-    // ── NAV
-    React.createElement("nav",{style:{padding:"14px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",borderBottom:"1px solid rgba(30,52,82,0.6)",position:"sticky",top:0,background:"rgba(7,16,28,0.97)",backdropFilter:"blur(12px)",zIndex:50}},
-      React.createElement("div",{style:{display:"flex",alignItems:"center",gap:10}},
-        React.createElement("div",{style:{width:32,height:32,background:`linear-gradient(135deg,${GOLD},${GOLD2})`,borderRadius:9,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Playfair Display',serif",fontWeight:700,fontSize:16,color:"#0D1B2E"}},"V"),
-        React.createElement("span",{style:{fontFamily:"'Playfair Display',serif",fontSize:18,fontWeight:700}},"Verdict",React.createElement("span",{style:{color:GOLD}},"AI"))
+    // ── NAV ──────────────────────────────────────────────────────────────────
+    React.createElement("nav",{style:{padding:"0 24px",display:"flex",alignItems:"center",justifyContent:"space-between",borderBottom:"1px solid rgba(200,164,94,0.12)",position:"sticky",top:0,background:"rgba(7,16,28,0.97)",backdropFilter:"blur(14px)",zIndex:100,height:64}},
+      // Logo
+      React.createElement("div",{style:{display:"flex",alignItems:"center",gap:10,flexShrink:0}},
+        React.createElement("div",{style:{width:34,height:34,background:`linear-gradient(135deg,${GOLD},${GOLD2})`,borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Playfair Display',serif",fontWeight:700,fontSize:17,color:"#0D1B2E",boxShadow:"0 2px 12px rgba(200,164,94,0.3)"}},"V"),
+        React.createElement("span",{style:{fontFamily:"'Playfair Display',serif",fontSize:19,fontWeight:700,letterSpacing:"-0.3px"}},"Verdict",React.createElement("span",{style:{color:GOLD}},"AI"))
       ),
-      React.createElement("div",{style:{display:"flex",gap:8,alignItems:"center"}},
-        React.createElement("button",{onClick:onGetStarted,style:{padding:"8px 16px",borderRadius:8,background:"transparent",color:GOLD,fontWeight:600,fontSize:13,border:"1px solid rgba(200,164,94,0.3)",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}},"Sign In"),
-        React.createElement("button",{onClick:onGetStarted,style:{padding:"8px 18px",borderRadius:8,background:`linear-gradient(135deg,${GOLD},${GOLD2})`,color:"#0D1B2E",fontWeight:700,fontSize:13,border:"none",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}},"Get Started Free")
+      // Desktop nav links
+      React.createElement("div",{className:"desktop-nav-links",style:{display:"flex",gap:28,alignItems:"center",position:"absolute",left:"50%",transform:"translateX(-50%)"}},
+        navLinks.map(l=>React.createElement("button",{key:l,onClick:()=>scrollTo(l),style:{background:"none",border:"none",color:"rgba(240,237,230,0.55)",fontSize:13,fontWeight:500,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.2px",padding:"4px 0",transition:"color 0.15s"},
+          onMouseEnter:e=>e.target.style.color=GOLD,
+          onMouseLeave:e=>e.target.style.color="rgba(240,237,230,0.55)"},l))
+      ),
+      // Desktop CTA buttons + mobile hamburger
+      React.createElement("div",{style:{display:"flex",gap:8,alignItems:"center",flexShrink:0}},
+        React.createElement("button",{onClick:onGetStarted,style:{padding:"8px 16px",borderRadius:8,background:"transparent",color:"rgba(240,237,230,0.8)",fontWeight:600,fontSize:13,border:"1px solid rgba(255,255,255,0.12)",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}},"Sign In"),
+        React.createElement("button",{onClick:onGetStarted,style:{padding:"8px 20px",borderRadius:8,background:`linear-gradient(135deg,${GOLD},${GOLD2})`,color:"#0D1B2E",fontWeight:700,fontSize:13,border:"none",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",boxShadow:"0 2px 10px rgba(200,164,94,0.25)"}},"Get Started"),
+        // Hamburger — mobile only
+        React.createElement("button",{onClick:()=>setMobileMenuOpen(p=>!p),style:{display:"none",background:"none",border:"none",cursor:"pointer",padding:"6px",flexDirection:"column",gap:5,marginLeft:4,id:"hamburger-btn"},
+          className:"hamburger-btn"},
+          React.createElement("div",{style:{width:22,height:2,background:"rgba(240,237,230,0.8)",borderRadius:2,transition:"all 0.25s",transform:mobileMenuOpen?"rotate(45deg) translate(5px,5px)":"none"}}),
+          React.createElement("div",{style:{width:22,height:2,background:"rgba(240,237,230,0.8)",borderRadius:2,opacity:mobileMenuOpen?0:1,transition:"opacity 0.2s"}}),
+          React.createElement("div",{style:{width:22,height:2,background:"rgba(240,237,230,0.8)",borderRadius:2,transition:"all 0.25s",transform:mobileMenuOpen?"rotate(-45deg) translate(5px,-5px)":"none"}})
+        )
       )
     ),
 
-    // ── HERO
-    React.createElement("div",{style:{position:"relative",overflow:"hidden"}},
-      // Lady Justice SVG background
-      React.createElement("div",{style:{position:"absolute",right:"-20px",top:"50%",transform:"translateY(-50%)",opacity:0.045,pointerEvents:"none",zIndex:0,height:"100%",display:"flex",alignItems:"center"}},
-        React.createElement("svg",{viewBox:"0 0 300 500",width:"420",height:"520",xmlns:"http://www.w3.org/2000/svg",fill:"#C8A45E"},
-          // Robe/body
-          React.createElement("ellipse",{cx:"150",cy:"420",rx:"90",ry:"70"}),
-          React.createElement("rect",{x:"75",y:"240",width:"150",height:"200",rx:"20"}),
-          // Torso
-          React.createElement("rect",{x:"100",y:"160",width:"100",height:"100",rx:"15"}),
-          // Head
-          React.createElement("circle",{cx:"150",cy:"130",r:"38"}),
-          // Blindfold
-          React.createElement("rect",{x:"112",y:"118",width:"76",height:"18",rx:"9"}),
-          // Left arm holding scales
-          React.createElement("line",{x1:"100",y1:"200",x2:"30",y2:"170",stroke:"#C8A45E",strokeWidth:"12",strokeLinecap:"round"}),
-          // Scale pole
-          React.createElement("line",{x1:"30",y1:"170",x2:"30",y2:"130",stroke:"#C8A45E",strokeWidth:"8",strokeLinecap:"round"}),
-          // Scale bar
-          React.createElement("line",{x1:"0",y1:"130",x2:"60",y2:"130",stroke:"#C8A45E",strokeWidth:"6",strokeLinecap:"round"}),
-          // Scale chains
-          React.createElement("line",{x1:"5",y1:"130",x2:"5",y2:"155",stroke:"#C8A45E",strokeWidth:"4"}),
-          React.createElement("line",{x1:"55",y1:"130",x2:"55",y2:"148",stroke:"#C8A45E",strokeWidth:"4"}),
-          // Scale pans
-          React.createElement("ellipse",{cx:"5",cy:"160",rx:"16",ry:"6"}),
-          React.createElement("ellipse",{cx:"55",cy:"153",rx:"16",ry:"6"}),
-          // Right arm holding sword
-          React.createElement("line",{x1:"200",y1:"200",x2:"265",y2:"170",stroke:"#C8A45E",strokeWidth:"12",strokeLinecap:"round"}),
-          // Sword
-          React.createElement("line",{x1:"265",y1:"80",x2:"265",y2:"195",stroke:"#C8A45E",strokeWidth:"7",strokeLinecap:"round"}),
-          // Sword guard
-          React.createElement("line",{x1:"248",y1:"175",x2:"282",y2:"175",stroke:"#C8A45E",strokeWidth:"9",strokeLinecap:"round"}),
-          // Crown/laurel hint
-          React.createElement("path",{d:"M120 95 Q150 80 180 95",stroke:"#C8A45E",strokeWidth:"5",fill:"none",strokeLinecap:"round"}),
-        )
-      ),
-      // Gradient overlay so text stays readable
-      React.createElement("div",{style:{position:"absolute",inset:0,background:"linear-gradient(to right, #07101c 45%, rgba(7,16,28,0.7) 100%)",zIndex:1,pointerEvents:"none"}}),
-      React.createElement("div",{style:{position:"relative",zIndex:2,padding:"clamp(48px,10vw,90px) clamp(16px,5vw,28px) clamp(40px,7vw,70px)",maxWidth:860,margin:"0 auto",textAlign:"center"}},
-      React.createElement("div",{style:{display:"inline-block",background:"rgba(200,164,94,0.12)",border:"1px solid rgba(200,164,94,0.25)",borderRadius:100,padding:"5px 18px",fontSize:11,fontWeight:700,color:GOLD,letterSpacing:"1.2px",marginBottom:24}},"BUILT FOR NIGERIAN LAWYERS"),
-      React.createElement("h1",{style:{fontFamily:"'Playfair Display',serif",fontSize:"clamp(32px,7vw,58px)",fontWeight:700,lineHeight:1.1,marginBottom:20}},"From Documents",React.createElement("br",null),React.createElement("span",{style:{color:GOLD}},"to Decisions.")),
-      React.createElement("p",{style:{fontSize:"clamp(14px,2.5vw,18px)",color:"rgba(240,237,230,0.65)",lineHeight:1.75,maxWidth:560,margin:"0 auto 36px"}},"The complete AI legal intelligence platform for Nigerian lawyers. 35+ features. Court-ready output. No invented authorities."),
-      React.createElement("div",{style:{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap"}},
-        React.createElement("button",{onClick:onGetStarted,style:{padding:"15px 36px",borderRadius:9,background:`linear-gradient(135deg,${GOLD},${GOLD2})`,color:"#0D1B2E",fontWeight:700,fontSize:15,border:"none",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",boxShadow:"0 6px 24px rgba(200,164,94,0.35)"}},"Start Free — No Credit Card"),
-        React.createElement("button",{onClick:onGetStarted,style:{padding:"15px 28px",borderRadius:9,background:"transparent",color:"rgba(240,237,230,0.8)",fontWeight:600,fontSize:14,border:"1px solid rgba(240,237,230,0.2)",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}},"See All Features →")
-      ),
-      React.createElement("div",{style:{marginTop:28,display:"flex",gap:24,justifyContent:"center",flexWrap:"wrap"}},
-        ["35+ AI features","No invented citations","Court-ready output","Works on mobile"].map((b,i)=>
-          React.createElement("div",{key:i,style:{display:"flex",alignItems:"center",gap:6,fontSize:12,color:"rgba(240,237,230,0.5)"}},
-            React.createElement("span",{style:{color:GOLD}},"✓"),b
+    // ── MOBILE MENU ───────────────────────────────────────────────────────────
+    mobileMenuOpen&&React.createElement("div",{style:{position:"fixed",top:64,left:0,right:0,background:"rgba(7,16,28,0.99)",borderBottom:"1px solid rgba(200,164,94,0.15)",zIndex:99,padding:"12px 0 20px",backdropFilter:"blur(14px)"}},
+      navLinks.map(l=>React.createElement("button",{key:l,onClick:()=>scrollTo(l),style:{display:"block",width:"100%",textAlign:"left",padding:"14px 24px",background:"none",border:"none",color:"rgba(240,237,230,0.75)",fontSize:15,fontWeight:500,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",borderBottom:"1px solid rgba(30,52,82,0.4)"},
+        onMouseEnter:e=>e.target.style.color=GOLD,
+        onMouseLeave:e=>e.target.style.color="rgba(240,237,230,0.75)"},l)),
+      React.createElement("div",{style:{padding:"16px 24px 0",display:"flex",gap:10}},
+        React.createElement("button",{onClick:onGetStarted,style:{flex:1,padding:"12px",borderRadius:8,background:"transparent",color:GOLD,fontWeight:600,fontSize:14,border:`1px solid rgba(200,164,94,0.3)`,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}},"Sign In"),
+        React.createElement("button",{onClick:onGetStarted,style:{flex:2,padding:"12px",borderRadius:8,background:`linear-gradient(135deg,${GOLD},${GOLD2})`,color:"#0D1B2E",fontWeight:700,fontSize:14,border:"none",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}},"Get Started Free")
+      )
+    ),
+
+    // ── HERO ──────────────────────────────────────────────────────────────────
+    React.createElement("div",{style:{position:"relative",minHeight:"clamp(520px,80vh,780px)",display:"flex",alignItems:"center",overflow:"hidden"}},
+      // Lady Justice background image
+      React.createElement("div",{style:{
+        position:"absolute",inset:0,zIndex:0,
+        backgroundImage:"url('https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&w=1400&q=80')",
+        backgroundSize:"cover",
+        backgroundPosition:"center 20%",
+        filter:"grayscale(30%) brightness(0.35)",
+      }}),
+      // Dark gradient overlay — left heavy so text is readable
+      React.createElement("div",{style:{position:"absolute",inset:0,zIndex:1,background:"linear-gradient(105deg, rgba(7,16,28,0.97) 0%, rgba(7,16,28,0.88) 45%, rgba(7,16,28,0.55) 75%, rgba(7,16,28,0.3) 100%)"}}),
+      // Gold bottom border line
+      React.createElement("div",{style:{position:"absolute",bottom:0,left:0,right:0,height:"1px",background:`linear-gradient(90deg,transparent,${GOLD},transparent)`,zIndex:2}}),
+      // Hero content
+      React.createElement("div",{style:{position:"relative",zIndex:3,width:"100%",maxWidth:900,margin:"0 auto",padding:"clamp(40px,8vw,80px) clamp(20px,5vw,40px)",textAlign:"left"}},
+        React.createElement("div",{style:{display:"inline-flex",alignItems:"center",gap:8,background:"rgba(200,164,94,0.1)",border:"1px solid rgba(200,164,94,0.3)",borderRadius:100,padding:"5px 16px",fontSize:11,fontWeight:700,color:GOLD,letterSpacing:"1.4px",marginBottom:28}},"⚖️  BUILT FOR NIGERIAN LAWYERS"),
+        React.createElement("h1",{style:{fontFamily:"'Playfair Display',serif",fontSize:"clamp(36px,6vw,62px)",fontWeight:700,lineHeight:1.08,marginBottom:22,maxWidth:640,color:"#F0EDE6"}},"From Documents",React.createElement("br",null),React.createElement("span",{style:{color:GOLD,textShadow:"0 0 40px rgba(200,164,94,0.3)"}},"to Decisions.")),
+        React.createElement("p",{style:{fontSize:"clamp(14px,2vw,17px)",color:"rgba(240,237,230,0.65)",lineHeight:1.8,maxWidth:520,marginBottom:36}},"The complete AI legal intelligence platform for Nigerian lawyers. 35+ features. Court-ready output. No invented authorities."),
+        React.createElement("div",{style:{display:"flex",gap:12,flexWrap:"wrap",marginBottom:36}},
+          React.createElement("button",{onClick:onGetStarted,style:{padding:"15px 36px",borderRadius:9,background:`linear-gradient(135deg,${GOLD},${GOLD2})`,color:"#0D1B2E",fontWeight:700,fontSize:15,border:"none",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",boxShadow:"0 4px 24px rgba(200,164,94,0.4)",letterSpacing:"0.2px"}},"Start Free — No Credit Card"),
+          React.createElement("button",{onClick:onGetStarted,style:{padding:"15px 28px",borderRadius:9,background:"rgba(255,255,255,0.05)",color:"rgba(240,237,230,0.85)",fontWeight:600,fontSize:14,border:"1px solid rgba(255,255,255,0.15)",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",backdropFilter:"blur(8px)"}},"See All Features →")
+        ),
+        React.createElement("div",{style:{display:"flex",gap:20,flexWrap:"wrap"}},
+          ["35+ AI features","No invented citations","Court-ready output","Works on mobile"].map((b,i)=>
+            React.createElement("div",{key:i,style:{display:"flex",alignItems:"center",gap:7,fontSize:12.5,color:"rgba(240,237,230,0.45)"}},
+              React.createElement("span",{style:{color:GOLD,fontSize:14}},"✓"),b
+            )
           )
         )
       )
-    )
-    ), // close hero position:relative wrapper
+    ),
 
     // ── FEATURES
     React.createElement("div",{id:"features",style:{padding:"clamp(40px,7vw,70px) clamp(16px,4vw,28px)",background:"rgba(12,26,46,0.6)"}},
