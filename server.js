@@ -8,30 +8,30 @@ const { createClient } = require('@supabase/supabase-js');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// ── Paystack webhook needs raw body ───────────────────────────────────────────
+// Webhook needs raw body — must be BEFORE express.json()
 app.use('/api/payments/webhook', express.raw({ type: 'application/json' }));
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
-
 const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY;
+
 const DISCLAIMER = '\n\nDISCLAIMER: This analysis is for informational purposes only and does not constitute legal advice. Verify all legal authorities on PrimsCol or current Nigerian law reports before relying on them in proceedings.';
 
-// Plans in kobo (Paystack uses kobo)
 const PLANS = {
   solo:     { amount: 1200000, name: 'Solo',     tier: 'solo' },
   chambers: { amount: 2000000, name: 'Chambers', tier: 'chambers' },
 };
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
 function httpsPost(hostname, urlPath, headers, body) {
   return new Promise((resolve, reject) => {
     const bodyStr = JSON.stringify(body);
     const options = {
       hostname, path: urlPath, method: 'POST',
       headers: { ...headers, 'Content-Length': Buffer.byteLength(bodyStr) },
-      timeout: 50000
+      timeout: 50000,
     };
     const req = https.request(options, resolve);
     req.on('error', reject);
@@ -55,9 +55,7 @@ async function readBody(res) {
   return new Promise((resolve) => {
     let data = '';
     res.on('data', chunk => data += chunk);
-    res.on('end', () => {
-      try { resolve(JSON.parse(data)); } catch { resolve({}); }
-    });
+    res.on('end', () => { try { resolve(JSON.parse(data)); } catch { resolve({}); } });
   });
 }
 
@@ -197,18 +195,36 @@ app.post('/api/ai', requireAuth, async (req, res) => {
   }
 });
 
-// ── PAYSTACK — Initialize payment ─────────────────────────────────────────────
+// ── PAYSTACK — Initialize ─────────────────────────────────────────────────────
 app.post('/api/payments/initialize', requireAuth, async (req, res) => {
+  console.log('=== PAYMENT INITIALIZE ===');
+  console.log('Plan:', req.body.plan);
+  console.log('User:', req.user.email);
+  console.log('Secret key set:', !!PAYSTACK_SECRET);
+  console.log('Secret key prefix:', PAYSTACK_SECRET ? PAYSTACK_SECRET.slice(0, 12) : 'NOT SET');
+
   const { plan } = req.body;
+
+  if (!plan) return res.status(400).json({ error: 'Plan is required' });
+
   const planData = PLANS[plan];
-  if (!planData) return res.status(400).json({ error: 'Invalid plan' });
-  if (!PAYSTACK_SECRET) return res.status(500).json({ error: 'Payment not configured' });
+  if (!planData) {
+    console.log('Invalid plan. Valid plans:', Object.keys(PLANS));
+    return res.status(400).json({ error: 'Invalid plan: ' + plan });
+  }
+
+  if (!PAYSTACK_SECRET) {
+    return res.status(500).json({ error: 'PAYSTACK_SECRET_KEY not configured in Render environment' });
+  }
 
   try {
     const paystackRes = await httpsPost(
       'api.paystack.co',
       '/transaction/initialize',
-      { 'Content-Type': 'application/json', 'Authorization': `Bearer ${PAYSTACK_SECRET}` },
+      {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${PAYSTACK_SECRET}`,
+      },
       {
         email: req.user.email,
         amount: planData.amount,
@@ -219,21 +235,31 @@ app.post('/api/payments/initialize', requireAuth, async (req, res) => {
           plan_name: planData.name,
           email: req.user.email,
         },
-        callback_url: `${process.env.APP_URL || 'https://verdict-ai.onrender.com'}/payment-success`,
         channels: ['card', 'bank_transfer', 'ussd', 'bank'],
       }
     );
 
     const data = await readBody(paystackRes);
-    if (!data.status) return res.status(400).json({ error: data.message || 'Payment initialization failed' });
-    res.json({ authorization_url: data.data.authorization_url, access_code: data.data.access_code, reference: data.data.reference });
+    console.log('Paystack HTTP status:', paystackRes.statusCode);
+    console.log('Paystack full response:', JSON.stringify(data));
+
+    if (!data.status) {
+      return res.status(400).json({ error: data.message || 'Paystack initialization failed' });
+    }
+
+    res.json({
+      authorization_url: data.data.authorization_url,
+      access_code: data.data.access_code,
+      reference: data.data.reference,
+    });
+
   } catch (err) {
     console.log('Paystack init error:', err.message);
-    res.status(500).json({ error: 'Payment initialization failed' });
+    res.status(500).json({ error: 'Payment initialization failed: ' + err.message });
   }
 });
 
-// ── PAYSTACK — Verify payment (called after redirect) ─────────────────────────
+// ── PAYSTACK — Verify ─────────────────────────────────────────────────────────
 app.get('/api/payments/verify/:reference', requireAuth, async (req, res) => {
   if (!PAYSTACK_SECRET) return res.status(500).json({ error: 'Payment not configured' });
   try {
@@ -243,13 +269,15 @@ app.get('/api/payments/verify/:reference', requireAuth, async (req, res) => {
       { 'Authorization': `Bearer ${PAYSTACK_SECRET}` }
     );
     const data = await readBody(paystackRes);
-    if (!data.status || data.data.status !== 'success') return res.status(400).json({ error: 'Payment not successful' });
+
+    if (!data.status || data.data.status !== 'success') {
+      return res.status(400).json({ error: 'Payment not successful' });
+    }
 
     const { user_id, plan } = data.data.metadata;
     const planData = PLANS[plan];
     if (!planData) return res.status(400).json({ error: 'Invalid plan in payment' });
 
-    // Calculate expiry — 31 days from now
     const expiry = new Date();
     expiry.setDate(expiry.getDate() + 31);
 
@@ -258,25 +286,24 @@ app.get('/api/payments/verify/:reference', requireAuth, async (req, res) => {
       tier_expiry: expiry.toISOString(),
     }).eq('id', user_id);
 
+    console.log(`Upgraded user ${user_id} to ${planData.tier}`);
     res.json({ success: true, tier: planData.tier });
   } catch (err) {
     console.log('Verify error:', err.message);
-    res.status(500).json({ error: 'Verification failed' });
+    res.status(500).json({ error: 'Verification failed: ' + err.message });
   }
 });
 
-// ── PAYSTACK — Webhook (auto-upgrade on payment) ──────────────────────────────
+// ── PAYSTACK — Webhook ────────────────────────────────────────────────────────
 app.post('/api/payments/webhook', async (req, res) => {
-  // Verify webhook is from Paystack
   const hash = crypto.createHmac('sha512', PAYSTACK_SECRET)
-    .update(req.body)
-    .digest('hex');
+    .update(req.body).digest('hex');
 
   if (hash !== req.headers['x-paystack-signature']) {
     return res.status(400).send('Invalid signature');
   }
 
-  res.status(200).send('OK'); // Respond immediately
+  res.status(200).send('OK');
 
   try {
     const event = JSON.parse(req.body.toString());
@@ -296,7 +323,7 @@ app.post('/api/payments/webhook', async (req, res) => {
       tier_expiry: expiry.toISOString(),
     }).eq('id', user_id);
 
-    console.log(`✅ Upgraded user ${user_id} to ${planData.tier}`);
+    console.log(`Webhook upgraded ${user_id} to ${planData.tier}`);
   } catch (err) {
     console.log('Webhook error:', err.message);
   }
@@ -362,13 +389,13 @@ app.get('/api/cases/search', requireAuth, async (req, res) => {
   const { q } = req.query;
   if (!q) return res.json({ results: [] });
   const results = [
-    { title: `Search "${q}" on AfricanLII`, court: 'Free Nigerian Case Law', url: `https://africanlii.org/search?q=${encodeURIComponent(q)}&jurisdiction=ng`, snippet: 'Thousands of Nigerian judgments — free access', source: 'AfricanLII', isLink: true },
+    { title: `Search "${q}" on AfricanLII`, court: 'Free Nigerian Case Law', url: `https://africanlii.org/search?q=${encodeURIComponent(q)}&jurisdiction=ng`, snippet: 'Thousands of Nigerian judgments', source: 'AfricanLII', isLink: true },
     { title: `Search "${q}" on PrimsCol`, court: 'LawPavilion', url: 'https://primsol.lawpavilion.com', snippet: 'Comprehensive Nigerian cases 1960-present', source: 'PrimsCol', isLink: true },
     { title: `Search "${q}" on NigeriaLII`, court: 'NigeriaLII', url: `https://nigerialii.org/search?q=${encodeURIComponent(q)}`, snippet: 'Free Nigerian legal materials', source: 'NigeriaLII', isLink: true }
   ];
   res.json({ results, count: 0 });
 });
 
-app.get('/api/health', (req, res) => res.json({ status: 'ok', version: '4.4.0', model: 'llama-3.3-70b-versatile' }));
+app.get('/api/health', (req, res) => res.json({ status: 'ok', version: '4.5.0', model: 'llama-3.3-70b-versatile' }));
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
-app.listen(PORT, () => console.log(`Verdict AI v4.4 running on port ${PORT}`));
+app.listen(PORT, () => console.log(`Verdict AI v4.5 running on port ${PORT}`));
