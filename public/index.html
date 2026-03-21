@@ -1521,10 +1521,20 @@ function UpgradePage({t,go,userTier,userEmail,onUpgradeSuccess}){
     if(plan.id==="free"||plan.current)return;
     setPaying(plan.id);setError("");
     try{
+      if(typeof PaystackPop==="undefined"){
+        throw new Error("Paystack script not loaded. Please refresh the page and try again.");
+      }
       const {data:{session}}=await sb.auth.getSession();
-      const res=await fetch("/api/payments/initialize",{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${session?.access_token}`},body:JSON.stringify({plan:plan.id})});
+      if(!session?.access_token)throw new Error("Not logged in. Please refresh and log in again.");
+
+      const res=await fetch("/api/payments/initialize",{
+        method:"POST",
+        headers:{"Content-Type":"application/json","Authorization":`Bearer ${session.access_token}`},
+        body:JSON.stringify({plan:plan.id})
+      });
       const data=await res.json();
-      if(!res.ok)throw new Error(data.error||"Payment failed to initialize");
+      if(!res.ok)throw new Error(data.error||"Server error: "+res.status);
+
       const handler=PaystackPop.setup({
         key:PAYSTACK_PUBLIC_KEY,
         email:userEmail,
@@ -1533,19 +1543,42 @@ function UpgradePage({t,go,userTier,userEmail,onUpgradeSuccess}){
         currency:"NGN",
         channels:["card","bank_transfer","ussd","bank"],
         onSuccess:async(transaction)=>{
+          console.log("Paystack onSuccess fired. Transaction object:", JSON.stringify(transaction));
+          setPaying("verifying");
+          setError("");
+          const ref = transaction.reference || transaction.trxref || data.reference;
+          console.log("Using reference:", ref);
+          await new Promise(r=>setTimeout(r,2000));
           try{
-            const {data:{session}}=await sb.auth.getSession();
-            const vRes=await fetch(`/api/payments/verify/${transaction.reference}`,{headers:{"Authorization":`Bearer ${session?.access_token}`}});
+            const {data:{session:s2}}=await sb.auth.getSession();
+            const vRes=await fetch(`/api/payments/verify/${ref}`,{
+              headers:{"Authorization":`Bearer ${s2?.access_token}`}
+            });
             const vData=await vRes.json();
-            if(vData.success){if(onUpgradeSuccess)onUpgradeSuccess(vData.tier);go("dashboard");}
-            else setError("Payment received but upgrade failed. Email trigxyfn@gmail.com with ref: "+transaction.reference);
-          }catch(e){setError("Payment received but upgrade failed. Email trigxyfn@gmail.com with ref: "+transaction.reference);}
-          setPaying(null);
+            console.log("Verify response:",vData);
+            if(vData.success){
+              if(onUpgradeSuccess)onUpgradeSuccess(vData.tier);
+              setPaying(null);
+              go("dashboard");
+              setTimeout(()=>window.location.reload(),1000);
+            } else {
+              setError("Payment received — upgrade processing. If your plan does not update in 1 minute, email trigxyfn@gmail.com with ref: "+ref);
+              setPaying(null);
+            }
+          }catch(e){
+            console.error("Verify error:",e);
+            setError("Payment received — upgrade processing. If plan does not update in 1 minute, email trigxyfn@gmail.com with ref: "+ref);
+            setPaying(null);
+          }
         },
-        onCancel:()=>setPaying(null),
+        onCancel:()=>{setPaying(null);},
       });
       handler.openIframe();
-    }catch(e){setError(e.message);setPaying(null);}
+    }catch(e){
+      console.error("Payment error:",e);
+      setError(e.message);
+      setPaying(null);
+    }
   };
   return React.createElement("div",{className:"fade"},
     React.createElement(Hdr,{title:"Choose Your Plan",desc:"Pay with card or bank transfer. Upgrade is instant.",t}),
