@@ -1590,8 +1590,7 @@ function UpgradePage({t,go,userTier,userEmail,onUpgradeSuccess}){
         sessionStorage.removeItem("vd_pay_plan");
         if(onUpgradeSuccess)onUpgradeSuccess(vData.tier);
         setPaying(null);
-        go("dashboard");
-        setTimeout(()=>window.location.reload(),800);
+        setTimeout(()=>{go("dashboard");window.location.reload();},500);
       } else {
         setError("Payment received. Your account will upgrade within 1 minute. If not, email trigxyfn@gmail.com with ref: "+ref);
         setPaying(null);
