@@ -859,45 +859,171 @@ function AuthPage({t,onBack}){
 
 // ── Landing ───────────────────────────────────────────────────────────────────
 function LandingPage({onGetStarted,t}){
+  const [openFaq,setOpenFaq]=useState(null);
   const features=[
-    {icon:"📄",title:"Document Analysis",desc:"Upload any PDF. Get complete risk analysis, hidden traps, and killer negotiation points."},
-    {icon:"🧠",title:"Case War Room",desc:"Weighted probability score, outcome scenarios with naira figures, settlement intelligence."},
-    {icon:"🔥",title:"Witness Cross-Examiner",desc:"20 leading questions only. Killer Sequence. Coaching notes. Built around your verified authorities."},
-    {icon:"🎯",title:"Motion Ammunition",desc:"Full Nigerian Written Address format. Issues for determination. Arguments. Formal reliefs."},
-    {icon:"📋",title:"Claim Analyser",desc:"Claim strength score. Draft Statement of Defence. 15 leading cross-exam questions."},
-    {icon:"🧑‍⚖️",title:"Client Prep Coach",desc:"Behaviour coaching. Danger zones. Model answers that protect — not concede."},
+    {icon:"📄",title:"Document Analysis",desc:"Upload any PDF or DOCX. Get complete risk rating, hidden traps, and killer negotiation points in seconds."},
+    {icon:"🧠",title:"Case War Room",desc:"Weighted probability score, outcome scenarios with exact naira figures, and a full strategic roadmap."},
+    {icon:"🔥",title:"Witness Cross-Examiner",desc:"20 leading questions only. Killer Sequence. Document-anchored fallbacks. Built around your verified authorities."},
+    {icon:"🎯",title:"Motion Ammunition",desc:"Full Nigerian Written Address — issues, arguments, killer points, and formal reliefs. Ready to file."},
+    {icon:"📋",title:"Claim Analyser",desc:"Claim strength score out of 100. Draft Statement of Defence. 15 leading cross-exam questions."},
+    {icon:"🧑‍⚖️",title:"Client Prep Coach",desc:"Behaviour coaching. Danger zones. Model answers that protect — not concede. Specific to your client."},
+    {icon:"🧬",title:"Clause DNA",desc:"Forensic breakdown of any contract clause — risk scores, party bias, hidden traps, and a suggested rewrite."},
+    {icon:"⏰",title:"Deadline Intelligence",desc:"Every deadline — explicit and hidden — with risk ratings, consequences, and a full compliance calendar."},
+    {icon:"🤝",title:"AI Senior Partner",desc:"Talk through any case with Ade Bello SAN. He gives his view first. Then pushes back. 28 years of experience."},
+  ];
+  const plans=[
+    {name:"Free",color:"#4A9EE8",price:"₦0",period:"forever",features:["7 analyses/month","Document Analysis","Legal Q&A","Draft Documents","Nigerian Case Law","Document Vault"]},
+    {name:"Solo",color:GOLD,price:"₦12,000",period:"/month",features:["Unlimited analyses","All 30+ features","Case War Room","Clause DNA","WhatsApp Evidence","Compliance Calendar","Pleadings Checker"],popular:true},
+    {name:"Chambers",color:"#9B59B6",price:"₦20,000",period:"/month",features:["Everything in Solo","Trial Prep Suite","AI Senior Partner","Witness Forge","Evidence Analyser","Settlement Intelligence","Up to 3 users"]},
+  ];
+  const faqs=[
+    {q:"Does Verdict AI invent case names or statute sections?",a:"Never. Verdict AI is built on a strict no-invention rule. It will only reference statutes that exist and will clearly tell you to verify any case authorities on PrimsCol before relying on them in court."},
+    {q:"Is this legal advice?",a:"No. Verdict AI is a legal intelligence tool that helps Nigerian lawyers work faster and smarter. Every output carries a disclaimer and is intended for use by qualified legal practitioners."},
+    {q:"How is my data protected?",a:"All data is stored on Supabase with row-level security. Your documents and analyses are private to your account. We do not train on your data."},
+    {q:"Can I use this on my phone?",a:"Yes. Verdict AI is fully mobile-responsive and works on any smartphone browser. No app download required."},
+    {q:"What happens when I reach my free limit?",a:"You get 7 analyses per month on the free tier. Once reached, you can upgrade to Solo for unlimited access. Your saved documents remain in your vault."},
+    {q:"How does payment work?",a:"Payments are processed by Paystack — Nigeria's leading payment gateway. You can pay by card or bank transfer. Your account upgrades instantly after payment."},
   ];
   return React.createElement("div",{style:{background:"#07101c",minHeight:"100vh",color:"#F0EDE6",fontFamily:"'DM Sans',sans-serif",overflowY:"auto"}},
-    React.createElement("nav",{style:{padding:"14px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",borderBottom:"1px solid rgba(30,52,82,0.6)",position:"sticky",top:0,background:"rgba(7,16,28,0.95)",backdropFilter:"blur(10px)",zIndex:50}},
+
+    // ── NAV
+    React.createElement("nav",{style:{padding:"14px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",borderBottom:"1px solid rgba(30,52,82,0.6)",position:"sticky",top:0,background:"rgba(7,16,28,0.97)",backdropFilter:"blur(12px)",zIndex:50}},
       React.createElement("div",{style:{display:"flex",alignItems:"center",gap:10}},
         React.createElement("div",{style:{width:32,height:32,background:`linear-gradient(135deg,${GOLD},${GOLD2})`,borderRadius:9,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Playfair Display',serif",fontWeight:700,fontSize:16,color:"#0D1B2E"}},"V"),
         React.createElement("span",{style:{fontFamily:"'Playfair Display',serif",fontSize:18,fontWeight:700}},"Verdict",React.createElement("span",{style:{color:GOLD}},"AI"))
       ),
-      React.createElement("button",{onClick:onGetStarted,style:{padding:"9px 22px",borderRadius:8,background:`linear-gradient(135deg,${GOLD},${GOLD2})`,color:"#0D1B2E",fontWeight:700,fontSize:13,border:"none",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}},"Get Started Free")
+      React.createElement("div",{style:{display:"flex",gap:8,alignItems:"center"}},
+        React.createElement("button",{onClick:onGetStarted,style:{padding:"8px 16px",borderRadius:8,background:"transparent",color:GOLD,fontWeight:600,fontSize:13,border:"1px solid rgba(200,164,94,0.3)",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}},"Sign In"),
+        React.createElement("button",{onClick:onGetStarted,style:{padding:"8px 18px",borderRadius:8,background:`linear-gradient(135deg,${GOLD},${GOLD2})`,color:"#0D1B2E",fontWeight:700,fontSize:13,border:"none",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}},"Get Started Free")
+      )
     ),
-    React.createElement("div",{style:{padding:"clamp(40px,8vw,72px) clamp(16px,5vw,28px) clamp(36px,6vw,56px)",maxWidth:820,margin:"0 auto",textAlign:"center"}},
-      React.createElement("div",{style:{display:"inline-block",background:"rgba(200,164,94,0.12)",border:"1px solid rgba(200,164,94,0.25)",borderRadius:100,padding:"5px 16px",fontSize:11,fontWeight:700,color:GOLD,letterSpacing:"1px",marginBottom:22}},"BUILT FOR NIGERIAN LAWYERS"),
-      React.createElement("h1",{style:{fontFamily:"'Playfair Display',serif",fontSize:"clamp(30px,6vw,52px)",fontWeight:700,lineHeight:1.15,marginBottom:18}},"From Documents",React.createElement("br",null),React.createElement("span",{style:{color:GOLD}},"to Decisions.")),
-      React.createElement("p",{style:{fontSize:"clamp(14px,2.5vw,18px)",color:"rgba(240,237,230,0.6)",lineHeight:1.7,maxWidth:540,margin:"0 auto 32px"}},"The complete AI legal intelligence platform for Nigerian lawyers. 35+ features. Elite-level output."),
-      React.createElement("button",{onClick:onGetStarted,style:{padding:"14px 32px",borderRadius:8,background:`linear-gradient(135deg,${GOLD},${GOLD2})`,color:"#0D1B2E",fontWeight:700,fontSize:15,border:"none",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",boxShadow:"0 6px 20px rgba(200,164,94,0.35)"}},"Start Free — No Credit Card")
+
+    // ── HERO
+    React.createElement("div",{style:{padding:"clamp(48px,10vw,90px) clamp(16px,5vw,28px) clamp(40px,7vw,70px)",maxWidth:860,margin:"0 auto",textAlign:"center"}},
+      React.createElement("div",{style:{display:"inline-block",background:"rgba(200,164,94,0.12)",border:"1px solid rgba(200,164,94,0.25)",borderRadius:100,padding:"5px 18px",fontSize:11,fontWeight:700,color:GOLD,letterSpacing:"1.2px",marginBottom:24}},"BUILT FOR NIGERIAN LAWYERS"),
+      React.createElement("h1",{style:{fontFamily:"'Playfair Display',serif",fontSize:"clamp(32px,7vw,58px)",fontWeight:700,lineHeight:1.1,marginBottom:20}},"From Documents",React.createElement("br",null),React.createElement("span",{style:{color:GOLD}},"to Decisions.")),
+      React.createElement("p",{style:{fontSize:"clamp(14px,2.5vw,18px)",color:"rgba(240,237,230,0.65)",lineHeight:1.75,maxWidth:560,margin:"0 auto 36px"}},"The complete AI legal intelligence platform for Nigerian lawyers. 35+ features. Court-ready output. No invented authorities."),
+      React.createElement("div",{style:{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap"}},
+        React.createElement("button",{onClick:onGetStarted,style:{padding:"15px 36px",borderRadius:9,background:`linear-gradient(135deg,${GOLD},${GOLD2})`,color:"#0D1B2E",fontWeight:700,fontSize:15,border:"none",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",boxShadow:"0 6px 24px rgba(200,164,94,0.35)"}},"Start Free — No Credit Card"),
+        React.createElement("button",{onClick:onGetStarted,style:{padding:"15px 28px",borderRadius:9,background:"transparent",color:"rgba(240,237,230,0.8)",fontWeight:600,fontSize:14,border:"1px solid rgba(240,237,230,0.2)",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}},"See All Features →")
+      ),
+      React.createElement("div",{style:{marginTop:28,display:"flex",gap:24,justifyContent:"center",flexWrap:"wrap"}},
+        ["35+ AI features","No invented citations","Court-ready output","Works on mobile"].map((b,i)=>
+          React.createElement("div",{key:i,style:{display:"flex",alignItems:"center",gap:6,fontSize:12,color:"rgba(240,237,230,0.5)"}},
+            React.createElement("span",{style:{color:GOLD}},"✓"),b
+          )
+        )
+      )
     ),
-    React.createElement("div",{style:{padding:"56px 28px",background:"rgba(12,26,46,0.5)"}},
-      React.createElement("div",{style:{maxWidth:960,margin:"0 auto"}},
-        React.createElement("h2",{style:{fontFamily:"'Playfair Display',serif",fontSize:30,fontWeight:700,textAlign:"center",marginBottom:8}},"Everything Nigerian lawyers need"),
-        React.createElement("p",{style:{textAlign:"center",color:"rgba(240,237,230,0.5)",fontSize:14,marginBottom:32}},"Principles-based analysis. Bring your verified authorities. No invented citations. No invented clauses."),
-        React.createElement("div",{style:{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))",gap:14}},
-          features.map((f,i)=>React.createElement("div",{key:i,style:{background:"rgba(12,26,46,0.8)",border:"1px solid rgba(30,52,82,0.8)",borderRadius:12,padding:20}},
-            React.createElement("div",{style:{fontSize:26,marginBottom:10}},f.icon),
-            React.createElement("div",{style:{fontFamily:"'Playfair Display',serif",fontSize:15,fontWeight:600,marginBottom:5}},f.title),
-            React.createElement("div",{style:{fontSize:13,color:"rgba(240,237,230,0.5)",lineHeight:1.6}},f.desc)
+
+    // ── FEATURES
+    React.createElement("div",{id:"features",style:{padding:"clamp(40px,7vw,70px) clamp(16px,4vw,28px)",background:"rgba(12,26,46,0.6)"}},
+      React.createElement("div",{style:{maxWidth:1000,margin:"0 auto"}},
+        React.createElement("div",{style:{textAlign:"center",marginBottom:40}},
+          React.createElement("h2",{style:{fontFamily:"'Playfair Display',serif",fontSize:"clamp(22px,4vw,32px)",fontWeight:700,marginBottom:10}},"Everything Nigerian lawyers need"),
+          React.createElement("p",{style:{color:"rgba(240,237,230,0.45)",fontSize:14,maxWidth:500,margin:"0 auto"}},`Principles-based analysis built on Nigerian law. Bring your verified authorities. We never invent clauses, statutes, or case names.`)
+        ),
+        React.createElement("div",{style:{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(280px,1fr))",gap:14}},
+          features.map((f,i)=>React.createElement("div",{key:i,style:{background:"rgba(7,16,28,0.8)",border:"1px solid rgba(30,52,82,0.9)",borderRadius:12,padding:"20px 18px",transition:"border-color 0.2s"},
+            onMouseEnter:e=>e.currentTarget.style.borderColor="rgba(200,164,94,0.4)",
+            onMouseLeave:e=>e.currentTarget.style.borderColor="rgba(30,52,82,0.9)"},
+            React.createElement("div",{style:{fontSize:28,marginBottom:12}},f.icon),
+            React.createElement("div",{style:{fontFamily:"'Playfair Display',serif",fontSize:15,fontWeight:600,marginBottom:7,color:"#F0EDE6"}},f.title),
+            React.createElement("div",{style:{fontSize:13,color:"rgba(240,237,230,0.5)",lineHeight:1.65}},f.desc)
           ))
         )
       )
     ),
-    React.createElement("div",{style:{padding:"24px 28px",borderTop:"1px solid rgba(30,52,82,0.6)",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:10}},
-      React.createElement("span",{style:{fontFamily:"'Playfair Display',serif",fontSize:14,fontWeight:700}},"Verdict",React.createElement("span",{style:{color:GOLD}},"AI")),
-      React.createElement("div",{style:{fontSize:11,color:"rgba(240,237,230,0.3)"}},"AI-powered legal analysis. Not legal advice."),
-      React.createElement("button",{onClick:onGetStarted,style:{padding:"7px 16px",borderRadius:7,background:"transparent",color:GOLD,fontWeight:600,fontSize:12,border:"1px solid rgba(200,164,94,0.3)",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}},"Sign In")
+
+    // ── HOW IT WORKS
+    React.createElement("div",{style:{padding:"clamp(40px,7vw,70px) clamp(16px,4vw,28px)"}},
+      React.createElement("div",{style:{maxWidth:800,margin:"0 auto",textAlign:"center"}},
+        React.createElement("h2",{style:{fontFamily:"'Playfair Display',serif",fontSize:"clamp(22px,4vw,30px)",fontWeight:700,marginBottom:10}},"How it works"),
+        React.createElement("p",{style:{color:"rgba(240,237,230,0.45)",fontSize:14,marginBottom:40}},"Three steps from document to decision."),
+        React.createElement("div",{style:{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:20}},
+          [
+            {n:"1",title:"Upload or paste",desc:"Drop in any PDF, DOCX, or paste text directly. Case facts, witness statements, contracts — anything."},
+            {n:"2",title:"AI analyses",desc:"Verdict AI applies Nigerian law, court rules, and elite litigation strategy to your specific facts."},
+            {n:"3",title:"Court-ready output",desc:"Get complete analysis, draft documents, or cross-examination kits — ready to use immediately."},
+          ].map((s,i)=>React.createElement("div",{key:i,style:{background:"rgba(12,26,46,0.6)",border:"1px solid rgba(30,52,82,0.8)",borderRadius:14,padding:"24px 20px"}},
+            React.createElement("div",{style:{width:40,height:40,borderRadius:"50%",background:`linear-gradient(135deg,${GOLD},${GOLD2})`,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Playfair Display',serif",fontWeight:700,fontSize:18,color:"#0D1B2E",marginBottom:14}},s.n),
+            React.createElement("div",{style:{fontFamily:"'Playfair Display',serif",fontSize:16,fontWeight:600,marginBottom:8,color:"#F0EDE6"}},s.title),
+            React.createElement("div",{style:{fontSize:13,color:"rgba(240,237,230,0.5)",lineHeight:1.65}},s.desc)
+          ))
+        )
+      )
+    ),
+
+    // ── PRICING
+    React.createElement("div",{id:"pricing",style:{padding:"clamp(40px,7vw,70px) clamp(16px,4vw,28px)",background:"rgba(12,26,46,0.6)"}},
+      React.createElement("div",{style:{maxWidth:900,margin:"0 auto"}},
+        React.createElement("div",{style:{textAlign:"center",marginBottom:40}},
+          React.createElement("h2",{style:{fontFamily:"'Playfair Display',serif",fontSize:"clamp(22px,4vw,30px)",fontWeight:700,marginBottom:10}},"Simple, transparent pricing"),
+          React.createElement("p",{style:{color:"rgba(240,237,230,0.45)",fontSize:14}},"Start free. Upgrade when the product earns it.")
+        ),
+        React.createElement("div",{style:{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(240px,1fr))",gap:16}},
+          plans.map((p,i)=>React.createElement("div",{key:i,style:{background:"rgba(7,16,28,0.9)",border:`2px solid ${p.popular?GOLD:p.name==="Chambers"?"rgba(155,89,182,0.4)":"rgba(30,52,82,0.9)"}`,borderRadius:14,padding:"24px 20px",position:"relative"}},
+            p.popular&&React.createElement("div",{style:{position:"absolute",top:-12,left:"50%",transform:"translateX(-50%)",background:GOLD,color:"#0D1B2E",fontSize:9,fontWeight:700,padding:"3px 14px",borderRadius:100,whiteSpace:"nowrap"}},"MOST POPULAR"),
+            React.createElement("div",{style:{textAlign:"center",marginBottom:18}},
+              React.createElement("div",{style:{fontFamily:"'Playfair Display',serif",fontSize:20,fontWeight:700,color:p.color,marginBottom:6}},p.name),
+              React.createElement("div",{style:{display:"flex",alignItems:"baseline",justifyContent:"center",gap:2}},
+                React.createElement("span",{style:{fontFamily:"'Playfair Display',serif",fontSize:30,fontWeight:700,color:"#F0EDE6"}},p.price),
+                React.createElement("span",{style:{fontSize:12,color:"rgba(240,237,230,0.4)"}},p.period)
+              )
+            ),
+            React.createElement("div",{style:{height:1,background:p.color,opacity:0.2,marginBottom:16}}),
+            p.features.map((f,j)=>React.createElement("div",{key:j,style:{fontSize:13,color:"rgba(240,237,230,0.65)",marginBottom:8,display:"flex",gap:8}},
+              React.createElement("span",{style:{color:p.color,fontWeight:700,flexShrink:0}},"✓"),f
+            )),
+            React.createElement("button",{onClick:onGetStarted,style:{display:"block",width:"100%",marginTop:20,padding:"12px",borderRadius:8,background:p.popular?`linear-gradient(135deg,${GOLD},${GOLD2})`:p.name==="Chambers"?"linear-gradient(135deg,#9B59B6,#8E44AD)":"rgba(255,255,255,0.06)",color:p.popular?"#0D1B2E":"#F0EDE6",fontWeight:700,fontSize:13,border:p.popular?"none":`1px solid ${p.name==="Chambers"?"rgba(155,89,182,0.4)":"rgba(255,255,255,0.1)"}`,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}},p.name==="Free"?"Start Free":"Get Started")
+          ))
+        )
+      )
+    ),
+
+    // ── FAQ
+    React.createElement("div",{id:"faq",style:{padding:"clamp(40px,7vw,70px) clamp(16px,4vw,28px)"}},
+      React.createElement("div",{style:{maxWidth:700,margin:"0 auto"}},
+        React.createElement("div",{style:{textAlign:"center",marginBottom:36}},
+          React.createElement("h2",{style:{fontFamily:"'Playfair Display',serif",fontSize:"clamp(22px,4vw,30px)",fontWeight:700,marginBottom:10}},"Frequently asked questions"),
+          React.createElement("p",{style:{color:"rgba(240,237,230,0.45)",fontSize:14}},"Everything you need to know before you sign up.")
+        ),
+        faqs.map((f,i)=>React.createElement("div",{key:i,style:{borderBottom:"1px solid rgba(30,52,82,0.8)",marginBottom:0}},
+          React.createElement("button",{onClick:()=>setOpenFaq(openFaq===i?null:i),style:{width:"100%",textAlign:"left",padding:"18px 0",background:"none",border:"none",cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,fontFamily:"'DM Sans',sans-serif"}},
+            React.createElement("span",{style:{fontSize:14,fontWeight:600,color:"#F0EDE6",lineHeight:1.4}},f.q),
+            React.createElement("span",{style:{color:GOLD,fontSize:18,flexShrink:0,transition:"transform 0.2s",transform:openFaq===i?"rotate(45deg)":"none"}},"＋")
+          ),
+          openFaq===i&&React.createElement("div",{style:{paddingBottom:18,fontSize:13.5,color:"rgba(240,237,230,0.6)",lineHeight:1.75}},f.a)
+        ))
+      )
+    ),
+
+    // ── CONTACT
+    React.createElement("div",{id:"contact",style:{padding:"clamp(40px,7vw,70px) clamp(16px,4vw,28px)",background:"rgba(12,26,46,0.6)"}},
+      React.createElement("div",{style:{maxWidth:600,margin:"0 auto",textAlign:"center"}},
+        React.createElement("h2",{style:{fontFamily:"'Playfair Display',serif",fontSize:"clamp(22px,4vw,30px)",fontWeight:700,marginBottom:10}},"Get in touch"),
+        React.createElement("p",{style:{color:"rgba(240,237,230,0.5)",fontSize:14,lineHeight:1.7,marginBottom:28}},"Questions about pricing, custom plans for your firm, or anything else — reach us directly."),
+        React.createElement("div",{style:{display:"flex",flexDirection:"column",gap:14,alignItems:"center"}},
+          React.createElement("a",{href:"mailto:trigxyfn@gmail.com",style:{display:"inline-flex",alignItems:"center",gap:10,padding:"14px 28px",borderRadius:10,background:`linear-gradient(135deg,${GOLD},${GOLD2})`,color:"#0D1B2E",fontWeight:700,fontSize:14,textDecoration:"none",fontFamily:"'DM Sans',sans-serif"}},"📧 trigxyfn@gmail.com"),
+          React.createElement("p",{style:{fontSize:12,color:"rgba(240,237,230,0.3)"}},"We respond within 24 hours.")
+        )
+      )
+    ),
+
+    // ── FOOTER
+    React.createElement("div",{style:{padding:"24px 16px",borderTop:"1px solid rgba(30,52,82,0.6)"}},
+      React.createElement("div",{style:{maxWidth:960,margin:"0 auto",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:12}},
+        React.createElement("div",{style:{display:"flex",alignItems:"center",gap:8}},
+          React.createElement("div",{style:{width:26,height:26,background:`linear-gradient(135deg,${GOLD},${GOLD2})`,borderRadius:7,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Playfair Display',serif",fontWeight:700,fontSize:13,color:"#0D1B2E"}},"V"),
+          React.createElement("span",{style:{fontFamily:"'Playfair Display',serif",fontSize:15,fontWeight:700}},"Verdict",React.createElement("span",{style:{color:GOLD}},"AI"))
+        ),
+        React.createElement("div",{style:{display:"flex",gap:20,flexWrap:"wrap"}},
+          ["Features","Pricing","FAQ","Contact"].map((l,i)=>
+            React.createElement("span",{key:i,style:{fontSize:12,color:"rgba(240,237,230,0.35)",cursor:"pointer",fontWeight:500}},l)
+          )
+        ),
+        React.createElement("div",{style:{fontSize:11,color:"rgba(240,237,230,0.25)"}},"AI-powered legal analysis. Not legal advice.")
+      )
     )
   );
 }
