@@ -1535,6 +1535,10 @@ function UpgradePage({t,go,userTier,userEmail,onUpgradeSuccess}){
       const data=await res.json();
       if(!res.ok)throw new Error(data.error||"Server error: "+res.status);
 
+      // Store reference and plan in sessionStorage so we can verify after redirect
+      sessionStorage.setItem("vd_pay_ref", data.reference);
+      sessionStorage.setItem("vd_pay_plan", plan.id);
+
       const handler=PaystackPop.setup({
         key:PAYSTACK_PUBLIC_KEY,
         email:userEmail,
@@ -1542,41 +1546,59 @@ function UpgradePage({t,go,userTier,userEmail,onUpgradeSuccess}){
         ref:data.reference,
         currency:"NGN",
         channels:["card","bank_transfer","ussd","bank"],
-        onSuccess:async(transaction)=>{
-          console.log("Paystack onSuccess fired. Transaction object:", JSON.stringify(transaction));
-          setPaying("verifying");
-          setError("");
-          const ref = transaction.reference || transaction.trxref || data.reference;
-          console.log("Using reference:", ref);
-          await new Promise(r=>setTimeout(r,2000));
-          try{
-            const {data:{session:s2}}=await sb.auth.getSession();
-            const vRes=await fetch(`/api/payments/verify/${ref}`,{
-              headers:{"Authorization":`Bearer ${s2?.access_token}`}
-            });
-            const vData=await vRes.json();
-            console.log("Verify response:",vData);
-            if(vData.success){
-              if(onUpgradeSuccess)onUpgradeSuccess(vData.tier);
-              setPaying(null);
-              go("dashboard");
-              setTimeout(()=>window.location.reload(),1000);
-            } else {
-              setError("Payment received — upgrade processing. If your plan does not update in 1 minute, email trigxyfn@gmail.com with ref: "+ref);
-              setPaying(null);
-            }
-          }catch(e){
-            console.error("Verify error:",e);
-            setError("Payment received — upgrade processing. If plan does not update in 1 minute, email trigxyfn@gmail.com with ref: "+ref);
+        onSuccess:(transaction)=>{
+          const ref=transaction?.reference||transaction?.trxref||data.reference;
+          sessionStorage.setItem("vd_pay_ref", ref);
+          // Verify immediately
+          verifyPayment(ref, session.access_token, plan.id);
+        },
+        onClose:()=>{
+          // Paystack closed — check if payment went through anyway
+          const savedRef=sessionStorage.getItem("vd_pay_ref");
+          if(savedRef&&savedRef===data.reference){
+            // Try verifying anyway after a short delay
+            setTimeout(async()=>{
+              const {data:{session:s2}}=await sb.auth.getSession();
+              if(s2?.access_token) verifyPayment(savedRef, s2.access_token, plan.id);
+            }, 1500);
+          } else {
             setPaying(null);
           }
         },
-        onCancel:()=>{setPaying(null);},
+        onCancel:()=>setPaying(null),
       });
       handler.openIframe();
     }catch(e){
       console.error("Payment error:",e);
       setError(e.message);
+      setPaying(null);
+    }
+  };
+
+  const verifyPayment=async(ref, token, planId)=>{
+    setPaying("verifying");
+    console.log("Verifying payment, ref:", ref);
+    try{
+      await new Promise(r=>setTimeout(r,1500));
+      const vRes=await fetch(`/api/payments/verify/${ref}`,{
+        headers:{"Authorization":`Bearer ${token}`}
+      });
+      const vData=await vRes.json();
+      console.log("Verify result:", vData);
+      if(vData.success){
+        sessionStorage.removeItem("vd_pay_ref");
+        sessionStorage.removeItem("vd_pay_plan");
+        if(onUpgradeSuccess)onUpgradeSuccess(vData.tier);
+        setPaying(null);
+        go("dashboard");
+        setTimeout(()=>window.location.reload(),800);
+      } else {
+        setError("Payment received. Your account will upgrade within 1 minute. If not, email trigxyfn@gmail.com with ref: "+ref);
+        setPaying(null);
+      }
+    }catch(e){
+      console.error("Verify error:", e);
+      setError("Payment received. Your account will upgrade within 1 minute. If not, email trigxyfn@gmail.com with ref: "+ref);
       setPaying(null);
     }
   };
@@ -2124,6 +2146,26 @@ function AppContent(){
 
   useEffect(()=>{
     if(!user)return;
+    // Check if returning from a payment
+    const pendingRef=sessionStorage.getItem("vd_pay_ref");
+    const pendingPlan=sessionStorage.getItem("vd_pay_plan");
+    if(pendingRef&&pendingPlan){
+      sessionStorage.removeItem("vd_pay_ref");
+      sessionStorage.removeItem("vd_pay_plan");
+      sb.auth.getSession().then(({data:{session}})=>{
+        if(!session?.access_token)return;
+        setTimeout(async()=>{
+          try{
+            const vRes=await fetch(`/api/payments/verify/${pendingRef}`,{headers:{"Authorization":`Bearer ${session.access_token}`}});
+            const vData=await vRes.json();
+            if(vData.success){
+              setProfile(p=>({...p,tier:vData.tier}));
+              setPage("dashboard");
+            }
+          }catch(e){console.log("Pending payment check error:",e.message);}
+        },2000);
+      });
+    }
     try{const cd=sessionStorage.getItem("vd_docs");const cc=sessionStorage.getItem("vd_cases");const cp=sessionStorage.getItem("vd_profile");if(cd)setDocs(JSON.parse(cd));if(cc)setCases(JSON.parse(cc));if(cp)setProfile(JSON.parse(cp));}catch{}
     loadAll(true);
   },[user]);
