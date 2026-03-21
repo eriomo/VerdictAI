@@ -899,7 +899,44 @@ function LandingPage({onGetStarted,t}){
     ),
 
     // ── HERO
-    React.createElement("div",{style:{padding:"clamp(48px,10vw,90px) clamp(16px,5vw,28px) clamp(40px,7vw,70px)",maxWidth:860,margin:"0 auto",textAlign:"center"}},
+    React.createElement("div",{style:{position:"relative",overflow:"hidden"}},
+      // Lady Justice SVG background
+      React.createElement("div",{style:{position:"absolute",right:"-20px",top:"50%",transform:"translateY(-50%)",opacity:0.045,pointerEvents:"none",zIndex:0,height:"100%",display:"flex",alignItems:"center"}},
+        React.createElement("svg",{viewBox:"0 0 300 500",width:"420",height:"520",xmlns:"http://www.w3.org/2000/svg",fill:"#C8A45E"},
+          // Robe/body
+          React.createElement("ellipse",{cx:"150",cy:"420",rx:"90",ry:"70"}),
+          React.createElement("rect",{x:"75",y:"240",width:"150",height:"200",rx:"20"}),
+          // Torso
+          React.createElement("rect",{x:"100",y:"160",width:"100",height:"100",rx:"15"}),
+          // Head
+          React.createElement("circle",{cx:"150",cy:"130",r:"38"}),
+          // Blindfold
+          React.createElement("rect",{x:"112",y:"118",width:"76",height:"18",rx:"9"}),
+          // Left arm holding scales
+          React.createElement("line",{x1:"100",y1:"200",x2:"30",y2:"170",stroke:"#C8A45E",strokeWidth:"12",strokeLinecap:"round"}),
+          // Scale pole
+          React.createElement("line",{x1:"30",y1:"170",x2:"30",y2:"130",stroke:"#C8A45E",strokeWidth:"8",strokeLinecap:"round"}),
+          // Scale bar
+          React.createElement("line",{x1:"0",y1:"130",x2:"60",y2:"130",stroke:"#C8A45E",strokeWidth:"6",strokeLinecap:"round"}),
+          // Scale chains
+          React.createElement("line",{x1:"5",y1:"130",x2:"5",y2:"155",stroke:"#C8A45E",strokeWidth:"4"}),
+          React.createElement("line",{x1:"55",y1:"130",x2:"55",y2:"148",stroke:"#C8A45E",strokeWidth:"4"}),
+          // Scale pans
+          React.createElement("ellipse",{cx:"5",cy:"160",rx:"16",ry:"6"}),
+          React.createElement("ellipse",{cx:"55",cy:"153",rx:"16",ry:"6"}),
+          // Right arm holding sword
+          React.createElement("line",{x1:"200",y1:"200",x2:"265",y2:"170",stroke:"#C8A45E",strokeWidth:"12",strokeLinecap:"round"}),
+          // Sword
+          React.createElement("line",{x1:"265",y1:"80",x2:"265",y2:"195",stroke:"#C8A45E",strokeWidth:"7",strokeLinecap:"round"}),
+          // Sword guard
+          React.createElement("line",{x1:"248",y1:"175",x2:"282",y2:"175",stroke:"#C8A45E",strokeWidth:"9",strokeLinecap:"round"}),
+          // Crown/laurel hint
+          React.createElement("path",{d:"M120 95 Q150 80 180 95",stroke:"#C8A45E",strokeWidth:"5",fill:"none",strokeLinecap:"round"}),
+        )
+      ),
+      // Gradient overlay so text stays readable
+      React.createElement("div",{style:{position:"absolute",inset:0,background:"linear-gradient(to right, #07101c 45%, rgba(7,16,28,0.7) 100%)",zIndex:1,pointerEvents:"none"}}),
+      React.createElement("div",{style:{position:"relative",zIndex:2,padding:"clamp(48px,10vw,90px) clamp(16px,5vw,28px) clamp(40px,7vw,70px)",maxWidth:860,margin:"0 auto",textAlign:"center"}},
       React.createElement("div",{style:{display:"inline-block",background:"rgba(200,164,94,0.12)",border:"1px solid rgba(200,164,94,0.25)",borderRadius:100,padding:"5px 18px",fontSize:11,fontWeight:700,color:GOLD,letterSpacing:"1.2px",marginBottom:24}},"BUILT FOR NIGERIAN LAWYERS"),
       React.createElement("h1",{style:{fontFamily:"'Playfair Display',serif",fontSize:"clamp(32px,7vw,58px)",fontWeight:700,lineHeight:1.1,marginBottom:20}},"From Documents",React.createElement("br",null),React.createElement("span",{style:{color:GOLD}},"to Decisions.")),
       React.createElement("p",{style:{fontSize:"clamp(14px,2.5vw,18px)",color:"rgba(240,237,230,0.65)",lineHeight:1.75,maxWidth:560,margin:"0 auto 36px"}},"The complete AI legal intelligence platform for Nigerian lawyers. 35+ features. Court-ready output. No invented authorities."),
@@ -914,7 +951,8 @@ function LandingPage({onGetStarted,t}){
           )
         )
       )
-    ),
+    )
+    ), // close hero position:relative wrapper
 
     // ── FEATURES
     React.createElement("div",{id:"features",style:{padding:"clamp(40px,7vw,70px) clamp(16px,4vw,28px)",background:"rgba(12,26,46,0.6)"}},
