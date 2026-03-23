@@ -132,7 +132,7 @@ app.post('/api/ai', requireAuth, async (req, res) => {
         'anthropic-version': '2023-06-01',
       },
       {
-        model: 'claude-sonnet-4-6',
+        model: 'claude-3-5-sonnet-20241022',
         max_tokens: 8000,
         stream: true,
         system: system,
@@ -143,8 +143,9 @@ app.post('/api/ai', requireAuth, async (req, res) => {
     if (claudeRes.statusCode !== 200) {
       let body = '';
       for await (const chunk of claudeRes) body += chunk;
-      console.log('Claude error:', claudeRes.statusCode, body.slice(0, 300));
-      if (!res.headersSent) res.status(500).json({ error: 'AI service error: ' + claudeRes.statusCode });
+      console.log('Claude error status:', claudeRes.statusCode);
+      console.log('Claude error body:', body.slice(0, 500));
+      if (!res.headersSent) res.status(500).json({ error: 'AI service error: ' + claudeRes.statusCode + ' — ' + body.slice(0, 100) });
       return;
     }
 
