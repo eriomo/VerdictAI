@@ -132,7 +132,7 @@ app.post('/api/ai', requireAuth, async (req, res) => {
         'anthropic-version': '2023-06-01',
       },
       {
-        model: 'claude-sonnet-4-5',
+        model: 'claude-sonnet-4-6',
         max_tokens: 8000,
         stream: true,
         system: system,
@@ -463,6 +463,6 @@ app.get('/api/cases/search', requireAuth, async (req, res) => {
   res.json({ results, count: 0 });
 });
 
-app.get('/api/health', (req, res) => res.json({ status: 'ok', version: '4.6.0', model: 'claude-sonnet-4-5' }));
+app.get('/api/health', (req, res) => res.json({ status: 'ok', version: '4.6.0', model: 'claude-sonnet-4-6' }));
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 app.listen(PORT, () => console.log(`Verdict AI v4.5 running on port ${PORT}`));
