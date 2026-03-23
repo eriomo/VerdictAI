@@ -81,10 +81,23 @@ function resetMinute() {
 
 // ── AI ────────────────────────────────────────────────────────────────────────
 app.post('/api/ai', requireAuth, async (req, res) => {
-  const { system, user } = req.body;
-  const apiKey = process.env.GROQ_API_KEY;
-  if (!apiKey) return res.status(500).json({ error: 'API key not configured' });
+  let { system, user } = req.body;
+  if (!system || !user) return res.status(400).json({ error: 'Missing system or user content' });
 
+  // Truncate large inputs
+  const MAX_USER_CHARS = 12000;
+  const MAX_SYS_CHARS = 6000;
+  if (user.length > MAX_USER_CHARS) {
+    user = user.slice(0, MAX_USER_CHARS) + '\n\n[Document truncated to fit AI limits. Analysis based on first portion.]';
+  }
+  if (system.length > MAX_SYS_CHARS) {
+    system = system.slice(0, MAX_SYS_CHARS);
+  }
+
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) return res.status(500).json({ error: 'AI API key not configured' });
+
+  // Usage tracking
   try {
     const { data: profile } = await supabase
       .from('profiles').select('tier, usage_count, usage_reset_date')
@@ -103,63 +116,51 @@ app.post('/api/ai', requireAuth, async (req, res) => {
     }
   } catch (e) { console.log('Profile check error:', e.message); }
 
-  resetMinute();
-  if (requestsThisMinute >= 25) {
-    const wait = 60000 - (Date.now() - minuteStart) + 500;
-    await new Promise(r => setTimeout(r, wait));
-    resetMinute();
-  }
-
-  const attemptGroq = async (retries = 3) => {
-    for (let i = 0; i < retries; i++) {
-      try {
-        const groqRes = await httpsPost(
-          'api.groq.com', '/openai/v1/chat/completions',
-          { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-          { model: 'llama-3.3-70b-versatile', messages: [{ role: 'system', content: system }, { role: 'user', content: user }], temperature: 0.2, max_tokens: 8000, stream: true }
-        );
-        if (groqRes.statusCode === 429) {
-          const retryAfter = parseInt(groqRes.headers['retry-after'] || '10') * 1000;
-          groqRes.resume();
-          if (retryAfter > 30000) throw new Error('DAILY_LIMIT');
-          await new Promise(r => setTimeout(r, retryAfter));
-          continue;
-        }
-        if (groqRes.statusCode !== 200) {
-          let body = '';
-          for await (const chunk of groqRes) body += chunk;
-          throw new Error(`Groq error ${groqRes.statusCode}: ${body.slice(0, 200)}`);
-        }
-        requestsThisMinute++;
-        return groqRes;
-      } catch (err) {
-        if (err.message === 'DAILY_LIMIT') throw err;
-        if (i === retries - 1) throw err;
-        await new Promise(r => setTimeout(r, 2000 * (i + 1)));
-      }
-    }
-  };
-
   try {
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
     res.setHeader('X-Accel-Buffering', 'no');
 
-    const groqRes = await attemptGroq();
+    // Call Claude API with streaming
+    const claudeRes = await httpsPost(
+      'api.anthropic.com',
+      '/v1/messages',
+      {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      {
+        model: 'claude-sonnet-4-5',
+        max_tokens: 8000,
+        stream: true,
+        system: system,
+        messages: [{ role: 'user', content: user }],
+      }
+    );
+
+    if (claudeRes.statusCode !== 200) {
+      let body = '';
+      for await (const chunk of claudeRes) body += chunk;
+      console.log('Claude error:', claudeRes.statusCode, body.slice(0, 300));
+      if (!res.headersSent) res.status(500).json({ error: 'AI service error: ' + claudeRes.statusCode });
+      return;
+    }
+
     let fullText = '';
     let buffer = '';
 
     let lastActivity = Date.now();
     const stallCheck = setInterval(() => {
-      if (Date.now() - lastActivity > 30000) {
+      if (Date.now() - lastActivity > 45000) {
         clearInterval(stallCheck);
-        groqRes.destroy();
+        claudeRes.destroy();
         if (!res.writableEnded) res.end();
       }
     }, 5000);
 
-    groqRes.on('data', (chunk) => {
+    claudeRes.on('data', (chunk) => {
       lastActivity = Date.now();
       buffer += chunk.toString();
       const lines = buffer.split('\n');
@@ -170,31 +171,36 @@ app.post('/api/ai', requireAuth, async (req, res) => {
         const data = trimmed.slice(6);
         if (data === '[DONE]') continue;
         try {
-          const delta = JSON.parse(data).choices?.[0]?.delta?.content || '';
+          const parsed = JSON.parse(data);
+          // Claude streaming events
+          let delta = '';
+          if (parsed.type === 'content_block_delta' && parsed.delta?.type === 'text_delta') {
+            delta = parsed.delta.text || '';
+          }
           if (delta) {
             fullText += delta;
+            // Stream in same format frontend expects
             res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: delta } }] })}\n\n`);
           }
         } catch {}
       }
     });
 
-    groqRes.on('end', () => {
+    claudeRes.on('end', () => {
       clearInterval(stallCheck);
-      const stripped = fullText.replace(/DISCLAIMER[\s\S]*$/i, '').trimEnd();
-      const disclaimerChunk = JSON.stringify({ choices: [{ delta: { content: DISCLAIMER } }] });
-      res.write(`data: ${disclaimerChunk}\n\n`);
+      // Append disclaimer
+      const cleaned = fullText.replace(/DISCLAIMER[\s\S]*$/i, '').trimEnd();
+      res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: DISCLAIMER } }] })}\n\n`);
       res.write('data: [DONE]\n\n');
       if (!res.writableEnded) res.end();
     });
 
-    groqRes.on('error', () => { clearInterval(stallCheck); if (!res.writableEnded) res.end(); });
-    res.on('close', () => { clearInterval(stallCheck); groqRes.destroy(); });
+    claudeRes.on('error', () => { clearInterval(stallCheck); if (!res.writableEnded) res.end(); });
+    res.on('close', () => { clearInterval(stallCheck); claudeRes.destroy(); });
 
   } catch (err) {
     console.log('AI error:', err.message);
     if (!res.headersSent) {
-      if (err.message === 'DAILY_LIMIT') return res.status(429).json({ error: 'Daily limit reached. Resets at midnight UTC.' });
       res.status(500).json({ error: err.message });
     } else res.end();
   }
@@ -457,6 +463,6 @@ app.get('/api/cases/search', requireAuth, async (req, res) => {
   res.json({ results, count: 0 });
 });
 
-app.get('/api/health', (req, res) => res.json({ status: 'ok', version: '4.5.0', model: 'llama-3.3-70b-versatile' }));
+app.get('/api/health', (req, res) => res.json({ status: 'ok', version: '4.6.0', model: 'claude-sonnet-4-5' }));
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 app.listen(PORT, () => console.log(`Verdict AI v4.5 running on port ${PORT}`));
