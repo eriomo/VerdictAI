@@ -94,8 +94,11 @@ app.post('/api/ai', requireAuth, async (req, res) => {
     system = system.slice(0, MAX_SYS_CHARS);
   }
 
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const apiKey = process.env.GROQ_API_KEY || process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return res.status(500).json({ error: 'AI API key not configured' });
+
+  // Use Claude if Anthropic key set, otherwise fall back to Groq
+  const usesClaude = !!process.env.ANTHROPIC_API_KEY && !process.env.GROQ_API_KEY;
 
   // Usage tracking
   try {
@@ -466,4 +469,4 @@ app.get('/api/cases/search', requireAuth, async (req, res) => {
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', version: '4.6.0', model: 'claude-sonnet-4-6' }));
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
-app.listen(PORT, () => console.log(`Verdict AI v4.5 running on port ${PORT}`));
+app.listen(PORT, () => console.log(`Verdict AI v4.6 running on port ${PORT}`));
