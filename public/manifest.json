@@ -1,0 +1,42 @@
+{
+  "name": "Verdict AI",
+  "short_name": "VerdictAI",
+  "description": "Nigeria's AI legal intelligence platform. From documents to decisions.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#07101c",
+  "theme_color": "#07101c",
+  "orientation": "any",
+  "categories": ["productivity", "business"],
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Document Analysis",
+      "url": "/?page=reader",
+      "description": "Analyse any legal document instantly"
+    },
+    {
+      "name": "Case War Room",
+      "url": "/?page=warroom",
+      "description": "Get your winning probability"
+    }
+  ]
+}
