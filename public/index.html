@@ -67,6 +67,8 @@ body{font-family:'DM Sans',sans-serif;background:#07101c;color:#F0EDE6;-webkit-f
 @keyframes shimmer{0%{background-position:-200% center}100%{background-position:200% center}}
 @keyframes scaleIn{from{opacity:0;transform:scale(0.95)}to{opacity:1;transform:scale(1)}}
 @keyframes gradientShift{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+@keyframes scaleTilt{0%,100%{transform:rotate(-6deg)}50%{transform:rotate(6deg)}}
+@keyframes scaleFloat{0%,100%{transform:translateY(0) rotate(-6deg)}50%{transform:translateY(-15px) rotate(6deg)}}
 
 .fade{animation:fadeIn 0.3s ease}
 .fade-up{animation:fadeUp 0.4s ease both}
@@ -1241,59 +1243,106 @@ function LandingPage({onGetStarted,t}){
         React.createElement("button",{onClick:onGetStarted,style:{flex:1,padding:"12px",borderRadius:8,background:"transparent",color:GOLD,fontWeight:600,fontSize:14,border:`1px solid rgba(200,164,94,0.3)`,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}},"Sign In"),
         React.createElement("button",{onClick:onGetStarted,style:{flex:2,padding:"12px",borderRadius:8,background:`linear-gradient(135deg,${GOLD},${GOLD2})`,color:"#0D1B2E",fontWeight:700,fontSize:14,border:"none",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}},"Get Started Free")
       )
-    ),
 
     // ── HERO ─────────────────────────────────────────────────────────────
     React.createElement("div",{style:{position:"relative",minHeight:"100vh",display:"flex",alignItems:"center",overflow:"hidden"}},
-      // Particle canvas
+      // Particle canvas background
       React.createElement("canvas",{ref:canvasRef,style:{position:"absolute",inset:0,zIndex:0,width:"100%",height:"100%"}}),
-      // Gradient overlay
-      React.createElement("div",{style:{position:"absolute",inset:0,zIndex:1,background:"radial-gradient(ellipse at 20% 50%,rgba(200,164,94,0.06) 0%,transparent 60%),linear-gradient(180deg,transparent 60%,rgba(7,16,28,0.8) 100%)"}}),
+      // Dark gradient
+      React.createElement("div",{style:{position:"absolute",inset:0,zIndex:1,background:"linear-gradient(105deg,rgba(7,16,28,0.97) 0%,rgba(7,16,28,0.85) 50%,rgba(7,16,28,0.4) 100%)"}}),
       // Gold top border
       React.createElement("div",{style:{position:"absolute",top:0,left:0,right:0,height:"1px",background:`linear-gradient(90deg,transparent,${GOLD}60,transparent)`,zIndex:2}}),
 
-      React.createElement("div",{style:{position:"relative",zIndex:3,width:"100%",maxWidth:900,margin:"0 auto",padding:"clamp(60px,10vw,100px) clamp(20px,5vw,40px) clamp(40px,6vw,60px)"}},
-        // Badge
+      // ── Animated Scales of Justice — right side ──
+      React.createElement("div",{style:{position:"absolute",right:"clamp(-60px,3vw,60px)",top:"50%",transform:"translateY(-50%)",zIndex:2,pointerEvents:"none"}},
+        React.createElement("svg",{viewBox:"0 0 380 480",width:"clamp(260px,38vw,440px)",height:"auto",style:{overflow:"visible",opacity:0.22}},
+          React.createElement("defs",null,
+            React.createElement("linearGradient",{id:"sg1",x1:"0%",y1:"0%",x2:"100%",y2:"100%"},
+              React.createElement("stop",{offset:"0%",stopColor:"#C8A45E"}),
+              React.createElement("stop",{offset:"100%",stopColor:"#D4B474"})
+            ),
+            React.createElement("filter",{id:"glow"},
+              React.createElement("feGaussianBlur",{stdDeviation:"3",result:"coloredBlur"}),
+              React.createElement("feMerge",null,
+                React.createElement("feMergeNode",{in:"coloredBlur"}),
+                React.createElement("feMergeNode",{in:"SourceGraphic"})
+              )
+            )
+          ),
+          // Base platform
+          React.createElement("rect",{x:"130",y:"420",width:"120",height:"14",rx:"7",fill:"url(#sg1)"}),
+          React.createElement("rect",{x:"150",y:"434",width:"80",height:"8",rx:"4",fill:"url(#sg1)",opacity:"0.6"}),
+          // Central pillar
+          React.createElement("rect",{x:"186",y:"55",width:"8",height:"365",rx:"4",fill:"url(#sg1)"}),
+          // Top orb
+          React.createElement("circle",{cx:"190",cy:"48",r:"16",fill:"url(#sg1)",filter:"url(#glow)"}),
+          React.createElement("circle",{cx:"190",cy:"48",r:"7",fill:"#07101c"}),
+          React.createElement("circle",{cx:"190",cy:"48",r:"3",fill:"url(#sg1)"}),
+
+          // ── Animated crossbeam + pans ──
+          React.createElement("g",{style:{transformOrigin:"190px 95px",animation:"scaleTilt 5s ease-in-out infinite"}},
+            // Crossbeam
+            React.createElement("rect",{x:"50",y:"91",width:"280",height:"8",rx:"4",fill:"url(#sg1)"}),
+            // Left suspension chain
+            React.createElement("line",{x1:"75",y1:"99",x2:"65",y2:"155",stroke:"#C8A45E",strokeWidth:"2",opacity:"0.7"}),
+            React.createElement("line",{x1:"65",y1:"155",x2:"70",y2:"200",stroke:"#C8A45E",strokeWidth:"2",opacity:"0.7"}),
+            // Right suspension chain
+            React.createElement("line",{x1:"305",y1:"99",x2:"315",y2:"145",stroke:"#C8A45E",strokeWidth:"2",opacity:"0.7"}),
+            React.createElement("line",{x1:"315",y1:"145",x2:"310",y2:"190",stroke:"#C8A45E",strokeWidth:"2",opacity:"0.7"}),
+            // Left pan
+            React.createElement("ellipse",{cx:"68",cy:"208",rx:"44",ry:"11",fill:"rgba(200,164,94,0.12)",stroke:"#C8A45E",strokeWidth:"2"}),
+            React.createElement("path",{d:"M 24 208 Q 68 228 112 208",fill:"rgba(200,164,94,0.06)",stroke:"#C8A45E",strokeWidth:"1.5"}),
+            // Right pan  
+            React.createElement("ellipse",{cx:"312",cy:"196",rx:"44",ry:"11",fill:"rgba(200,164,94,0.12)",stroke:"#C8A45E",strokeWidth:"2"}),
+            React.createElement("path",{d:"M 268 196 Q 312 216 356 196",fill:"rgba(200,164,94,0.06)",stroke:"#C8A45E",strokeWidth:"1.5"}),
+            // Left pan — document icons
+            React.createElement("rect",{x:"48",y:"192",width:"16",height:"20",rx:"2",fill:"rgba(200,164,94,0.35)",stroke:"#C8A45E",strokeWidth:"1.5"}),
+            React.createElement("line",{x1:"51",y1:"197",x2:"61",y2:"197",stroke:"#C8A45E",strokeWidth:"1",opacity:"0.6"}),
+            React.createElement("line",{x1:"51",y1:"201",x2:"61",y2:"201",stroke:"#C8A45E",strokeWidth:"1",opacity:"0.6"}),
+            React.createElement("rect",{x:"68",y:"195",width:"13",height:"17",rx:"2",fill:"rgba(200,164,94,0.2)",stroke:"#C8A45E",strokeWidth:"1.5"}),
+            // Right pan — weight/judgment disc
+            React.createElement("circle",{cx:"305",cy:"181",r:"10",fill:"rgba(200,164,94,0.35)",stroke:"#C8A45E",strokeWidth:"1.5"}),
+            React.createElement("circle",{cx:"305",cy:"181",r:"4",fill:"rgba(200,164,94,0.15)",stroke:"#C8A45E",strokeWidth:"1"}),
+            React.createElement("circle",{cx:"322",cy:"183",r:"7",fill:"rgba(200,164,94,0.2)",stroke:"#C8A45E",strokeWidth:"1.5"}),
+          ),
+          // Ambient sparkles
+          React.createElement("circle",{cx:"30",cy:"70",r:"2",fill:"#C8A45E",style:{animation:"pulse 2.5s infinite"}}),
+          React.createElement("circle",{cx:"355",cy:"110",r:"1.5",fill:"#C8A45E",style:{animation:"pulse 3.5s 1s infinite"}}),
+          React.createElement("circle",{cx:"160",cy:"450",r:"1.5",fill:"#C8A45E",style:{animation:"pulse 4s 0.5s infinite"}}),
+          React.createElement("circle",{cx:"350",cy:"380",r:"1",fill:"#C8A45E",style:{animation:"pulse 3s 2s infinite"}}),
+        )
+      ),
+
+      // ── Text content ──
+      React.createElement("div",{style:{position:"relative",zIndex:3,width:"100%",padding:"clamp(60px,10vw,100px) clamp(20px,5vw,40px) clamp(40px,6vw,60px)",maxWidth:640}},
         React.createElement("div",{style:{display:"inline-flex",alignItems:"center",gap:8,background:"rgba(200,164,94,0.08)",border:"1px solid rgba(200,164,94,0.25)",borderRadius:100,padding:"5px 16px",fontSize:11,fontWeight:700,color:GOLD,letterSpacing:"1.4px",marginBottom:32}},
           Icon({name:"scale",size:14,color:GOLD}),
           "BUILT FOR NIGERIAN LAWYERS"
         ),
-
-        // Headline
-        React.createElement("h1",{style:{fontFamily:"'Playfair Display',serif",fontSize:"clamp(36px,6vw,64px)",fontWeight:900,lineHeight:1.05,marginBottom:8,color:"#F0EDE6",maxWidth:680}},
+        React.createElement("h1",{style:{fontFamily:"'Playfair Display',serif",fontSize:"clamp(36px,6vw,64px)",fontWeight:900,lineHeight:1.05,marginBottom:8,color:"#F0EDE6"}},
           "Nigeria's Legal Intelligence Platform"
         ),
-
-        // Typing text
-        React.createElement("div",{style:{fontFamily:"'Playfair Display',serif",fontSize:"clamp(22px,3.5vw,34px)",fontWeight:700,color:GOLD,marginBottom:24,minHeight:"1.2em",display:"flex",alignItems:"center",gap:4}},
+        React.createElement("div",{style:{fontFamily:"'Playfair Display',serif",fontSize:"clamp(22px,3.5vw,34px)",fontWeight:700,color:GOLD,marginBottom:24,minHeight:"1.3em",display:"flex",alignItems:"center",gap:4}},
           typedText,
-          React.createElement("span",{style:{display:"inline-block",width:3,height:"1em",background:GOLD,animation:"blink 1s infinite",borderRadius:1}})
+          React.createElement("span",{style:{display:"inline-block",width:3,height:"0.9em",background:GOLD,animation:"blink 1s infinite",borderRadius:1}})
         ),
-
         React.createElement("p",{style:{fontSize:"clamp(14px,2vw,17px)",color:"rgba(240,237,230,0.6)",lineHeight:1.8,maxWidth:520,marginBottom:40}},
           "Upload any document. Describe any case. Get court-ready analysis, strategy, and drafted documents — built exclusively for Nigerian law. No invented citations. Ever."
         ),
-
-        // CTAs
         React.createElement("div",{style:{display:"flex",gap:12,flexWrap:"wrap",marginBottom:48}},
-          React.createElement("button",{onClick:onGetStarted,style:{padding:"15px 36px",borderRadius:10,background:`linear-gradient(135deg,${GOLD},${GOLD2})`,color:"#0D1B2E",fontWeight:700,fontSize:15,border:"none",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",boxShadow:`0 4px 24px rgba(200,164,94,0.35)`,letterSpacing:"0.2px"}},"Start Free — No Credit Card"),
+          React.createElement("button",{onClick:onGetStarted,style:{padding:"15px 36px",borderRadius:10,background:`linear-gradient(135deg,${GOLD},${GOLD2})`,color:"#0D1B2E",fontWeight:700,fontSize:15,border:"none",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",boxShadow:"0 4px 24px rgba(200,164,94,0.35)"}},"Start Free — No Credit Card"),
           React.createElement("button",{onClick:()=>scrollTo("Features"),style:{padding:"15px 28px",borderRadius:10,background:"rgba(255,255,255,0.04)",color:"rgba(240,237,230,0.8)",fontWeight:600,fontSize:14,border:"1px solid rgba(255,255,255,0.12)",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",display:"flex",alignItems:"center",gap:8}},
             "See all features",Icon({name:"chevron",size:16,color:"rgba(240,237,230,0.6)"})
           )
         ),
-
-        // Trust badges
         React.createElement("div",{style:{display:"flex",gap:24,flexWrap:"wrap"}},
-          [
-            [Icon({name:"shield",size:13,color:GOLD}),"No invented citations"],
-            [Icon({name:"scale",size:13,color:GOLD}),"Nigerian law only"],
-            [Icon({name:"check",size:13,color:GOLD}),"Court-ready output"],
-            [Icon({name:"document",size:13,color:GOLD}),"35+ features"],
-          ].map(([icon,label],i)=>
+          [[Icon({name:"shield",size:13,color:GOLD}),"No invented citations"],[Icon({name:"scale",size:13,color:GOLD}),"Nigerian law only"],[Icon({name:"check",size:13,color:GOLD}),"Court-ready output"],[Icon({name:"document",size:13,color:GOLD}),"35+ features"]].map(([icon,label],i)=>
             React.createElement("div",{key:i,style:{display:"flex",alignItems:"center",gap:7,fontSize:12.5,color:"rgba(240,237,230,0.4)"}},icon,label)
           )
         )
       )
+    ),
+
     ),
 
     // ── HOW IT WORKS ──────────────────────────────────────────────────────
