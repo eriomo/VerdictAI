@@ -1475,6 +1475,58 @@ function LandingPage({onGetStarted,t}){
       )
     ),
 
+    // ── DOWNLOAD / INSTALL ────────────────────────────────────────────────
+    React.createElement("div",{id:"download",style:{padding:"clamp(60px,8vw,90px) clamp(16px,4vw,28px)"}},
+      React.createElement("div",{style:{maxWidth:800,margin:"0 auto",textAlign:"center"}},
+        React.createElement("div",{style:{fontSize:11,fontWeight:700,letterSpacing:"2px",color:GOLD,textTransform:"uppercase",marginBottom:10}},"Install The App"),
+        React.createElement("h2",{style:{fontFamily:"'Playfair Display',serif",fontSize:"clamp(24px,4vw,34px)",fontWeight:700,marginBottom:12}},"Add Verdict AI to your device"),
+        React.createElement("p",{style:{color:"rgba(240,237,230,0.5)",fontSize:14,lineHeight:1.7,maxWidth:500,margin:"0 auto 40px"}},"Install Verdict AI directly on your phone, tablet, or computer. No App Store required — works like a native app."),
+
+        React.createElement("div",{style:{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:16,maxWidth:700,margin:"0 auto 40px"}},
+          [
+            {
+              icon:React.createElement("svg",{viewBox:"0 0 24 24",width:32,height:32,fill:"none",stroke:GOLD,strokeWidth:1.5},React.createElement("rect",{x:2,y:3,width:20,height:14,rx:2}),React.createElement("line",{x1:8,y1:21,x2:16,y2:21}),React.createElement("line",{x1:12,y1:17,x2:12,y2:21})),
+              name:"Windows & Mac",
+              steps:"Open verdictai.com.ng in Chrome → click the install icon in the address bar → click Install"
+            },
+            {
+              icon:React.createElement("svg",{viewBox:"0 0 24 24",width:32,height:32,fill:"none",stroke:GOLD,strokeWidth:1.5},React.createElement("rect",{x:5,y:2,width:14,height:20,rx:2}),React.createElement("line",{x1:12,y1:18,x2:12,y2:18.5})),
+              name:"iPhone & iPad",
+              steps:"Open verdictai.com.ng in Safari → tap the Share button → tap Add to Home Screen → tap Add"
+            },
+            {
+              icon:React.createElement("svg",{viewBox:"0 0 24 24",width:32,height:32,fill:"none",stroke:GOLD,strokeWidth:1.5},React.createElement("rect",{x:5,y:2,width:14,height:20,rx:2}),React.createElement("circle",{cx:12,cy:17,r:1})),
+              name:"Android",
+              steps:"Open verdictai.com.ng in Chrome → tap the 3-dot menu → tap Add to Home Screen → tap Add"
+            },
+          ].map((p,i)=>React.createElement("div",{key:i,style:{background:"rgba(12,26,46,0.6)",border:"1px solid rgba(30,52,82,0.8)",borderRadius:16,padding:"28px 20px",textAlign:"center"}},
+            React.createElement("div",{style:{display:"flex",justifyContent:"center",marginBottom:16}},p.icon),
+            React.createElement("div",{style:{fontFamily:"'Playfair Display',serif",fontSize:16,fontWeight:700,color:"#F0EDE6",marginBottom:10}},p.name),
+            React.createElement("div",{style:{fontSize:12,color:"rgba(240,237,230,0.45)",lineHeight:1.7}},p.steps)
+          ))
+        ),
+
+        // Big install CTA
+        React.createElement("div",{style:{background:"rgba(200,164,94,0.06)",border:"1px solid rgba(200,164,94,0.2)",borderRadius:16,padding:"24px",display:"inline-block"}},
+          React.createElement("div",{style:{fontSize:13,color:"rgba(240,237,230,0.5)",marginBottom:8}},"No download. No App Store. Just open in your browser and install."),
+          React.createElement("button",{
+            onClick:()=>{
+              if(window.deferredPrompt){
+                window.deferredPrompt.prompt();
+                window.deferredPrompt.userChoice.then(()=>{window.deferredPrompt=null;});
+              } else {
+                alert("To install: use Chrome on desktop (look for install icon in address bar) or Safari on iPhone (Share → Add to Home Screen)");
+              }
+            },
+            style:{display:"flex",alignItems:"center",gap:10,padding:"13px 28px",borderRadius:10,background:`linear-gradient(135deg,${GOLD},${GOLD2})`,color:"#0D1B2E",fontWeight:700,fontSize:15,border:"none",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",margin:"0 auto"}
+          },
+            Icon({name:"document",size:18,color:"#0D1B2E"}),
+            "Install Verdict AI"
+          )
+        )
+      )
+    ),
+
     // ── CONTACT ───────────────────────────────────────────────────────────
     React.createElement("div",{id:"contact",style:{padding:"clamp(60px,8vw,90px) clamp(16px,4vw,28px)",background:"rgba(12,26,46,0.5)"}},
       React.createElement("div",{style:{maxWidth:600,margin:"0 auto",textAlign:"center"}},
@@ -2022,7 +2074,7 @@ function ProfilePage({profile,onUpdate,t,go}){
     ),
     React.createElement("div",{style:{background:t.card,border:`1px solid ${t.border}`,borderRadius:12,padding:22}},
       React.createElement("h3",{style:{fontFamily:"'Playfair Display',serif",fontSize:16,marginBottom:12,color:t.text}},"About"),
-      [["Version","4.5.0"],["AI Model","Claude Sonnet 4.5"],["Max Output","8,000 tokens"],["Storage","Supabase Cloud"]].map(([k,v])=>
+      [["Version","4.5.0"],["AI Model","Claude Sonnet 4.6"],["Max Output","8,000 tokens"],["Storage","Supabase Cloud"]].map(([k,v])=>
         React.createElement("div",{key:k,style:{display:"flex",gap:8,marginBottom:7,fontSize:13}},React.createElement("span",{style:{color:t.muted,minWidth:100}},k+":"),React.createElement("span",{style:{color:t.dim}},v))
       ),
       React.createElement("div",{style:{marginTop:14}}),
@@ -2919,6 +2971,11 @@ if('serviceWorker' in navigator){
     }).catch(()=>{});
   });
 }
+// Capture install prompt
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  window.deferredPrompt = e;
+});
 </script>
 </body>
 </html>
