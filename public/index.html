@@ -4,6 +4,14 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="VerdictAI"/>
+<meta name="theme-color" content="#07101c"/>
+<meta name="description" content="Nigeria's AI legal intelligence platform. 35+ features built for Nigerian lawyers."/>
+<link rel="manifest" href="/manifest.json"/>
+<link rel="apple-touch-icon" href="/apple-touch-icon.png"/>
+<link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png"/>
 <title>Verdict AI — From Documents to Decisions</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
@@ -969,10 +977,19 @@ function FileUpload({onText,t,label}){
   const [dragging,setDragging]=useState(false);
   const [loading,setLoading]=useState(false);
   const [name,setName]=useState("");
+  const [warn,setWarn]=useState("");
   const ref=useRef();
+  const MAX_CHARS=10000;
   const handle=async file=>{
-    if(!file)return;setLoading(true);setName(file.name);
-    try{const text=await extractFile(file);onText(text,file.name);}
+    if(!file)return;setLoading(true);setName(file.name);setWarn("");
+    try{
+      let text=await extractFile(file);
+      if(text.length>MAX_CHARS){
+        setWarn(`Document is large — only the first portion will be analysed for best results.`);
+        text=text.slice(0,MAX_CHARS);
+      }
+      onText(text,file.name);
+    }
     catch(e){alert("Could not read file: "+e.message);}
     setLoading(false);
   };
@@ -980,11 +997,12 @@ function FileUpload({onText,t,label}){
     React.createElement("div",{onClick:()=>ref.current?.click(),onDragOver:e=>{e.preventDefault();setDragging(true);},onDragLeave:()=>setDragging(false),onDrop:e=>{e.preventDefault();setDragging(false);handle(e.dataTransfer.files[0]);},style:{border:`2px dashed ${dragging?GOLD:t.border}`,borderRadius:10,padding:16,textAlign:"center",cursor:"pointer",background:dragging?"rgba(200,164,94,0.06)":t.input,transition:"all 0.2s"}},
       loading?React.createElement("div",{style:{color:GOLD,fontSize:13}},"Extracting text..."):
       React.createElement("div",null,
-        React.createElement("div",{style:{fontSize:22,marginBottom:4}},"📎"),
+        React.createElement("div",{style:{marginBottom:6}},Icon({name:"document",size:20,color:name?GOLD:t.muted})),
         React.createElement("div",{style:{fontSize:13,fontWeight:600,color:t.text,marginBottom:2}},name?`✓ ${name}`:(label||"Drop file here or click to upload")),
         React.createElement("div",{style:{fontSize:11,color:t.muted}},"Supports PDF, DOCX, TXT")
       )
     ),
+    warn&&React.createElement("div",{style:{fontSize:11,color:"#F0A500",marginTop:6,padding:"6px 10px",background:"rgba(240,165,0,0.08)",borderRadius:6,border:"1px solid rgba(240,165,0,0.2)"}},warn),
     React.createElement("input",{ref,type:"file",accept:".pdf,.doc,.docx,.txt,.md",style:{display:"none"},onChange:e=>handle(e.target.files[0])})
   );
 }
@@ -2004,7 +2022,7 @@ function ProfilePage({profile,onUpdate,t,go}){
     ),
     React.createElement("div",{style:{background:t.card,border:`1px solid ${t.border}`,borderRadius:12,padding:22}},
       React.createElement("h3",{style:{fontFamily:"'Playfair Display',serif",fontSize:16,marginBottom:12,color:t.text}},"About"),
-      [["Version","4.5.0"],["AI Model","Llama 3.3 70B via Groq"],["Max Output","8,000 tokens"],["Storage","Supabase Cloud"]].map(([k,v])=>
+      [["Version","4.5.0"],["AI Model","Claude Sonnet 4.5"],["Max Output","8,000 tokens"],["Storage","Supabase Cloud"]].map(([k,v])=>
         React.createElement("div",{key:k,style:{display:"flex",gap:8,marginBottom:7,fontSize:13}},React.createElement("span",{style:{color:t.muted,minWidth:100}},k+":"),React.createElement("span",{style:{color:t.dim}},v))
       ),
       React.createElement("div",{style:{marginTop:14}}),
@@ -2892,6 +2910,15 @@ function AppContent(){
 
 function App(){return React.createElement(AuthProvider,null,React.createElement(AppContent));}
 ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(App));
+</script>
+<script>
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('/sw.js').then(reg=>{
+      console.log('Verdict AI PWA ready');
+    }).catch(()=>{});
+  });
+}
 </script>
 </body>
 </html>
