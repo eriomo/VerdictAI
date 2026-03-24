@@ -94,11 +94,15 @@ app.post('/api/ai', requireAuth, async (req, res) => {
     system = system.slice(0, MAX_SYS_CHARS);
   }
 
-  const apiKey = process.env.GROQ_API_KEY || process.env.ANTHROPIC_API_KEY;
+  // Clean keys of any whitespace/newlines
+  const rawGroq = process.env.GROQ_API_KEY;
+  const rawClaude = process.env.ANTHROPIC_API_KEY;
+  const groqKey = rawGroq ? rawGroq.trim().replace(/[\r\n\t]/g,'') : null;
+  const claudeKey = rawClaude ? rawClaude.trim().replace(/[\r\n\t]/g,'') : null;
+  const usesClaude = claudeKey && claudeKey.startsWith('sk-ant') && !groqKey;
+  const apiKey = groqKey || claudeKey;
   if (!apiKey) return res.status(500).json({ error: 'AI API key not configured' });
-
-  // Use Claude if Anthropic key set, otherwise fall back to Groq
-  const usesClaude = !!process.env.ANTHROPIC_API_KEY && !process.env.GROQ_API_KEY;
+  console.log('AI route: using', usesClaude ? 'Claude' : 'Groq', '| groqKey:', !!groqKey, '| claudeKey:', !!claudeKey);
 
   // Usage tracking
   try {
@@ -125,46 +129,39 @@ app.post('/api/ai', requireAuth, async (req, res) => {
     res.setHeader('Connection', 'keep-alive');
     res.setHeader('X-Accel-Buffering', 'no');
 
-    // Call Claude API with streaming
-    const claudeRes = await httpsPost(
-      'api.anthropic.com',
-      '/v1/messages',
-      {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-      },
-      {
-        model: 'claude-3-5-sonnet-20241022',
-        max_tokens: 8000,
-        stream: true,
-        system: system,
-        messages: [{ role: 'user', content: user }],
-      }
-    );
+    let aiRes;
+    if (usesClaude) {
+      // Claude API
+      aiRes = await httpsPost(
+        'api.anthropic.com', '/v1/messages',
+        { 'Content-Type': 'application/json', 'x-api-key': claudeKey, 'anthropic-version': '2023-06-01' },
+        { model: 'claude-3-5-sonnet-20241022', max_tokens: 8000, stream: true, system, messages: [{ role: 'user', content: user }] }
+      );
+    } else {
+      // Groq API
+      aiRes = await httpsPost(
+        'api.groq.com', '/openai/v1/chat/completions',
+        { 'Content-Type': 'application/json', 'Authorization': `Bearer ${groqKey}` },
+        { model: 'llama-3.3-70b-versatile', messages: [{ role: 'system', content: system }, { role: 'user', content: user }], temperature: 0.2, max_tokens: 8000, stream: true }
+      );
+    }
 
-    if (claudeRes.statusCode !== 200) {
+    if (aiRes.statusCode !== 200) {
       let body = '';
-      for await (const chunk of claudeRes) body += chunk;
-      console.log('Claude error status:', claudeRes.statusCode);
-      console.log('Claude error body:', body.slice(0, 500));
-      if (!res.headersSent) res.status(500).json({ error: 'AI service error: ' + claudeRes.statusCode + ' — ' + body.slice(0, 100) });
+      for await (const chunk of aiRes) body += chunk;
+      console.log('AI error:', aiRes.statusCode, body.slice(0, 300));
+      if (!res.headersSent) res.status(500).json({ error: 'AI service error ' + aiRes.statusCode });
       return;
     }
 
     let fullText = '';
     let buffer = '';
-
     let lastActivity = Date.now();
     const stallCheck = setInterval(() => {
-      if (Date.now() - lastActivity > 45000) {
-        clearInterval(stallCheck);
-        claudeRes.destroy();
-        if (!res.writableEnded) res.end();
-      }
+      if (Date.now() - lastActivity > 45000) { clearInterval(stallCheck); aiRes.destroy(); if (!res.writableEnded) res.end(); }
     }, 5000);
 
-    claudeRes.on('data', (chunk) => {
+    aiRes.on('data', (chunk) => {
       lastActivity = Date.now();
       buffer += chunk.toString();
       const lines = buffer.split('\n');
@@ -176,37 +173,31 @@ app.post('/api/ai', requireAuth, async (req, res) => {
         if (data === '[DONE]') continue;
         try {
           const parsed = JSON.parse(data);
-          // Claude streaming events
           let delta = '';
-          if (parsed.type === 'content_block_delta' && parsed.delta?.type === 'text_delta') {
-            delta = parsed.delta.text || '';
+          if (usesClaude) {
+            if (parsed.type === 'content_block_delta' && parsed.delta?.type === 'text_delta') delta = parsed.delta.text || '';
+          } else {
+            delta = parsed.choices?.[0]?.delta?.content || '';
           }
-          if (delta) {
-            fullText += delta;
-            // Stream in same format frontend expects
-            res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: delta } }] })}\n\n`);
-          }
+          if (delta) { fullText += delta; res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: delta } }] })}\n\n`); }
         } catch {}
       }
     });
 
-    claudeRes.on('end', () => {
+    aiRes.on('end', () => {
       clearInterval(stallCheck);
-      // Append disclaimer
-      const cleaned = fullText.replace(/DISCLAIMER[\s\S]*$/i, '').trimEnd();
       res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: DISCLAIMER } }] })}\n\n`);
       res.write('data: [DONE]\n\n');
       if (!res.writableEnded) res.end();
     });
 
-    claudeRes.on('error', () => { clearInterval(stallCheck); if (!res.writableEnded) res.end(); });
-    res.on('close', () => { clearInterval(stallCheck); claudeRes.destroy(); });
+    aiRes.on('error', () => { clearInterval(stallCheck); if (!res.writableEnded) res.end(); });
+    res.on('close', () => { clearInterval(stallCheck); aiRes.destroy(); });
 
   } catch (err) {
     console.log('AI error:', err.message);
-    if (!res.headersSent) {
-      res.status(500).json({ error: err.message });
-    } else res.end();
+    if (!res.headersSent) res.status(500).json({ error: err.message });
+    else res.end();
   }
 });
 
