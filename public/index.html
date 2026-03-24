@@ -919,7 +919,17 @@ function Btn({onClick,disabled,children,variant="gold",sm,full}){
 function Inp({val,set,ph,rows,t,style={},onKey}){
   const base={width:"100%",background:t.input,border:`1px solid ${t.border}`,borderRadius:8,padding:"11px 14px",fontFamily:"'DM Sans',sans-serif",fontSize:13.5,color:t.text,outline:"none",...style};
   const focus=e=>{e.target.style.borderColor=GOLD;};const blur=e=>{e.target.style.borderColor=t.border;};
-  return rows?React.createElement("textarea",{value:val,onChange:e=>set(e.target.value),placeholder:ph,rows,onFocus:focus,onBlur:blur,style:{...base,resize:"vertical",lineHeight:1.7}}):React.createElement("input",{value:val,onChange:e=>set(e.target.value),placeholder:ph,onFocus:focus,onBlur:blur,onKeyDown:onKey,style:base});
+  const WARN=8000;const MAX=12000;
+  const len=val?val.length:0;
+  const showCounter=rows&&len>2000;
+  const counterColor=len>=MAX?"#E05252":len>=WARN?"#F0A500":t.muted;
+  if(rows)return React.createElement("div",{style:{position:"relative"}},
+    React.createElement("textarea",{value:val,onChange:e=>set(e.target.value),placeholder:ph,rows,onFocus:focus,onBlur:blur,style:{...base,resize:"vertical",lineHeight:1.7}}),
+    showCounter&&React.createElement("div",{style:{textAlign:"right",fontSize:10,color:counterColor,marginTop:3}},
+      len>=MAX?"⚠ Will be truncated at 12,000 chars":len>=WARN?`${len.toLocaleString()} chars — approaching limit`:`${len.toLocaleString()} chars`
+    )
+  );
+  return React.createElement("input",{value:val,onChange:e=>set(e.target.value),placeholder:ph,onFocus:focus,onBlur:blur,onKeyDown:onKey,style:base});
 }
 
 function Sel({val,set,opts,ph,t}){
@@ -1112,6 +1122,17 @@ function AuthPage({t,onBack}){
   const [loading,setLoading]=useState(false);
   const [error,setError]=useState("");
   const [success,setSuccess]=useState("");
+  const [resetSent,setResetSent]=useState(false);
+
+  const handleForgotPassword=async()=>{
+    if(!email.trim()){setError("Enter your email address first, then click Forgot Password.");return;}
+    setLoading(true);setError("");
+    const {error:e}=await sb.auth.resetPasswordForEmail(email,{redirectTo:window.location.origin});
+    setLoading(false);
+    if(e)setError(e.message);
+    else{setResetSent(true);setSuccess("Password reset email sent to "+email+". Check your inbox.");}
+  };
+
   const submit=async()=>{
     setError("");setLoading(true);
     if(mode==="login"){const err=await signIn(email,password);if(err)setError(err.message);}
@@ -1136,7 +1157,10 @@ function AuthPage({t,onBack}){
         React.createElement("div",{style:{marginBottom:12}},React.createElement(Lbl,{t},"Email"),React.createElement(Inp,{val:email,set:setEmail,ph:"your@email.com",t})),
         React.createElement("div",{style:{marginBottom:20}},React.createElement(Lbl,{t},"Password"),React.createElement(Inp,{val:password,set:setPassword,ph:"At least 6 characters",t,onKey:e=>e.key==="Enter"&&submit()})),
         React.createElement(Btn,{full:true,onClick:submit,disabled:loading||!email||!password},loading?"Please wait...":mode==="login"?"Log In to Verdict AI":"Create Account"),
-        React.createElement("div",{style:{textAlign:"center",marginTop:14,fontSize:13,color:t.muted}},mode==="login"?"Don't have an account? ":"Already have an account? ",React.createElement("button",{onClick:()=>setMode(mode==="login"?"signup":"login"),style:{background:"none",border:"none",color:GOLD,cursor:"pointer",fontFamily:"inherit",fontSize:13,fontWeight:600}},mode==="login"?"Sign up free":"Log in"))
+        React.createElement("div",{style:{textAlign:"center",marginTop:14,fontSize:13,color:t.muted}},mode==="login"?"Don't have an account? ":"Already have an account? ",React.createElement("button",{onClick:()=>setMode(mode==="login"?"signup":"login"),style:{background:"none",border:"none",color:GOLD,cursor:"pointer",fontFamily:"inherit",fontSize:13,fontWeight:600}},mode==="login"?"Sign up free":"Log in")),
+        mode==="login"&&React.createElement("div",{style:{textAlign:"center",marginTop:10}},
+          React.createElement("button",{onClick:handleForgotPassword,disabled:loading||resetSent,style:{background:"none",border:"none",color:t.muted,cursor:"pointer",fontFamily:"inherit",fontSize:12,textDecoration:"underline"}},resetSent?"Reset email sent ✓":"Forgot password?")
+        )
       ),
       React.createElement("div",{style:{textAlign:"center",marginTop:14,fontSize:11,color:t.muted,lineHeight:1.6}},"Free tier: 7 analyses/month. No credit card required.")
     )
@@ -1876,7 +1900,7 @@ function NigerianCasesPage({t,go}){
   const [liveLoading,setLiveLoading]=useState(false);
   const [searched,setSearched]=useState(false);
   const [limitReached,setLimitReached]=useState(false);
-  const sys=VOICE+`\n\nNigerian legal research specialist. Begin immediately with the analysis — no introduction.\n\nRESEARCH SUMMARY: The state of Nigerian law on this issue — the principles, doctrines, and statutory frameworks that apply. State the law clearly and directly.\n\nAPPLICABLE STATUTES: Nigerian statutes and legislation by full name and section. Do not invent statute names. If a statute does not exist, do not cite it.\n\nLEGAL PRINCIPLES: The common law principles and doctrines that apply, by their correct names.\n\nCURRENT LEGAL POSITION: The current state of Nigerian law on this issue stated clearly.\n\nDECISIVE FACTORS: The factors that courts weigh in determining this issue. With realistic probability ranges.\n\nFINANCIAL EXPOSURE: State the realistic financial exposure using only the naira figures that appear in the user's input. Never substitute different amounts. If the input states NGN 180 million, write NGN 180 million. Do not invent or alter any financial figure.\n\nPRIMSOL SEARCH TERMS: Specific search terms to find the relevant cases on PrimsCol. Include at least six distinct search term combinations.`;
+  const sys=VOICE+`\n\nNigerian legal research specialist. Begin immediately with the analysis — no introduction.\n\nRESEARCH SUMMARY: The state of Nigerian law on this issue — the principles, doctrines, and statutory frameworks that apply. State the law clearly and directly.\n\nAPPLICABLE STATUTES: Nigerian statutes and legislation by full name and section. Do not invent statute names. If a statute does not exist, do not cite it.\n\nLEGAL PRINCIPLES: The common law principles and doctrines that apply, by their correct names.\n\nCURRENT LEGAL POSITION: The current state of Nigerian law on this issue stated clearly.\n\nDECISIVE FACTORS: The factors that courts weigh in determining this issue. With realistic probability ranges.\n\nFINANCIAL EXPOSURE: State the realistic financial exposure using only the naira figures that appear in the user's input. Never substitute different amounts. If the input states NGN 180 million, write NGN 180 million. Do not invent or alter any financial figure.\n\nPrimsCol SEARCH TERMS: Specific search terms to find the relevant cases on PrimsCol. Include at least six distinct search term combinations.`;
   const runAI=async()=>{
     if(!query.trim())return;setLoading(true);setAiOut("");setLimitReached(false);
     try{await stream(sys,"Nigerian law research: "+query,v=>setAiOut(v));}
@@ -2105,7 +2129,7 @@ function ProfilePage({profile,onUpdate,t,go}){
     ),
     React.createElement("div",{style:{background:t.card,border:`1px solid ${t.border}`,borderRadius:12,padding:22}},
       React.createElement("h3",{style:{fontFamily:"'Playfair Display',serif",fontSize:16,marginBottom:12,color:t.text}},"About"),
-      [["Version","4.5.0"],["AI Model","Claude Sonnet 4.6"],["Max Output","8,000 tokens"],["Storage","Supabase Cloud"]].map(([k,v])=>
+      [["Version","4.6.0"],["AI Model","Claude Sonnet 4.6"],["Max Output","8,000 tokens"],["Storage","Supabase Cloud"]].map(([k,v])=>
         React.createElement("div",{key:k,style:{display:"flex",gap:8,marginBottom:7,fontSize:13}},React.createElement("span",{style:{color:t.muted,minWidth:100}},k+":"),React.createElement("span",{style:{color:t.dim}},v))
       ),
       React.createElement("div",{style:{marginTop:14}}),
