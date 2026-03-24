@@ -108,9 +108,18 @@ app.post('/api/ai', requireAuth, async (req, res) => {
   // Usage tracking
   try {
     const { data: profile } = await supabase
-      .from('profiles').select('tier, usage_count, usage_reset_date')
+      .from('profiles').select('tier, usage_count, usage_reset_date, tier_expiry')
       .eq('id', req.user.id).single();
     if (profile) {
+      // Check if paid tier has expired — downgrade to free
+      if (profile.tier !== 'free' && profile.tier_expiry) {
+        const expiry = new Date(profile.tier_expiry);
+        if (expiry < new Date()) {
+          await supabase.from('profiles').update({ tier: 'free' }).eq('id', req.user.id);
+          profile.tier = 'free';
+          profile.usage_count = 0;
+        }
+      }
       const resetDate = new Date(profile.usage_reset_date || 0);
       const now = new Date();
       if (now.getMonth() !== resetDate.getMonth() || now.getFullYear() !== resetDate.getFullYear()) {
