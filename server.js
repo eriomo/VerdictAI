@@ -3,6 +3,7 @@ const cors = require('cors');
 const path = require('path');
 const https = require('https');
 const crypto = require('crypto');
+const nodemailer = require('nodemailer');
 const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
@@ -480,7 +481,50 @@ app.post('/api/payments/bank-transfer', requireAuth, async (req, res) => {
       })
     }).eq('id', req.user.id);
 
-    // Send email notification via Supabase (simple approach)
+    // Send email notification via Gmail SMTP
+    const gmailPass = process.env.GMAIL_APP_PASSWORD;
+    if (gmailPass) {
+      const https = require('https');
+      const emailBody = [
+        'From: "Verdict AI" <trigxyfn@gmail.com>',
+        'To: trigxyfn@gmail.com',
+        'Subject: 💰 New Payment — ' + plan + ' — NGN ' + Number(amount).toLocaleString(),
+        'Content-Type: text/plain; charset=utf-8',
+        '',
+        '🎉 NEW BANK TRANSFER SUBMITTED',
+        '',
+        'User Email: ' + req.user.email,
+        'Plan: ' + plan,
+        'Amount: NGN ' + Number(amount).toLocaleString(),
+        'Transfer Reference: ' + reference,
+        'Time: ' + new Date().toLocaleString('en-NG', {timeZone:'Africa/Lagos'}),
+        '',
+        'ACTION REQUIRED:',
+        '1. Check your Moniepoint app — confirm NGN ' + Number(amount).toLocaleString() + ' received from this user',
+        '2. Go to Supabase → profiles → find ' + req.user.email,
+        '3. Change their tier to: ' + (plan.includes('chambers') ? 'chambers' : 'solo'),
+        '4. They get access immediately',
+        '',
+        'Supabase link: https://supabase.com/dashboard/project/xlykbkfwgqhldxrwhwbp/editor',
+      ].join('\r\n');
+
+      // Use Gmail SMTP via nodemailer-style raw SMTP
+      const nodemailerAvailable = !!nodemailer;
+      if (nodemailerAvailable) {
+        const transporter = nodemailer.createTransport({
+          service: 'gmail',
+          auth: { user: 'trigxyfn@gmail.com', pass: gmailPass.trim().replace(/\s/g,'') }
+        });
+        await transporter.sendMail({
+          from: '"Verdict AI Payments" <trigxyfn@gmail.com>',
+          to: 'trigxyfn@gmail.com',
+          subject: `💰 New Payment — ${plan} — NGN ${Number(amount).toLocaleString()}`,
+          text: emailBody,
+        });
+        console.log('Payment notification email sent');
+      }
+    }
+
     console.log(`BANK TRANSFER SUBMITTED:
 User: ${req.user.email}
 Plan: ${plan}
@@ -491,7 +535,8 @@ Time: ${new Date().toISOString()}`);
     res.json({ success: true });
   } catch (err) {
     console.log('Bank transfer notification error:', err.message);
-    res.status(500).json({ error: 'Failed to submit. Please email trigxyfn@gmail.com directly.' });
+    // Still return success — don't fail the user if email fails
+    res.json({ success: true });
   }
 });
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
