@@ -18,7 +18,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY;
 
-const DISCLAIMER = '\n\nDISCLAIMER: This analysis is for informational purposes only and does not constitute legal advice. Verify all legal authorities on PrimsCol or current Nigerian law reports before relying on them in proceedings.';
+const DISCLAIMER = '\n\nDISCLAIMER: This analysis is for informational purposes only and does not constitute legal advice. Verify all legal authorities on Primsol or current Nigerian law reports before relying on them in proceedings.';
 
 const PLANS = {
   solo_monthly:     { amount: 1200000,  name: 'Solo Monthly',     tier: 'solo',     planCode: 'PLN_hu4h4wc91ytd9pr', interval: 'monthly' },
@@ -126,7 +126,7 @@ app.post('/api/ai', requireAuth, async (req, res) => {
         await supabase.from('profiles').update({ usage_count: 0, usage_reset_date: now.toISOString() }).eq('id', req.user.id);
         profile.usage_count = 0;
       }
-      if (profile.tier === 'free' && profile.usage_count >= 7) {
+      if (profile.tier === 'free' && profile.usage_count >= 3) {
         return res.status(403).json({ error: 'FREE_LIMIT_REACHED', message: 'You have used all 7 free analyses this month. Upgrade to Solo to continue.' });
       }
       await supabase.from('profiles').update({ usage_count: (profile.usage_count || 0) + 1 }).eq('id', req.user.id);
@@ -466,7 +466,7 @@ app.get('/api/cases/search', requireAuth, async (req, res) => {
   if (!q) return res.json({ results: [] });
   const results = [
     { title: `Search "${q}" on AfricanLII`, court: 'Free Nigerian Case Law', url: `https://africanlii.org/search?q=${encodeURIComponent(q)}&jurisdiction=ng`, snippet: 'Thousands of Nigerian judgments', source: 'AfricanLII', isLink: true },
-    { title: `Search "${q}" on PrimsCol`, court: 'LawPavilion', url: 'https://primsol.lawpavilion.com', snippet: 'Comprehensive Nigerian cases 1960-present', source: 'PrimsCol', isLink: true },
+    { title: `Search "${q}" on Primsol`, court: 'LawPavilion', url: 'https://primsol.lawpavilion.com', snippet: 'Comprehensive Nigerian cases 1960-present', source: 'Primsol', isLink: true },
     { title: `Search "${q}" on NigeriaLII`, court: 'NigeriaLII', url: `https://nigerialii.org/search?q=${encodeURIComponent(q)}`, snippet: 'Free Nigerian legal materials', source: 'NigeriaLII', isLink: true }
   ];
   res.json({ results, count: 0 });
