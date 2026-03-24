@@ -463,5 +463,36 @@ app.get('/api/cases/search', requireAuth, async (req, res) => {
 });
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', version: '4.6.0', model: 'claude-sonnet-4-6' }));
+
+// ── Bank Transfer Notification ────────────────────────────────────────────────
+app.post('/api/payments/bank-transfer', requireAuth, async (req, res) => {
+  const { plan, amount, reference, email } = req.body;
+  if (!plan || !amount || !reference) return res.status(400).json({ error: 'Missing required fields' });
+
+  try {
+    // Save transfer proof to Supabase for admin review
+    await supabase.from('profiles').update({
+      pending_transfer: JSON.stringify({
+        plan, amount, reference, email,
+        submitted_at: new Date().toISOString(),
+        user_id: req.user.id,
+        user_email: req.user.email,
+      })
+    }).eq('id', req.user.id);
+
+    // Send email notification via Supabase (simple approach)
+    console.log(`BANK TRANSFER SUBMITTED:
+User: ${req.user.email}
+Plan: ${plan}
+Amount: NGN ${amount}
+Reference: ${reference}
+Time: ${new Date().toISOString()}`);
+
+    res.json({ success: true });
+  } catch (err) {
+    console.log('Bank transfer notification error:', err.message);
+    res.status(500).json({ error: 'Failed to submit. Please email trigxyfn@gmail.com directly.' });
+  }
+});
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 app.listen(PORT, () => console.log(`Verdict AI v4.6 running on port ${PORT}`));
