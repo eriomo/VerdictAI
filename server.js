@@ -287,7 +287,8 @@ app.get('/api/payments/verify/:reference', requireAuth, async (req, res) => {
     if (!planData) return res.status(400).json({ error: 'Invalid plan in payment' });
 
     const expiry = new Date();
-    expiry.setDate(expiry.getDate() + 31);
+    const isAnnual = planData.interval === 'annually';
+    expiry.setDate(expiry.getDate() + (isAnnual ? 366 : 32));
 
     await supabase.from('profiles').update({
       tier: planData.tier,
@@ -304,6 +305,7 @@ app.get('/api/payments/verify/:reference', requireAuth, async (req, res) => {
 
 // ── PAYSTACK — Webhook ────────────────────────────────────────────────────────
 app.post('/api/payments/webhook', async (req, res) => {
+  if (!PAYSTACK_SECRET) return res.status(200).send('OK');
   const hash = crypto.createHmac('sha512', PAYSTACK_SECRET)
     .update(req.body).digest('hex');
 
@@ -323,8 +325,10 @@ app.post('/api/payments/webhook', async (req, res) => {
     const resolvedTier = tier || (plan && PLANS[plan]?.tier);
     if (!resolvedTier) return;
 
+    const planData = plan ? PLANS[plan] : null;
+    const isAnnual = planData?.interval === 'annually';
     const expiry = new Date();
-    expiry.setDate(expiry.getDate() + 31);
+    expiry.setDate(expiry.getDate() + (isAnnual ? 366 : 32));
 
     const updateData = {
       tier: resolvedTier,
