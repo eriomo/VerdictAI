@@ -194,7 +194,7 @@ const ZONES=[
       {id:"reader",name:"Document Analysis",desc:"Complete risk analysis of any legal document",icon:"document"},
       {id:"qa",name:"Legal Q&A",desc:"Ask any Nigerian legal question, get elite-level answers",icon:"chat"},
       {id:"nigeriancases",name:"Nigerian Case Law",desc:"AI research + live database links, no invented cases",icon:"book"},
-      {id:"lawdatabases",name:"Law Research Hub",desc:"AfricanLII, PrimsCol, CAC, FIRS — all in one place",icon:"search"},
+      {id:"lawdatabases",name:"Law Research Hub",desc:"AfricanLII, Primsol, CAC, FIRS — all in one place",icon:"search"},
     ]
   },
   {
@@ -577,7 +577,7 @@ OVERALL SCORE: State the score out of 100 and the letter grade from A to F. Stat
 
 DIMENSION SCORES — each out of 20 with a full paragraph explanation:
 1. ARGUMENT STRENGTH: Are arguments legally sound, compelling, correctly ranked.
-2. CITATION QUALITY: Are authorities properly applied. Flag any needing PrimsCol verification.
+2. CITATION QUALITY: Are authorities properly applied. Flag any needing Primsol verification.
 3. LOGICAL FLOW: Does the argument build correctly and where does it lose the reader.
 4. PERSUASION AND PRECISION: Is the language sharp and court-grade or vague and generic.
 5. TECHNICAL ACCURACY: Procedural compliance, proper headings, correct relief formulation.
@@ -702,7 +702,7 @@ CONCLUSION: Clear, direct answer to the question presented.
 
 RECOMMENDATIONS: Numbered, specific actions. Prioritised by urgency.
 
-AUTHORITIES NOTE: All statutes referenced by full name. Advise verification of any case authorities on PrimsCol.`},
+AUTHORITIES NOTE: All statutes referenced by full name. Advise verification of any case authorities on Primsol.`},
 
 pleadingcheck:{id:"pleadingcheck",title:"Pleadings Checker",isNew:true,desc:"Every defect found before your opponent does — grammar audit, rewritten sections, filing recommendation.",lbl:"Court Process",ph:"Paste your statement of claim, writ, motion, affidavit, or any court process...",rows:14,sys:VOICE+`
 
@@ -871,7 +871,7 @@ function Pulse(){
 function AuthoritiesBox({val,set,t}){
   return React.createElement("div",{style:{background:"rgba(200,164,94,0.05)",border:"1px solid rgba(200,164,94,0.2)",borderRadius:9,padding:"12px 14px",marginBottom:12}},
     React.createElement("div",{style:{fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"1.3px",color:GOLD,marginBottom:5}},"Your Verified Authorities (Optional)"),
-    React.createElement("div",{style:{fontSize:12,color:"rgba(200,164,94,0.7)",marginBottom:8,lineHeight:1.6}},"Paste cases or statutory provisions you have verified on PrimsCol. The AI will build its analysis around your authorities."),
+    React.createElement("div",{style:{fontSize:12,color:"rgba(200,164,94,0.7)",marginBottom:8,lineHeight:1.6}},"Paste cases or statutory provisions you have verified on Primsol. The AI will build its analysis around your authorities."),
     React.createElement("textarea",{value:val,onChange:e=>set(e.target.value),placeholder:"e.g. Section 84 Evidence Act 2011 — electronic evidence requirements...",rows:4,style:{width:"100%",background:t.input,border:"1px solid rgba(200,164,94,0.15)",borderRadius:7,padding:"9px 12px",fontFamily:"'DM Sans',sans-serif",fontSize:12.5,color:t.text,outline:"none",resize:"vertical",lineHeight:1.6}})
   );
 }
@@ -1161,13 +1161,13 @@ function AIPage({cfg,t,go,pageId}){
       )
     ),
 
-    // PrimsCol banner — always visible
+    // Primsol banner — always visible
     React.createElement("div",{className:"primsol-banner"},
       Icon({name:"star",size:14,color:"#2ECC8A"}),
       React.createElement("span",{style:{fontSize:12,color:t.dim,flex:1}},
         React.createElement("strong",{style:{color:"#2ECC8A"}},"For cited, accurate output: "),
         "Paste verified cases or statute sections from ",
-        React.createElement("button",{onClick:()=>go("lawdatabases"),style:{background:"none",border:"none",color:GOLD,cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:600,padding:0,textDecoration:"underline"}},"PrimsCol or AfricanLII"),
+        React.createElement("button",{onClick:()=>go("lawdatabases"),style:{background:"none",border:"none",color:GOLD,cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:600,padding:0,textDecoration:"underline"}},"Primsol or AfricanLII"),
         " into the Verified Authorities box below."
       )
     ),
@@ -1237,7 +1237,7 @@ function AuthPage({t,onBack}){
           React.createElement("button",{onClick:handleForgotPassword,disabled:loading||resetSent,style:{background:"none",border:"none",color:t.muted,cursor:"pointer",fontFamily:"inherit",fontSize:12,textDecoration:"underline"}},resetSent?"Reset email sent ✓":"Forgot password?")
         )
       ),
-      React.createElement("div",{style:{textAlign:"center",marginTop:14,fontSize:11,color:t.muted,lineHeight:1.6}},"Free tier: 7 analyses/month. No credit card required.")
+      React.createElement("div",{style:{textAlign:"center",marginTop:14,fontSize:11,color:t.muted,lineHeight:1.6}},"Free tier: 3 analyses/month. No credit card required.")
     )
   );
 }
@@ -1347,14 +1347,14 @@ function LandingPage({onGetStarted,t}){
   ];
 
   const plans=[
-    {name:"Free",color:"#4A9EE8",price:"₦0",period:"forever",features:["7 analyses/month","Document Analysis","Legal Q&A","Draft Documents","Nigerian Case Law","Document Vault"]},
+    {name:"Free",color:"#4A9EE8",price:"₦0",period:"forever",features:["3 analyses/month","Document Analysis","Legal Q&A","Draft Documents","Nigerian Case Law","Document Vault"]},
     {name:"Solo",color:GOLD,price:"₦12,000",period:"/month",features:["Unlimited analyses","All 30+ features","Case War Room","Clause DNA","WhatsApp Evidence","Compliance Calendar","Pleadings Checker"],popular:true},
     {name:"Chambers",color:"#9B59B6",price:"₦20,000",period:"/month",features:["Everything in Solo","Trial Prep Suite","AI Senior Partner","Witness Forge","Evidence Analyser","Settlement Intelligence","Up to 3 users"]},
   ];
 
   const faqs=[
-    {q:"Does Verdict AI invent case names or statute sections?",a:"Never. Verdict AI is built on a strict no-invention rule. It will only reference statutes that exist and will clearly tell you to verify any case authorities on PrimsCol before relying on them in court."},
-    {q:"How does PrimsCol integration work?",a:"Every analysis tool has a Verified Authorities box where you paste your verified cases from PrimsCol, AfricanLII, or NigeriaLII. Verdict AI then builds its analysis around your specific authorities — giving you cited, court-ready output rather than general principles."},
+    {q:"Does Verdict AI invent case names or statute sections?",a:"Never. Verdict AI is built on a strict no-invention rule. It will only reference statutes that exist and will clearly tell you to verify any case authorities on Primsol before relying on them in court."},
+    {q:"How does Primsol integration work?",a:"Every analysis tool has a Verified Authorities box where you paste your verified cases from Primsol, AfricanLII, or NigeriaLII. Verdict AI then builds its analysis around your specific authorities — giving you cited, court-ready output rather than general principles."},
     {q:"Is this legal advice?",a:"No. Verdict AI is a legal intelligence tool that helps Nigerian lawyers work faster and smarter. Every output carries a disclaimer and is intended for use by qualified legal practitioners."},
     {q:"How is my data protected?",a:"All data is stored on Supabase with row-level security. Your documents and analyses are private to your account. We do not train on your data."},
     {q:"Can I use this on my phone?",a:"Yes. Verdict AI is fully mobile-responsive and works on any smartphone browser. No app download required."},
@@ -1505,7 +1505,7 @@ function LandingPage({onGetStarted,t}){
         React.createElement("div",{style:{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:24,position:"relative"}},
           [
             {n:"01",icon:"document",title:"Paste or Upload",desc:"Drop in your contract, witness statement, court process, or brief. Or simply type your case facts."},
-            {n:"02",icon:"brain",title:"Add Your Authorities",desc:"Paste verified cases from PrimsCol or AfricanLII for cited, accurate output. This is what separates good analysis from great."},
+            {n:"02",icon:"brain",title:"Add Your Authorities",desc:"Paste verified cases from Primsol or AfricanLII for cited, accurate output. This is what separates good analysis from great."},
             {n:"03",icon:"check",title:"Get Court-Ready Output",desc:"Receive complete analysis, drafted documents, or strategy — ready for partner review or filing."},
           ].map((s,i)=>React.createElement("div",{key:i,style:{background:"rgba(7,16,28,0.8)",border:"1px solid rgba(30,52,82,0.8)",borderRadius:16,padding:"28px 24px",position:"relative"}},
             React.createElement("div",{style:{fontSize:11,fontWeight:700,color:"rgba(200,164,94,0.4)",letterSpacing:"2px",marginBottom:16}},s.n),
@@ -1516,7 +1516,7 @@ function LandingPage({onGetStarted,t}){
             React.createElement("div",{style:{fontSize:13,color:"rgba(240,237,230,0.5)",lineHeight:1.7}},s.desc)
           ))
         ),
-        // PrimsCol callout
+        // Primsol callout
         React.createElement("div",{style:{marginTop:32,background:"rgba(46,204,138,0.05)",border:"1px solid rgba(46,204,138,0.2)",borderRadius:14,padding:"20px 24px",display:"flex",alignItems:"flex-start",gap:16,flexWrap:"wrap"}},
           React.createElement("div",{style:{width:40,height:40,borderRadius:10,background:"rgba(46,204,138,0.1)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}},
             Icon({name:"book",size:20,color:"#2ECC8A"})
@@ -1524,10 +1524,10 @@ function LandingPage({onGetStarted,t}){
           React.createElement("div",{style:{flex:1,minWidth:200}},
             React.createElement("div",{style:{fontSize:14,fontWeight:700,color:"#2ECC8A",marginBottom:6}},"How to get cited, accurate output"),
             React.createElement("div",{style:{fontSize:13,color:"rgba(240,237,230,0.6)",lineHeight:1.7,marginBottom:12}},
-              "Every Verdict AI tool has a Verified Authorities box. Search for your case or statute on PrimsCol, AfricanLII, or NigeriaLII — copy the relevant passage — paste it into the authorities box. Verdict AI will build its analysis around your specific verified authorities, giving you output you can cite directly in proceedings."
+              "Every Verdict AI tool has a Verified Authorities box. Search for your case or statute on Primsol, AfricanLII, or NigeriaLII — copy the relevant passage — paste it into the authorities box. Verdict AI will build its analysis around your specific verified authorities, giving you output you can cite directly in proceedings."
             ),
             React.createElement("div",{style:{display:"flex",gap:10,flexWrap:"wrap"}},
-              [{name:"PrimsCol",url:"https://primsol.lawpavilion.com"},{name:"AfricanLII",url:"https://africanlii.org/ng"},{name:"NigeriaLII",url:"https://nigerialii.org"}].map(db=>
+              [{name:"Primsol",url:"https://primsol.lawpavilion.com"},{name:"AfricanLII",url:"https://africanlii.org/ng"},{name:"NigeriaLII",url:"https://nigerialii.org"}].map(db=>
                 React.createElement("a",{key:db.name,href:db.url,target:"_blank",rel:"noreferrer",style:{fontSize:12,fontWeight:600,color:"#2ECC8A",background:"rgba(46,204,138,0.1)",padding:"5px 12px",borderRadius:6,textDecoration:"none"}},db.name+" →")
               )
             )
@@ -1755,10 +1755,10 @@ function Dashboard({go,t,docCount,caseCount,profile}){
       React.createElement("div",{style:{flex:1,minWidth:160}},
         React.createElement("div",{style:{display:"flex",justifyContent:"space-between",fontSize:12,marginBottom:6}},
           React.createElement("span",{style:{color:t.text,fontWeight:600}},"Free analyses"),
-          React.createElement("span",{style:{color:used>=7?"#E05252":GOLD,fontWeight:700}},used+" / 7 used")
+          React.createElement("span",{style:{color:used>=3?"#E05252":GOLD,fontWeight:700}},used+" / 3 used")
         ),
         React.createElement("div",{style:{height:4,background:t.border,borderRadius:100,overflow:"hidden"}},
-          React.createElement("div",{style:{height:"100%",width:Math.min((used/7)*100,100)+"%",background:used>=7?"#E05252":`linear-gradient(90deg,${GOLD},${GOLD2})`,borderRadius:100,transition:"width 0.5s"}})
+          React.createElement("div",{style:{height:"100%",width:Math.min((used/3)*100,100)+"%",background:used>=3?"#E05252":`linear-gradient(90deg,${GOLD},${GOLD2})`,borderRadius:100,transition:"width 0.5s"}})
         )
       ),
       React.createElement(Btn,{onClick:()=>go("upgrade"),sm:true},"Upgrade to Solo")
@@ -1766,7 +1766,7 @@ function Dashboard({go,t,docCount,caseCount,profile}){
 
     // Stats row
     React.createElement("div",{className:"stat-grid",style:{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:24}},
-      [{v:docCount,l:"Documents"},{v:caseCount,l:"Cases"},{v:tier==="free"?(7-used)+" left":"∞",l:"Analyses"},{v:tier.charAt(0).toUpperCase()+tier.slice(1),l:"Plan",c:tier==="free"?"#4A9EE8":GOLD}].map((s,i)=>
+      [{v:docCount,l:"Documents"},{v:caseCount,l:"Cases"},{v:tier==="free"?(3-used)+" left":"∞",l:"Analyses"},{v:tier.charAt(0).toUpperCase()+tier.slice(1),l:"Plan",c:tier==="free"?"#4A9EE8":GOLD}].map((s,i)=>
         React.createElement("div",{key:i,style:{background:t.card,border:`1px solid ${t.border}`,borderRadius:12,padding:"12px 10px",textAlign:"center"}},
           React.createElement("div",{style:{fontFamily:"'Playfair Display',serif",fontSize:"clamp(16px,4vw,22px)",fontWeight:700,color:s.c||GOLD}},s.v),
           React.createElement("div",{style:{fontSize:11,color:t.muted,marginTop:2}},s.l)
@@ -1975,7 +1975,7 @@ function NigerianCasesPage({t,go}){
   const [liveLoading,setLiveLoading]=useState(false);
   const [searched,setSearched]=useState(false);
   const [limitReached,setLimitReached]=useState(false);
-  const sys=VOICE+`\n\nNigerian legal research specialist. Begin immediately with the analysis — no introduction.\n\nRESEARCH SUMMARY: The state of Nigerian law on this issue — the principles, doctrines, and statutory frameworks that apply. State the law clearly and directly.\n\nAPPLICABLE STATUTES: Nigerian statutes and legislation by full name and section. Do not invent statute names. If a statute does not exist, do not cite it.\n\nLEGAL PRINCIPLES: The common law principles and doctrines that apply, by their correct names.\n\nCURRENT LEGAL POSITION: The current state of Nigerian law on this issue stated clearly.\n\nDECISIVE FACTORS: The factors that courts weigh in determining this issue. With realistic probability ranges.\n\nFINANCIAL EXPOSURE: State the realistic financial exposure using only the naira figures that appear in the user's input. Never substitute different amounts. If the input states NGN 180 million, write NGN 180 million. Do not invent or alter any financial figure.\n\nPrimsCol SEARCH TERMS: Specific search terms to find the relevant cases on PrimsCol. Include at least six distinct search term combinations.`;
+  const sys=VOICE+`\n\nNigerian legal research specialist. Begin immediately with the analysis — no introduction.\n\nRESEARCH SUMMARY: The state of Nigerian law on this issue — the principles, doctrines, and statutory frameworks that apply. State the law clearly and directly.\n\nAPPLICABLE STATUTES: Nigerian statutes and legislation by full name and section. Do not invent statute names. If a statute does not exist, do not cite it.\n\nLEGAL PRINCIPLES: The common law principles and doctrines that apply, by their correct names.\n\nCURRENT LEGAL POSITION: The current state of Nigerian law on this issue stated clearly.\n\nDECISIVE FACTORS: The factors that courts weigh in determining this issue. With realistic probability ranges.\n\nFINANCIAL EXPOSURE: State the realistic financial exposure using only the naira figures that appear in the user's input. Never substitute different amounts. If the input states NGN 180 million, write NGN 180 million. Do not invent or alter any financial figure.\n\nPrimsol SEARCH TERMS: Specific search terms to find the relevant cases on Primsol. Include at least six distinct search term combinations.`;
   const runAI=async()=>{
     if(!query.trim())return;setLoading(true);setAiOut("");setLimitReached(false);
     try{await stream(sys,"Nigerian law research: "+query,v=>setAiOut(v));}
@@ -1987,7 +1987,7 @@ function NigerianCasesPage({t,go}){
     try{const data=await api(`/api/cases/search?q=${encodeURIComponent(query)}`);setLiveResults(data.results||[]);}
     catch{setLiveResults([
       {title:`Search "${query}" on AfricanLII`,court:"Free Nigerian Case Law",url:`https://africanlii.org/search?q=${encodeURIComponent(query)}&jurisdiction=ng`,snippet:"Thousands of Nigerian judgments.",source:"AfricanLII",isLink:true},
-      {title:`Search "${query}" on PrimsCol`,court:"LawPavilion",url:"https://primsol.lawpavilion.com",snippet:"Comprehensive Nigerian cases 1960-present.",source:"PrimsCol",isLink:true},
+      {title:`Search "${query}" on Primsol`,court:"LawPavilion",url:"https://primsol.lawpavilion.com",snippet:"Comprehensive Nigerian cases 1960-present.",source:"Primsol",isLink:true},
       {title:`Search "${query}" on NigeriaLII`,court:"NigeriaLII",url:`https://nigerialii.org/search?q=${encodeURIComponent(query)}`,snippet:"Free Nigerian legal materials.",source:"NigeriaLII",isLink:true},
     ]);}
     setLiveLoading(false);
@@ -2029,7 +2029,7 @@ function LawDatabasesPage({t}){
   const dbs=[
     {id:"africanlii",name:"AfricanLII",icon:"🌍",color:"#2ECC8A",url:"https://africanlii.org/ng",sUrl:"https://africanlii.org/search?q={q}&jurisdiction=ng",desc:"Free access to thousands of Nigerian judgments.",badge:"FREE",embed:true},
     {id:"nigerialii",name:"NigeriaLII",icon:"⚖️",color:"#4A9EE8",url:"https://nigerialii.org",sUrl:"https://nigerialii.org/search?q={q}",desc:"Nigerian Legal Information Institute — free statutes and case law.",badge:"FREE"},
-    {id:"primsol",name:"PrimsCol",icon:"📚",color:"#C8A45E",url:"https://primsol.lawpavilion.com",sUrl:"https://primsol.lawpavilion.com",desc:"Nigeria's most comprehensive case law database — 200,000+ judgments. Log in with your LawPavilion credentials.",badge:"LOG IN",embed:true,login:true},
+    {id:"primsol",name:"Primsol",icon:"📚",color:"#C8A45E",url:"https://primsol.lawpavilion.com",sUrl:"https://primsol.lawpavilion.com",desc:"Nigeria's most comprehensive case law database — 200,000+ judgments. Log in with your LawPavilion credentials.",badge:"LOG IN",embed:true,login:true},
     {id:"cac",name:"CAC Company Search",icon:"🏢",color:"#E67E22",url:"https://search.cac.gov.ng/home",sUrl:"https://search.cac.gov.ng/home",desc:"Corporate Affairs Commission — verify company registration and corporate status.",badge:"FREE"},
     {id:"firs",name:"FIRS Tax Portal",icon:"💰",color:"#E05252",url:"https://www.firs.gov.ng",sUrl:"https://www.firs.gov.ng",desc:"Federal Inland Revenue Service — tax circulars, TIN verification, e-filing.",badge:"FREE"},
     {id:"cbn",name:"CBN Regulations",icon:"🏦",color:"#3498DB",url:"https://www.cbn.gov.ng",sUrl:"https://www.cbn.gov.ng",desc:"Central Bank of Nigeria — banking regulations and AML/CFT guidelines.",badge:"FREE"},
@@ -2059,7 +2059,7 @@ function LawDatabasesPage({t}){
     ),
     showEmbed&&React.createElement("div",{style:{background:t.card,border:"1px solid "+t.border,borderRadius:12,overflow:"hidden"}},
       React.createElement("div",{style:{padding:"12px 16px",borderBottom:"1px solid "+t.border,display:"flex",justifyContent:"space-between",alignItems:"center"}},
-        React.createElement("div",{style:{fontSize:13,fontWeight:600,color:t.text}},showEmbed==="primsol"?"PrimsCol — Log in with your LawPavilion credentials":"AfricanLII — Nigerian Case Law"),
+        React.createElement("div",{style:{fontSize:13,fontWeight:600,color:t.text}},showEmbed==="primsol"?"Primsol — Log in with your LawPavilion credentials":"AfricanLII — Nigerian Case Law"),
         React.createElement("div",{style:{display:"flex",gap:10,alignItems:"center"}},
           React.createElement("a",{href:showEmbed==="primsol"?"https://primsol.lawpavilion.com":"https://africanlii.org/ng",target:"_blank",rel:"noreferrer",style:{fontSize:12,color:"#C8A45E",textDecoration:"none",fontWeight:600}},"Open full site ↗"),
           React.createElement("button",{onClick:()=>setShowEmbed(null),style:{background:"none",border:"none",color:t.muted,cursor:"pointer",fontSize:20,padding:0,lineHeight:1}},"×")
@@ -2177,7 +2177,7 @@ function ProfilePage({profile,onUpdate,t,go}){
       React.createElement("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8,marginBottom:tier!=="free"?14:0}},
         React.createElement("div",null,
           React.createElement("div",{style:{fontSize:18,fontWeight:700,color:GOLD,marginBottom:2}},tier.charAt(0).toUpperCase()+tier.slice(1)+" Plan"),
-          React.createElement("div",{style:{fontSize:13,color:t.muted}},tier==="free"?(profile?.usage_count||0)+" of 7 analyses used":"Unlimited analyses")
+          React.createElement("div",{style:{fontSize:13,color:t.muted}},tier==="free"?(profile?.usage_count||0)+" of 3 analyses used":"Unlimited analyses")
         ),
         tier==="free"?React.createElement(Btn,{onClick:()=>go("upgrade")},"Upgrade"):React.createElement(Btn,{variant:"ghost",onClick:()=>go("upgrade"),sm:true},"Change Plan")
       ),
@@ -2322,7 +2322,7 @@ function UpgradePage({t,go,userTier,userEmail,onUpgradeSuccess,profile,onUpdate}
 
   const plans=[
     {id:"free",name:"Free",color:"#4A9EE8",monthly:0,annual:0,
-      features:["7 analyses/month","Document Analysis","Legal Q&A","Draft Documents","Nigerian Case Law","Document Vault"],
+      features:["3 analyses/month","Document Analysis","Legal Q&A","Draft Documents","Nigerian Case Law","Document Vault"],
       locked:["Matter Clock","All Power Tools","Trial Prep Suite","AI Senior Partner"]},
     {id:"solo",name:"Solo",color:GOLD,monthly:12000,annual:120000,
       planKey_monthly:"solo_monthly",planKey_annual:"solo_annual",
