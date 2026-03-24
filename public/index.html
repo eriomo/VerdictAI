@@ -448,7 +448,7 @@ TONE — ABSOLUTE RULES:
 You are the most expensive lawyer in the room. Never say "may," "might," "could potentially," or "it seems." Say "this clause is unenforceable," "this creates direct liability," "this will be challenged." Be decisive. Every sentence must carry weight. If a clause is dangerous, say it is dangerous. If a contract is badly drafted, say so. The user is paying for your honest expert opinion, not diplomatic language.
 
 FORMATTING — ABSOLUTE RULES:
-Never use bullet points, dashes as list markers, asterisks, or markdown. Write in full sentences and paragraphs only. Section headers in ALL CAPS followed by a colon. Never produce a preamble or introduction — start immediately with the first section heading. Risk ratings must appear as: 🔴 MUST FIX BEFORE SIGNING, 🟠 NEGOTIATE THIS, or 🟢 LOW CONCERN — placed at the start of each risk item.
+Never use bullet points, dashes as list markers, asterisks, or markdown symbols. Write in full sentences and paragraphs only. Section headers in ALL CAPS followed by a colon. Never produce a preamble or introduction — start immediately with the first section heading. Risk ratings must appear as plain text labels at the start of each risk item: MUST FIX BEFORE SIGNING, NEGOTIATE THIS, or LOW CONCERN — followed by a colon and the analysis. Never use emoji. Never use # headers. Never use ** for bold. Never use - or • as list markers.
 
 FINANCIAL CALCULATIONS — ABSOLUTE RULES:
 Always verify arithmetic before writing. Monthly salary × 12 = annual salary. Annual salary × years = total exposure. Never approximate — calculate precisely. If a salary is stated as NGN 350,000 per month, then 3 years exposure = NGN 350,000 × 36 = NGN 12,600,000. State the full calculation in the output. Wrong numbers destroy trust.
@@ -940,11 +940,86 @@ function Sel({val,set,opts,ph,t}){
   );
 }
 
+function formatLegalOutput(text){
+  if(!text)return[];
+  const lines=text.split("\n");
+  const elements=[];
+  let key=0;
+
+  for(let i=0;i<lines.length;i++){
+    let line=lines[i];
+
+    // Strip markdown symbols
+    line=line.replace(/^#{1,4}\s*/,"");           // ## headers
+    line=line.replace(/\*\*([^*]+)\*\*/g,"__BOLD__$1__ENDBOLD__"); // **bold**
+    line=line.replace(/\*([^*]+)\*/g,"$1");       // *italic* → plain
+    line=line.replace(/^[-•–]\s+/,"");            // bullet markers
+    line=line.replace(/^>\s*/,"");                // blockquotes
+    line=line.replace(/`([^`]+)`/g,"$1");         // inline code
+
+    // Risk rating lines — convert emoji to text labels
+    line=line.replace(/🔴\s*/g,"[MUST FIX] ");
+    line=line.replace(/🟠\s*/g,"[NEGOTIATE] ");
+    line=line.replace(/🟢\s*/g,"[LOW CONCERN] ");
+    line=line.replace(/⚠️\s*/g,"[NOTE] ");
+    line=line.replace(/✅\s*/g,"");
+    line=line.replace(/❌\s*/g,"");
+
+    const trimmed=line.trim();
+    if(!trimmed){elements.push(React.createElement("div",{key:key++,style:{height:10}}));continue;}
+
+    // ALL CAPS section headers
+    const isHeader=/^[A-Z][A-Z\s\(\)\/\-&:]{4,}:/.test(trimmed)||(/^[A-Z\s]{5,}$/.test(trimmed)&&trimmed.length<80);
+
+    // Risk rating lines
+    const isRisk=trimmed.startsWith("[MUST FIX]")||trimmed.startsWith("[NEGOTIATE]")||trimmed.startsWith("[LOW CONCERN]");
+    const riskColor=trimmed.startsWith("[MUST FIX]")?"#C0392B":trimmed.startsWith("[NEGOTIATE]")?"#E67E22":"#27AE60";
+
+    // Build inline elements with bold support
+    const renderInline=(str)=>{
+      const parts=str.split(/__BOLD__|__ENDBOLD__/);
+      return parts.map((part,pi)=>
+        pi%2===1
+          ?React.createElement("span",{key:pi,style:{fontWeight:700}}," "+part+" ")
+          :part
+      );
+    };
+
+    if(isHeader){
+      elements.push(React.createElement("div",{key:key++,style:{
+        fontFamily:"'Playfair Display',serif",
+        fontSize:13,fontWeight:700,
+        color:"#C8A45E",
+        letterSpacing:"0.8px",
+        marginTop:18,marginBottom:6,
+        borderBottom:"1px solid rgba(200,164,94,0.2)",
+        paddingBottom:4,
+      }},trimmed));
+    } else if(isRisk){
+      elements.push(React.createElement("div",{key:key++,style:{
+        fontSize:13,lineHeight:1.75,
+        marginBottom:6,padding:"8px 12px",
+        borderLeft:`3px solid ${riskColor}`,
+        background:`${riskColor}0d`,
+        borderRadius:"0 6px 6px 0",
+      }},renderInline(trimmed)));
+    } else {
+      elements.push(React.createElement("div",{key:key++,style:{
+        fontSize:13.5,lineHeight:1.85,
+        color:"inherit",marginBottom:4,
+      }},renderInline(trimmed)));
+    }
+  }
+  return elements;
+}
+
 function Out({text,loading,ph,t}){
   const ref=useRef();
   useEffect(()=>{if(ref.current)ref.current.scrollTop=ref.current.scrollHeight;},[text]);
-  return React.createElement("div",{ref,style:{background:t.input,border:`1px solid ${t.border}`,borderRadius:10,padding:20,minHeight:200,maxHeight:520,overflowY:"auto",fontSize:14,lineHeight:2,whiteSpace:"pre-wrap",wordBreak:"break-word",color:t.text}},
-    loading&&!text?React.createElement(Pulse):!loading&&!text?React.createElement("span",{style:{color:t.muted,fontStyle:"italic",fontSize:13.5}},ph||"Results appear here..."):text
+  return React.createElement("div",{ref,style:{background:t.input,border:`1px solid ${t.border}`,borderRadius:10,padding:20,minHeight:200,maxHeight:520,overflowY:"auto",wordBreak:"break-word",color:t.text}},
+    loading&&!text?React.createElement(Pulse):
+    !loading&&!text?React.createElement("span",{style:{color:t.muted,fontStyle:"italic",fontSize:13.5}},ph||"Results appear here..."):
+    formatLegalOutput(text)
   );
 }
 
