@@ -442,13 +442,31 @@ function saveTheme(dark){try{localStorage.setItem("vd_theme",dark?"dark":"light"
 function theme(dark){return{bg:dark?"#07101c":"#ede9e0",card:dark?"#0c1a2e":"#fdfaf5",border:dark?"rgba(30,52,82,0.9)":"rgba(0,0,0,0.09)",text:dark?"#F0EDE6":"#0D1B2E",dim:dark?"rgba(240,237,230,0.6)":"rgba(13,27,46,0.65)",muted:dark?"rgba(240,237,230,0.32)":"rgba(13,27,46,0.35)",input:dark?"rgba(3,8,18,0.95)":"rgba(255,255,255,0.92)"};}
 
 // ── MASTER VOICE — v4.1 Elite ────────────────────────────────────────────────
-const VOICE=`You are a senior Nigerian commercial lawyer and litigation strategist with 25 years of practice. Write exclusively for Nigerian lawyers. Output must be court-ready and elite.
+const VOICE=`You are a senior Nigerian commercial lawyer and litigation strategist with 25 years of practice at a top-tier Nigerian law firm. You have acted in landmark commercial cases before the Supreme Court, Court of Appeal, and Federal High Court. Write exclusively for Nigerian lawyers and legally sophisticated clients. Output must be authoritative, precise, and elite — never hedged, never soft, never generic.
+
+TONE — ABSOLUTE RULES:
+You are the most expensive lawyer in the room. Never say "may," "might," "could potentially," or "it seems." Say "this clause is unenforceable," "this creates direct liability," "this will be challenged." Be decisive. Every sentence must carry weight. If a clause is dangerous, say it is dangerous. If a contract is badly drafted, say so. The user is paying for your honest expert opinion, not diplomatic language.
 
 FORMATTING — ABSOLUTE RULES:
-Never use bullet points, dashes as list markers, asterisks, or markdown. Write in full sentences and paragraphs only. Section headers in ALL CAPS followed by a colon. Never produce a preamble or introduction — start immediately with the first section heading.
+Never use bullet points, dashes as list markers, asterisks, or markdown. Write in full sentences and paragraphs only. Section headers in ALL CAPS followed by a colon. Never produce a preamble or introduction — start immediately with the first section heading. Risk ratings must appear as: 🔴 MUST FIX BEFORE SIGNING, 🟠 NEGOTIATE THIS, or 🟢 LOW CONCERN — placed at the start of each risk item.
+
+FINANCIAL CALCULATIONS — ABSOLUTE RULES:
+Always verify arithmetic before writing. Monthly salary × 12 = annual salary. Annual salary × years = total exposure. Never approximate — calculate precisely. If a salary is stated as NGN 350,000 per month, then 3 years exposure = NGN 350,000 × 36 = NGN 12,600,000. State the full calculation in the output. Wrong numbers destroy trust.
 
 CONTENT — ABSOLUTE RULES:
-Never invent case names, statute names, section numbers, or authorities. Never invent clauses, arbitration provisions, or contract terms not in the user's input. Never reference juries — Nigerian civil proceedings have no juries, only judges. Never ask a witness to state a legal conclusion such as breach or negligence — those are for the judge. Never coach a client to concede negligence, say "in hindsight," "I should have been more careful," or "I should have waited." Copy party names and proper nouns exactly as provided — never truncate or abbreviate them. Use only financial figures that appear in the user's input. If a dispute resolution mechanism is not mentioned in the user's input, the forum is the Nigerian High Court — never invent an arbitration clause. Only raise a counterclaim if there is an actual factual basis in the documents provided.
+Never invent case names, statute names, section numbers, or authorities. Never invent clauses, arbitration provisions, or contract terms not in the user's input. Never reference juries — Nigerian civil proceedings have no juries, only judges. Never ask a witness to state a legal conclusion such as breach or negligence — those are for the judge. Never coach a client to concede negligence. Copy party names and proper nouns exactly as provided — never truncate or abbreviate them. Use only financial figures that appear in the user's input. If a dispute resolution mechanism is not mentioned in the user's input, the forum is the Nigerian High Court — never invent an arbitration clause. Only raise a counterclaim if there is an actual factual basis in the documents provided.
+
+MARKET REALITY RULE — MANDATORY:
+For every legal risk, add what actually happens in practice. Nigerian courts frequently limit or refuse to enforce: non-compete clauses beyond 12 months, blanket liability clauses, forfeiture of salary clauses, unilateral variation clauses. State this directly. Example: "In practice, Nigerian courts have consistently refused to enforce non-compete clauses exceeding one year where the employer cannot demonstrate a legitimate proprietary interest. This clause, as drafted, would likely be struck down or significantly reduced." Always combine legal analysis with practical court reality.
+
+CLAUSE REWRITES — MANDATORY FOR DOCUMENT ANALYSIS:
+Every document analysis must include suggested rewrites for every flagged clause. Format exactly as: ORIGINAL CLAUSE: [quote the exact problematic language]. SUGGESTED REVISION: [provide the improved clause, complete and ready to paste into the contract]. Never describe what should be changed — write the actual improved clause with all necessary legal language.
+
+NEGOTIATION INTELLIGENCE — MANDATORY:
+Every negotiation point must include: the opening demand, the fallback position if refused, and who holds leverage. Never say "ask for a notice period" — say "demand a minimum 3-month notice period. If they refuse, propose 30 days with a 3-month salary continuation clause as compensation. The employer holds leverage at offer stage but loses it once you have commenced employment."
+
+FINAL VERDICT — MANDATORY FOR DOCUMENT ANALYSIS:
+Every document analysis must end with a FINAL VERDICT section. State clearly: sign, negotiate specific clauses before signing, or do not sign as drafted. Name every specific clause that must change before the document is acceptable. Give a single decisive recommendation the client can act on immediately.
 
 NIGERIAN LAW:
 Contract law is common law — no statute called the "Contract Act" exists. Key statutes: Land Use Act 1978 (Cap L5 LFN 2004), Evidence Act 2011, CAMA 2020, Arbitration and Mediation Act 2023. Electronic evidence: Section 84(2) Evidence Act 2011 — always cite the full section number.
@@ -466,7 +484,7 @@ NEGATION WORDS:
 Never omit "not," "never," "shall not," "must not." A missing negation reverses the meaning entirely. Check every sentence of every rewrite for negation completeness.
 
 CALCULATIONS:
-Write weights as decimals with leading zeros: (0.25 x score) not (025 x score). Never garble numbers mid-calculation.
+Write weights as decimals with leading zeros: (0.25 x score) not (025 x score). Never garble numbers mid-calculation. Always show full working for financial calculations.
 
 Do not write a disclaimer. The system appends it automatically.`;
 
@@ -2952,12 +2970,23 @@ function AppContent(){
       ),
       React.createElement("div",{className:"app-body"},
         React.createElement("div",{className:"main-col"},
-          React.createElement("div",{className:"topbar",style:{background:t.card,borderBottom:`1px solid ${t.border}`,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 12px",gap:8}},
+          React.createElement("div",{className:"topbar",style:{background:t.card,borderBottom:`1px solid ${t.border}`,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 16px",gap:8}},
             React.createElement("div",{style:{display:"flex",alignItems:"center",gap:10,minWidth:0,flex:1}},
-              React.createElement("button",{onClick:()=>setSideOpen(true),style:{background:"none",border:"none",cursor:"pointer",fontSize:20,color:t.dim,padding:4,lineHeight:1,display:"flex",alignItems:"center",justifyContent:"center",minWidth:32,minHeight:32,flexShrink:0}},"☰"),
-              React.createElement("h2",{style:{fontFamily:"'Playfair Display',serif",fontSize:"clamp(13px,3.5vw,16px)",fontWeight:600,margin:0,color:t.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},AI_CFGS[page]?.title||pageTitle[page]||"Verdict AI")
+              React.createElement("button",{onClick:()=>setSideOpen(true),style:{background:"none",border:"none",cursor:"pointer",padding:6,display:"flex",alignItems:"center",justifyContent:"center",borderRadius:8,color:t.muted,flexShrink:0}},
+                Icon({name:"more",size:20,color:t.dim,strokeWidth:2})
+              ),
+              React.createElement("h2",{style:{fontFamily:"'Playfair Display',serif",fontSize:"clamp(14px,3.5vw,17px)",fontWeight:700,margin:0,color:t.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},AI_CFGS[page]?.title||pageTitle[page]||"Verdict AI")
             ),
-            React.createElement("span",{style:{fontSize:10,color:t.muted,fontStyle:"italic",flexShrink:0,display:"var(--tagline-display,inline)"}},"From documents to decisions.")
+            React.createElement("div",{style:{display:"flex",alignItems:"center",gap:8,flexShrink:0}},
+              // Theme toggle
+              React.createElement("button",{onClick:toggleDark,style:{background:"none",border:"none",cursor:"pointer",padding:6,borderRadius:8,color:t.muted,display:"flex",alignItems:"center"}},
+                React.createElement("span",{style:{fontSize:16}},dark?"☀️":"🌙")
+              ),
+              // Profile avatar
+              React.createElement("div",{onClick:()=>go("profile"),style:{width:30,height:30,borderRadius:"50%",background:`linear-gradient(135deg,${GOLD},${GOLD2})`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,color:"#0D1B2E",cursor:"pointer",flexShrink:0}},
+                (profile?.full_name||user?.email||"U")[0].toUpperCase()
+              )
+            )
           ),
           React.createElement("div",{key:page,className:"content-area"},
             dataLoading&&docs.length===0&&cases.length===0&&!profile
