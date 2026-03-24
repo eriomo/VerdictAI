@@ -132,6 +132,14 @@ select option{background:#0c1a2e;color:#F0EDE6}
 @media(max-width:360px){
   .stat-grid{grid-template-columns:1fr 1fr!important;}
 }
+/* PWA standalone — full native feel */
+@media(display-mode:standalone){
+  body{padding-top:env(safe-area-inset-top,0px);}
+  .app-shell{height:100dvh;padding-bottom:env(safe-area-inset-bottom,0px);}
+  .topbar{padding-top:env(safe-area-inset-top,0px);height:calc(56px + env(safe-area-inset-top,0px))!important;}
+  .bottom-tabs{height:calc(60px + env(safe-area-inset-bottom,0px))!important;padding-bottom:env(safe-area-inset-bottom,0px);}
+  #download{display:none!important;}
+}
 </style>
 </head>
 <body>
@@ -424,7 +432,12 @@ async function exportDOCX(text,filename="verdict-ai"){
 }
 
 // ── Theme ─────────────────────────────────────────────────────────────────────
-function getTheme(){try{const s=localStorage.getItem("vd_theme");if(s)return s==="dark";}catch{}return true;}
+function getTheme(){
+  // Always dark in standalone PWA mode
+  if(window.matchMedia('(display-mode: standalone)').matches)return true;
+  try{const s=localStorage.getItem("vd_theme");if(s)return s==="dark";}catch{}
+  return true;
+}
 function saveTheme(dark){try{localStorage.setItem("vd_theme",dark?"dark":"light");}catch{}}
 function theme(dark){return{bg:dark?"#07101c":"#ede9e0",card:dark?"#0c1a2e":"#fdfaf5",border:dark?"rgba(30,52,82,0.9)":"rgba(0,0,0,0.09)",text:dark?"#F0EDE6":"#0D1B2E",dim:dark?"rgba(240,237,230,0.6)":"rgba(13,27,46,0.65)",muted:dark?"rgba(240,237,230,0.32)":"rgba(13,27,46,0.35)",input:dark?"rgba(3,8,18,0.95)":"rgba(255,255,255,0.92)"};}
 
