@@ -112,7 +112,7 @@ async function callOpenRouterStream(orKey, model, system, user, maxTokens = 8000
   );
 }
 
-// ── Streaming call to Groq ───────────────────────────────────────────────────
+// ── Streaming call to Groq ────────────────────────────────────────────────────
 async function callGroqStream(groqKey, system, user, maxTokens = 8000) {
   return httpsPost(
     'api.groq.com', '/openai/v1/chat/completions',
@@ -242,7 +242,7 @@ async function requireAuth(req, res, next) {
   next();
 }
 
-// ── /api/ai ───────────────────────────────────────────────────────────────────
+
 app.post('/api/ai', requireAuth, async (req, res) => {
   let { system, user, tool } = req.body;
   if (!system || !user) return res.status(400).json({ error: 'Missing system or user content' });
@@ -288,7 +288,7 @@ app.post('/api/ai', requireAuth, async (req, res) => {
     res.setHeader('X-Accel-Buffering', 'no');
 
     const toolId = (tool || '').toLowerCase();
-    const { aiRes, engine } = await orchestrate(toolId, system, user, groqKey, orKey);
+    const { aiRes, engine } = await routeAI(toolId, system, user, groqKey, orKey);
 
     if (aiRes.statusCode !== 200) {
       let body = '';
@@ -339,8 +339,343 @@ app.post('/api/ai', requireAuth, async (req, res) => {
   }
 });
 
-// ── Remaining routes, subscription, payments, etc. (lines 682–end) ──────────
-// [These remain exactly the same in your original 681-line file]
-// ...
 
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+// ── PAYSTACK — Initialize ─────────────────────────────────────────────────────
+app.post('/api/payments/initialize', requireAuth, async (req, res) => {
+  console.log('=== PAYMENT INITIALIZE ===');
+  console.log('Plan:', req.body.plan);
+  console.log('User:', req.user.email);
+  console.log('Secret key set:', !!PAYSTACK_SECRET);
+  console.log('Secret key prefix:', PAYSTACK_SECRET ? PAYSTACK_SECRET.slice(0, 12) : 'NOT SET');
+
+  const { plan } = req.body;
+
+  if (!plan) return res.status(400).json({ error: 'Plan is required' });
+
+  const planData = PLANS[plan];
+  if (!planData) {
+    console.log('Invalid plan. Valid plans:', Object.keys(PLANS));
+    return res.status(400).json({ error: 'Invalid plan: ' + plan });
+  }
+
+  if (!PAYSTACK_SECRET) {
+    return res.status(500).json({ error: 'PAYSTACK_SECRET_KEY not configured in Render environment' });
+  }
+
+  try {
+    const paystackRes = await httpsPost(
+      'api.paystack.co',
+      '/transaction/initialize',
+      {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${PAYSTACK_SECRET}`,
+      },
+      {
+        email: req.user.email,
+        amount: planData.amount,
+        currency: 'NGN',
+        plan: planData.planCode,
+        metadata: {
+          user_id: req.user.id,
+          plan: plan,
+          plan_name: planData.name,
+          tier: planData.tier,
+          email: req.user.email,
+        },
+        channels: ['card', 'bank_transfer', 'ussd', 'bank'],
+      }
+    );
+
+    const data = await readBody(paystackRes);
+    console.log('Paystack HTTP status:', paystackRes.statusCode);
+    console.log('Paystack full response:', JSON.stringify(data));
+
+    if (!data.status) {
+      return res.status(400).json({ error: data.message || 'Paystack initialization failed' });
+    }
+
+    res.json({
+      authorization_url: data.data.authorization_url,
+      access_code: data.data.access_code,
+      reference: data.data.reference,
+    });
+
+  } catch (err) {
+    console.log('Paystack init error:', err.message);
+    res.status(500).json({ error: 'Payment initialization failed: ' + err.message });
+  }
+});
+
+// ── PAYSTACK — Verify ─────────────────────────────────────────────────────────
+app.get('/api/payments/verify/:reference', requireAuth, async (req, res) => {
+  if (!PAYSTACK_SECRET) return res.status(500).json({ error: 'Payment not configured' });
+  try {
+    const paystackRes = await httpsGet(
+      'api.paystack.co',
+      `/transaction/verify/${req.params.reference}`,
+      { 'Authorization': `Bearer ${PAYSTACK_SECRET}` }
+    );
+    const data = await readBody(paystackRes);
+
+    if (!data.status || data.data.status !== 'success') {
+      return res.status(400).json({ error: 'Payment not successful' });
+    }
+
+    const { user_id, plan } = data.data.metadata;
+    const planData = PLANS[plan];
+    if (!planData) return res.status(400).json({ error: 'Invalid plan in payment' });
+
+    const expiry = new Date();
+    const isAnnual = planData.interval === 'annually';
+    expiry.setDate(expiry.getDate() + (isAnnual ? 366 : 32));
+
+    await supabase.from('profiles').update({
+      tier: planData.tier,
+      tier_expiry: expiry.toISOString(),
+    }).eq('id', user_id);
+
+    console.log(`Upgraded user ${user_id} to ${planData.tier}`);
+    res.json({ success: true, tier: planData.tier });
+  } catch (err) {
+    console.log('Verify error:', err.message);
+    res.status(500).json({ error: 'Verification failed: ' + err.message });
+  }
+});
+
+// ── PAYSTACK — Webhook ────────────────────────────────────────────────────────
+app.post('/api/payments/webhook', async (req, res) => {
+  if (!PAYSTACK_SECRET) return res.status(200).send('OK');
+  const hash = crypto.createHmac('sha512', PAYSTACK_SECRET)
+    .update(req.body).digest('hex');
+
+  if (hash !== req.headers['x-paystack-signature']) {
+    return res.status(400).send('Invalid signature');
+  }
+
+  res.status(200).send('OK');
+
+  try {
+    const event = JSON.parse(req.body.toString());
+    if (event.event !== 'charge.success') return;
+
+    const { user_id, plan, tier } = event.data.metadata || {};
+    if (!user_id) return;
+
+    const resolvedTier = tier || (plan && PLANS[plan]?.tier);
+    if (!resolvedTier) return;
+
+    const planData = plan ? PLANS[plan] : null;
+    const isAnnual = planData?.interval === 'annually';
+    const expiry = new Date();
+    expiry.setDate(expiry.getDate() + (isAnnual ? 366 : 32));
+
+    const updateData = {
+      tier: resolvedTier,
+      tier_expiry: expiry.toISOString(),
+      auto_renew: true,
+    };
+
+    // Save subscription code if available
+    if (event.data.subscription_code) updateData.subscription_code = event.data.subscription_code;
+    if (event.data.plan?.token) updateData.email_token = event.data.plan.token;
+
+    await supabase.from('profiles').update(updateData).eq('id', user_id);
+    console.log(`Webhook upgraded ${user_id} to ${resolvedTier}`);
+  } catch (err) {
+    console.log('Webhook error:', err.message);
+  }
+});
+
+// ── PAYSTACK — Cancel subscription ───────────────────────────────────────────
+app.post('/api/payments/cancel', requireAuth, async (req, res) => {
+  if (!PAYSTACK_SECRET) return res.status(500).json({ error: 'Payment not configured' });
+  try {
+    const { data: profile } = await supabase.from('profiles').select('subscription_code, email_token').eq('id', req.user.id).single();
+    if (!profile?.subscription_code) return res.status(400).json({ error: 'No active subscription found' });
+
+    const paystackRes = await httpsPost(
+      'api.paystack.co',
+      '/subscription/disable',
+      { 'Content-Type': 'application/json', 'Authorization': `Bearer ${PAYSTACK_SECRET}` },
+      { code: profile.subscription_code, token: profile.email_token }
+    );
+    const data = await readBody(paystackRes);
+    if (!data.status) return res.status(400).json({ error: data.message || 'Failed to cancel subscription' });
+
+    await supabase.from('profiles').update({ auto_renew: false }).eq('id', req.user.id);
+    res.json({ success: true });
+  } catch (err) {
+    console.log('Cancel error:', err.message);
+    res.status(500).json({ error: 'Failed to cancel: ' + err.message });
+  }
+});
+
+// ── PAYSTACK — Re-enable subscription ────────────────────────────────────────
+app.post('/api/payments/reactivate', requireAuth, async (req, res) => {
+  if (!PAYSTACK_SECRET) return res.status(500).json({ error: 'Payment not configured' });
+  try {
+    const { data: profile } = await supabase.from('profiles').select('subscription_code, email_token').eq('id', req.user.id).single();
+    if (!profile?.subscription_code) return res.status(400).json({ error: 'No subscription found' });
+
+    const paystackRes = await httpsPost(
+      'api.paystack.co',
+      '/subscription/enable',
+      { 'Content-Type': 'application/json', 'Authorization': `Bearer ${PAYSTACK_SECRET}` },
+      { code: profile.subscription_code, token: profile.email_token }
+    );
+    const data = await readBody(paystackRes);
+    if (!data.status) return res.status(400).json({ error: data.message || 'Failed to reactivate' });
+
+    await supabase.from('profiles').update({ auto_renew: true }).eq('id', req.user.id);
+    res.json({ success: true });
+  } catch (err) {
+    console.log('Reactivate error:', err.message);
+    res.status(500).json({ error: 'Failed to reactivate: ' + err.message });
+  }
+});
+
+
+app.get('/api/documents', requireAuth, async (req, res) => {
+  const { data, error } = await supabase.from('documents').select('*').eq('user_id', req.user.id).order('created_at', { ascending: false });
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+app.post('/api/documents', requireAuth, async (req, res) => {
+  const { name, content, analysis, type } = req.body;
+  const { data, error } = await supabase.from('documents').insert({ user_id: req.user.id, name, content, analysis, type, created_at: new Date().toISOString() }).select().single();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+app.delete('/api/documents/:id', requireAuth, async (req, res) => {
+  const { error } = await supabase.from('documents').delete().eq('id', req.params.id).eq('user_id', req.user.id);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ success: true });
+});
+
+// ── Cases ─────────────────────────────────────────────────────────────────────
+app.get('/api/cases', requireAuth, async (req, res) => {
+  const { data, error } = await supabase.from('cases').select('*').eq('user_id', req.user.id).order('created_at', { ascending: false });
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+app.post('/api/cases', requireAuth, async (req, res) => {
+  const { name, description, status } = req.body;
+  const { data, error } = await supabase.from('cases').insert({ user_id: req.user.id, name, description, status: status || 'active', created_at: new Date().toISOString() }).select().single();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+app.patch('/api/cases/:id', requireAuth, async (req, res) => {
+  const { name, description, status, notes } = req.body;
+  const { data, error } = await supabase.from('cases').update({ name, description, status, notes }).eq('id', req.params.id).eq('user_id', req.user.id).select().single();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+app.delete('/api/cases/:id', requireAuth, async (req, res) => {
+  const { error } = await supabase.from('cases').delete().eq('id', req.params.id).eq('user_id', req.user.id);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ success: true });
+});
+
+// ── Profile ───────────────────────────────────────────────────────────────────
+app.get('/api/profile', requireAuth, async (req, res) => {
+  const { data, error } = await supabase.from('profiles').select('*').eq('id', req.user.id).single();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ ...data, email: req.user.email });
+});
+app.patch('/api/profile', requireAuth, async (req, res) => {
+  const { full_name, firm_name, practice_area } = req.body;
+  const { data, error } = await supabase.from('profiles').update({ full_name, firm_name, practice_area }).eq('id', req.user.id).select().single();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+
+// ── Case search ───────────────────────────────────────────────────────────────
+app.get('/api/cases/search', requireAuth, async (req, res) => {
+  const { q } = req.query;
+  if (!q) return res.json({ results: [] });
+  const results = [
+    { title: `Search "${q}" on AfricanLII`, court: 'Free Nigerian Case Law', url: `https://africanlii.org/search?q=${encodeURIComponent(q)}&jurisdiction=ng`, snippet: 'Thousands of Nigerian judgments', source: 'AfricanLII', isLink: true },
+    { title: `Search "${q}" on Primsol`, court: 'LawPavilion', url: 'https://primsol.lawpavilion.com', snippet: 'Comprehensive Nigerian cases 1960-present', source: 'Primsol', isLink: true },
+    { title: `Search "${q}" on NigeriaLII`, court: 'NigeriaLII', url: `https://nigerialii.org/search?q=${encodeURIComponent(q)}`, snippet: 'Free Nigerian legal materials', source: 'NigeriaLII', isLink: true }
+  ];
+  res.json({ results, count: 0 });
+});
+
+app.get('/api/health', (req, res) => res.json({ status: 'ok', version: '4.6.0', model: 'claude-sonnet-4-6' }));
+
+// ── Bank Transfer Notification ────────────────────────────────────────────────
+app.post('/api/payments/bank-transfer', requireAuth, async (req, res) => {
+  const { plan, amount, reference, email } = req.body;
+  if (!plan || !amount || !reference) return res.status(400).json({ error: 'Missing required fields' });
+
+  try {
+    // Save transfer proof to Supabase for admin review
+    await supabase.from('profiles').update({
+      pending_transfer: JSON.stringify({
+        plan, amount, reference, email,
+        submitted_at: new Date().toISOString(),
+        user_id: req.user.id,
+        user_email: req.user.email,
+      })
+    }).eq('id', req.user.id);
+
+    // Send email notification via Gmail SMTP
+    const gmailPass = process.env.GMAIL_APP_PASSWORD;
+    if (gmailPass) {
+      const https = require('https');
+      const emailBody = [
+        'From: "Verdict AI" <trigxyfn@gmail.com>',
+        'To: trigxyfn@gmail.com',
+        'Subject: 💰 New Payment — ' + plan + ' — NGN ' + Number(amount).toLocaleString(),
+        'Content-Type: text/plain; charset=utf-8',
+        '',
+        '🎉 NEW BANK TRANSFER SUBMITTED',
+        '',
+        'User Email: ' + req.user.email,
+        'Plan: ' + plan,
+        'Amount: NGN ' + Number(amount).toLocaleString(),
+        'Transfer Reference: ' + reference,
+        'Time: ' + new Date().toLocaleString('en-NG', {timeZone:'Africa/Lagos'}),
+        '',
+        'ACTION REQUIRED:',
+        '1. Check your Moniepoint app — confirm NGN ' + Number(amount).toLocaleString() + ' received from this user',
+        '2. Go to Supabase → profiles → find ' + req.user.email,
+        '3. Change their tier to: ' + (plan.includes('chambers') ? 'chambers' : 'solo'),
+        '4. They get access immediately',
+        '',
+        'Supabase link: https://supabase.com/dashboard/project/xlykbkfwgqhldxrwhwbp/editor',
+      ].join('\r\n');
+
+      // Use Gmail SMTP via nodemailer-style raw SMTP
+      const nodemailerAvailable = !!nodemailer;
+      if (nodemailerAvailable) {
+        const transporter = nodemailer.createTransport({
+          service: 'gmail',
+          auth: { user: 'trigxyfn@gmail.com', pass: gmailPass.trim().replace(/\s/g,'') }
+        });
+        await transporter.sendMail({
+          from: '"Verdict AI Payments" <trigxyfn@gmail.com>',
+          to: 'trigxyfn@gmail.com',
+          subject: `💰 New Payment — ${plan} — NGN ${Number(amount).toLocaleString()}`,
+          text: emailBody,
+        });
+        console.log('Payment notification email sent');
+      }
+    }
+
+    console.log(`BANK TRANSFER SUBMITTED:
+User: ${req.user.email}
+Plan: ${plan}
+Amount: NGN ${amount}
+Reference: ${reference}
+Time: ${new Date().toISOString()}`);
+
+    res.json({ success: true });
+  } catch (err) {
+    console.log('Bank transfer notification error:', err.message);
+    // Still return success — don't fail the user if email fails
+    res.json({ success: true });
+  }
+});
+app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
+app.listen(PORT, () => console.log(`Verdict AI v4.6 running on port ${PORT}`));
