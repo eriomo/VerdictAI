@@ -288,7 +288,9 @@ app.post('/api/ai', requireAuth, async (req, res) => {
     res.setHeader('X-Accel-Buffering', 'no');
 
     const toolId = (tool || '').toLowerCase();
-    const { aiRes, engine } = await routeAI(toolId, system, user, groqKey, orKey);
+
+    // ✅ FIXED: was `routeAI(...)` — now correctly calls `orchestrate(...)`
+    const { aiRes, engine } = await orchestrate(toolId, system, user, groqKey, orKey);
 
     if (aiRes.statusCode !== 200) {
       let body = '';
@@ -622,7 +624,6 @@ app.post('/api/payments/bank-transfer', requireAuth, async (req, res) => {
     // Send email notification via Gmail SMTP
     const gmailPass = process.env.GMAIL_APP_PASSWORD;
     if (gmailPass) {
-      const https = require('https');
       const emailBody = [
         'From: "Verdict AI" <trigxyfn@gmail.com>',
         'To: trigxyfn@gmail.com',
@@ -646,7 +647,6 @@ app.post('/api/payments/bank-transfer', requireAuth, async (req, res) => {
         'Supabase link: https://supabase.com/dashboard/project/xlykbkfwgqhldxrwhwbp/editor',
       ].join('\r\n');
 
-      // Use Gmail SMTP via nodemailer-style raw SMTP
       const nodemailerAvailable = !!nodemailer;
       if (nodemailerAvailable) {
         const transporter = nodemailer.createTransport({
@@ -677,5 +677,6 @@ Time: ${new Date().toISOString()}`);
     res.json({ success: true });
   }
 });
+
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 app.listen(PORT, () => console.log(`Verdict AI v4.6 running on port ${PORT}`));
