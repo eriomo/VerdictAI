@@ -335,10 +335,10 @@ async function api(path,opts={}){
 }
 
 // ── Stream ────────────────────────────────────────────────────────────────────
-async function stream(sys,user,cb,retries=0){
+async function stream(sys,user,cb,retries=0,tool=''){
   try{
     const {data:{session}}=await sb.auth.getSession();
-    const res=await fetch("/api/ai",{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${session?.access_token||""}`},body:JSON.stringify({system:sys,user})});
+    const res=await fetch("/api/ai",{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${session?.access_token||""}`},body:JSON.stringify({system:sys,user,tool})});
     if(res.status===403){const e=await res.json();throw new Error(e.error==="FREE_LIMIT_REACHED"?"FREE_LIMIT_REACHED":e.message||"Access denied");}
     if(res.status===429&&retries<3){cb("[Busy — retrying...]\n");await new Promise(r=>setTimeout(r,5000));return stream(sys,user,cb,retries+1);}
     if(!res.ok){const e=await res.json().catch(()=>({}));throw new Error(e.error||`Error ${res.status}`);}
@@ -1817,7 +1817,7 @@ function ReaderPage({onSave,t,go}){
   const [fileName,setFileName]=usePersist("reader_fn","");
   const [limitReached,setLimitReached]=useState(false);
   const {setLastAnalysis}=useSess();
-  const sys=VOICE+`
+  const sys=`
 
 DOCUMENT IDENTIFICATION: Document type, parties, governing law, date, and the single most important thing to know about this document in one sentence.
 
@@ -1835,10 +1835,10 @@ NEGOTIATION POINTS: The specific changes the client must push for, ranked by imp
 
 PLAIN ENGLISH SUMMARY: What this document does, what it commits the client to, and the three most important things they must understand.
 
-NEXT STEPS: Numbered specific actions before signing. Every step is concrete — exactly what to do, not just to consider something. Do not say "seek legal advice" — this IS the legal advice. The final step must state clearly: sign, negotiate, or reject — and why.`;
+NEXT STEPS: Numbered specific actions before signing. Every step is concrete — exactly what to do, not just to consider something. Do not say "seek legal advice" — this IS the legal advice. The final step must state clearly: sign, negotiate, or reject — and why.`+VOICE;
   const run=async()=>{
     if(!txt.trim())return;setLoading(true);setOut("");setLimitReached(false);
-    try{const res=await stream(sys,txt,s=>setOut(s));await onSave({name:(fileName||"Document")+" — "+new Date().toLocaleDateString(),content:txt.slice(0,400)+"...",analysis:res,type:"analyzed"});setLastAnalysis({title:fileName||"Document Analysis",text:res});}
+    try{const res=await stream(sys,txt,s=>setOut(s),0,'docanalysis');await onSave({name:(fileName||"Document")+" — "+new Date().toLocaleDateString(),content:txt.slice(0,400)+"...",analysis:res,type:"analyzed"});setLastAnalysis({title:fileName||"Document Analysis",text:res});}
     catch(e){if(e.message==="FREE_LIMIT_REACHED")setLimitReached(true);else setOut("Error: "+e.message);}
     setLoading(false);
   };
@@ -1872,7 +1872,7 @@ function QAPage({t,go}){
     const q2=question||q;if(!q2.trim())return;
     setLoading(true);setOut("");setLimitReached(false);
     const ctx=lastAnalysis?`\n\nContext from current session (${lastAnalysis.title}):\n${lastAnalysis.text.slice(0,600)}`:"";
-    const sys=VOICE+`\n\nAnswer this legal question at the level of a senior Nigerian lawyer advising a client paying for elite counsel. Begin immediately with the answer — no introduction.\n\nDIRECT ANSWER: State the answer immediately in the first paragraph.\n\nLEGAL FRAMEWORK: The statutory provisions and principles governing this issue. Full Act names and section numbers. Never invent statute names.\n\nIN PRACTICE: What actually happens in Nigerian practice. The gap between law on paper and law in action.\n\nKILLER INSIGHT: The one thing most lawyers miss. The nuance or trap that makes the difference.\n\nRISKS: The specific risks from this legal position.\n\nNEXT STEPS: Numbered specific actions the client or lawyer should take.`+ctx;
+    const sys=`\n\nAnswer this legal question at the level of a senior Nigerian lawyer advising a client paying for elite counsel. Begin immediately with the answer — no introduction.\n\nDIRECT ANSWER: State the answer immediately in the first paragraph.\n\nLEGAL FRAMEWORK: The statutory provisions and principles governing this issue. Full Act names and section numbers. Never invent statute names.\n\nIN PRACTICE: What actually happens in Nigerian practice. The gap between law on paper and law in action.\n\nKILLER INSIGHT: The one thing most lawyers miss. The nuance or trap that makes the difference.\n\nRISKS: The specific risks from this legal position.\n\nNEXT STEPS: Numbered specific actions the client or lawyer should take.`+VOICE+ctx;
     try{await stream(sys,q2,s=>setOut(s));}
     catch(e){if(e.message==="FREE_LIMIT_REACHED")setLimitReached(true);else setOut("Error: "+e.message);}
     setLoading(false);
@@ -1905,8 +1905,15 @@ function DraftPage({t,go}){
   const [limitReached,setLimitReached]=useState(false);
   const run=async()=>{
     if(!type||!details.trim())return;setLoading(true);setOut("");setLimitReached(false);
-    const sys=VOICE+"\n\nSenior legal drafter. Draft a complete, polished document ready for partner review. Use proper legal formatting — numbered clauses, defined terms, proper recitals. Use [SQUARE BRACKETS] for information to be supplied. End with DRAFTING NOTES explaining key choices made.";
-    try{await stream(sys,`Draft a ${type}:\n\n${details}`,s=>setOut(s));}
+    const sys=`You are a senior Nigerian commercial lawyer. TASK: Draft a complete, polished ${type} ready for immediate use. 
+
+DRAFTING REQUIREMENTS:
+Use proper Nigerian legal formatting — numbered clauses, defined terms in bold, proper recitals. Use [SQUARE BRACKETS] for information to be supplied by the parties. Every obligation must have a corresponding remedy for breach. Include governing law (Nigerian law), jurisdiction (Nigerian courts), dispute resolution, and execution block. End with DRAFTING NOTES: explain every key drafting choice made.
+
+DO NOT analyse. DO NOT give advice. DRAFT THE DOCUMENT IN FULL from clause 1 to the signature block. Begin immediately with the document heading — no preamble.
+
+`+VOICE;
+    try{await stream(sys,`DRAFT THIS DOCUMENT:\n\nType: ${type}\n\nInstructions and details:\n${details}`,s=>setOut(s),0,'draft');}
     catch(e){if(e.message==="FREE_LIMIT_REACHED")setLimitReached(true);else setOut("Error: "+e.message);}
     setLoading(false);
   };
@@ -1941,7 +1948,7 @@ function JurisdictionPage({t,go}){
   const [limitReached,setLimitReached]=useState(false);
   const run=async()=>{
     if(!txt.trim()||!from||!to)return;setLoading(true);setOut("");setLimitReached(false);
-    const sys=VOICE+`\n\nCross-jurisdictional specialist. Translate legal concepts from ${from} to ${to}.\n\nCONCEPT IDENTIFICATION: The key legal concepts in the text.\n\nANALYSIS UNDER ${from.toUpperCase()}: How each concept operates, the applicable rules, and the statutory framework.\n\nEQUIVALENT UNDER ${to.toUpperCase()}: The closest equivalent concept, its legal basis, and how it operates.\n\nKEY DIFFERENCES: How the treatment differs between the two systems and why the differences matter.\n\nRISK AREAS: Where assuming equivalence between the two systems could cause serious damage.`;
+    const sys=`\n\nCross-jurisdictional specialist. Translate legal concepts from ${from} to ${to}.\n\nCONCEPT IDENTIFICATION: The key legal concepts in the text.\n\nANALYSIS UNDER ${from.toUpperCase()}: How each concept operates, the applicable rules, and the statutory framework.\n\nEQUIVALENT UNDER ${to.toUpperCase()}: The closest equivalent concept, its legal basis, and how it operates.\n\nKEY DIFFERENCES: How the treatment differs between the two systems and why the differences matter.\n\nRISK AREAS: Where assuming equivalence between the two systems could cause serious damage.`+VOICE;
     try{await stream(sys,`Translate from ${from} to ${to}:\n\n${txt}`,s=>setOut(s));}
     catch(e){if(e.message==="FREE_LIMIT_REACHED")setLimitReached(true);else setOut("Error: "+e.message);}
     setLoading(false);
@@ -1975,7 +1982,7 @@ function NigerianCasesPage({t,go}){
   const [liveLoading,setLiveLoading]=useState(false);
   const [searched,setSearched]=useState(false);
   const [limitReached,setLimitReached]=useState(false);
-  const sys=VOICE+`\n\nNigerian legal research specialist. Begin immediately with the analysis — no introduction.\n\nRESEARCH SUMMARY: The state of Nigerian law on this issue — the principles, doctrines, and statutory frameworks that apply. State the law clearly and directly.\n\nAPPLICABLE STATUTES: Nigerian statutes and legislation by full name and section. Do not invent statute names. If a statute does not exist, do not cite it.\n\nLEGAL PRINCIPLES: The common law principles and doctrines that apply, by their correct names.\n\nCURRENT LEGAL POSITION: The current state of Nigerian law on this issue stated clearly.\n\nDECISIVE FACTORS: The factors that courts weigh in determining this issue. With realistic probability ranges.\n\nFINANCIAL EXPOSURE: State the realistic financial exposure using only the naira figures that appear in the user's input. Never substitute different amounts. If the input states NGN 180 million, write NGN 180 million. Do not invent or alter any financial figure.\n\nPrimsol SEARCH TERMS: Specific search terms to find the relevant cases on Primsol. Include at least six distinct search term combinations.`;
+  const sys=`\n\nNigerian legal research specialist. Begin immediately with the analysis — no introduction.\n\nRESEARCH SUMMARY: The state of Nigerian law on this issue — the principles, doctrines, and statutory frameworks that apply. State the law clearly and directly.\n\nAPPLICABLE STATUTES: Nigerian statutes and legislation by full name and section. Do not invent statute names. If a statute does not exist, do not cite it.\n\nLEGAL PRINCIPLES: The common law principles and doctrines that apply, by their correct names.\n\nCURRENT LEGAL POSITION: The current state of Nigerian law on this issue stated clearly.\n\nDECISIVE FACTORS: The factors that courts weigh in determining this issue. With realistic probability ranges.\n\nFINANCIAL EXPOSURE: State the realistic financial exposure using only the naira figures that appear in the user's input. Never substitute different amounts. If the input states NGN 180 million, write NGN 180 million. Do not invent or alter any financial figure.\n\nPrimsol SEARCH TERMS: Specific search terms to find the relevant cases on Primsol. Include at least six distinct search term combinations.`+VOICE;
   const runAI=async()=>{
     if(!query.trim())return;setLoading(true);setAiOut("");setLimitReached(false);
     try{await stream(sys,"Nigerian law research: "+query,v=>setAiOut(v));}
@@ -2557,7 +2564,7 @@ function CrossExamPage({t,go}){
   const run=async()=>{
     if(!stmt.trim())return;setLoading(true);setOut("");setLimitReached(false);
     const authSection=auth.trim()?"\n\nVERIFIED AUTHORITIES PROVIDED BY COUNSEL:\n"+auth:"";
-    const sys=VOICE+`
+    const sys=`
 
 This cross-examination preparation is for Nigerian court proceedings before a judge only. There are no juries in Nigerian civil proceedings.
 
@@ -2579,9 +2586,9 @@ OPPOSING OBJECTIONS: Specific objections from these questions. For each: their p
 
 COUNSEL COACHING NOTES: Body language, pacing, tone. When to pause and let silence work. When to move on without pressing. Specific advice for this witness type.
 
-`;
+`+VOICE;
     const msg="WITNESS ROLE: "+(role||"not specified")+"\n\nWITNESS STATEMENT:\n"+stmt+authSection;
-    try{await stream(sys,msg,v=>setOut(v));}catch(e){if(e.message==="FREE_LIMIT_REACHED")setLimitReached(true);else setOut("Error: "+e.message);}
+    try{await stream(sys,msg,v=>setOut(v),0,'crossexam');}catch(e){if(e.message==="FREE_LIMIT_REACHED")setLimitReached(true);else setOut("Error: "+e.message);}
     setLoading(false);
   };
   const doClear=()=>{setStmt("");setAuth("");setOut("");clearPersist("cx_stmt","cx_auth","cx_out");};
@@ -2613,7 +2620,7 @@ function MotionAmmoPage({t,go}){
   const run=async()=>{
     if(!facts.trim()||!motionType)return;setLoading(true);setOut("");setLimitReached(false);
     const authSection=auth.trim()?"\n\nVERIFIED AUTHORITIES PROVIDED BY COUNSEL:\n"+auth:"";
-    const sys=VOICE+`
+    const sys=`
 
 Draft a full Nigerian Written Address for this motion. Court-ready format only. Every section must be complete and in proper Nigerian court drafting language.
 
@@ -2633,9 +2640,9 @@ IF THE COURT IS HESITANT: The fallback submissions. What counsel says when the j
 
 RELIEFS SOUGHT: Exact reliefs matching this specific motion type. Number each with a complete operative verb. INJUNCTION: Relief 1 restraining order with operative verb restraining, Relief 2 Applicant undertaking as to damages to Respondent, Relief 3 costs. JURISDICTION, STAY, OR STRIKING-OUT: Relief 1 order staying or striking out the suit, Relief 2 referral to arbitration only if the contract provides for it, Relief 3 costs. Never include an undertaking as to damages in a non-injunction motion.
 
-CONCLUDING SUBMISSION: The formal close urging the court to grant the relief. The final sentence must be a hard, persuasive closing that a judge remembers.`;
+CONCLUDING SUBMISSION: The formal close urging the court to grant the relief. The final sentence must be a hard, persuasive closing that a judge remembers.`+VOICE;
     const msg="MOTION TYPE: "+motionType+"\n\nFACTS AND GROUNDS:\n"+facts+authSection;
-    try{await stream(sys,msg,v=>setOut(v));}catch(e){if(e.message==="FREE_LIMIT_REACHED")setLimitReached(true);else setOut("Error: "+e.message);}
+    try{await stream(sys,msg,v=>setOut(v),0,'motionammo');}catch(e){if(e.message==="FREE_LIMIT_REACHED")setLimitReached(true);else setOut("Error: "+e.message);}
     setLoading(false);
   };
   const doClear=()=>{setFacts("");setAuth("");setOut("");clearPersist("ma_facts","ma_auth","ma_out");};
@@ -2666,7 +2673,7 @@ function ClaimAnalyserPage({t,go}){
   const run=async()=>{
     if(!claim.trim())return;setLoading(true);setOut("");setLimitReached(false);
     const authSection=auth.trim()?"\n\nVERIFIED AUTHORITIES PROVIDED BY COUNSEL:\n"+auth:"";
-    const sys=VOICE+`
+    const sys=`
 
 You appear for the ${side}. Dismantle this claim completely. Court-ready output only. Nigerian court proceedings before a judge only — no jury.
 
@@ -2686,9 +2693,9 @@ LEGAL DEFENCES: For each cause of action: the formal defence in court-ready lang
 
 COUNTERCLAIM OPPORTUNITIES: Only identify a counterclaim with an actual factual basis in the documents. If no genuine counterclaim exists on the facts, say so rather than inventing one.
 
-DRAFT STATEMENT OF DEFENCE: A complete Draft Statement of Defence in proper Nigerian court format. Full court heading with suit number and parties spelled exactly as in the claim. Respond paragraph by paragraph. Traverse all material allegations. Plead all available defences.`;
+DRAFT STATEMENT OF DEFENCE: A complete Draft Statement of Defence in proper Nigerian court format. Full court heading with suit number and parties spelled exactly as in the claim. Respond paragraph by paragraph. Traverse all material allegations. Plead all available defences.`+VOICE;
     const msg="YOU APPEAR FOR: "+side+"\n\nSTATEMENT OF CLAIM:\n"+claim+authSection;
-    try{await stream(sys,msg,v=>setOut(v));}catch(e){if(e.message==="FREE_LIMIT_REACHED")setLimitReached(true);else setOut("Error: "+e.message);}
+    try{await stream(sys,msg,v=>setOut(v),0,'claimanalyser');}catch(e){if(e.message==="FREE_LIMIT_REACHED")setLimitReached(true);else setOut("Error: "+e.message);}
     setLoading(false);
   };
   const doClear=()=>{setClaim("");setAuth("");setOut("");clearPersist("ca_claim","ca_auth","ca_out");};
@@ -2721,7 +2728,7 @@ function ClientPrepPage({t,go}){
   const run=async()=>{
     if(!facts.trim())return;setLoading(true);setOut("");setLimitReached(false);
     const authSection=auth.trim()?"\n\nVERIFIED AUTHORITIES PROVIDED BY COUNSEL:\n"+auth:"";
-    const sys=VOICE+`
+    const sys=`
 
 These are Nigerian court proceedings before a judge. There is no jury. All references must be to the judge only.
 
@@ -2743,7 +2750,7 @@ IF FLUSTERED OR RATTLED: The exact sequence of what to say and what to do physic
 
 RED FLAGS TO AVOID: Specific behaviours and statements that will signal dishonesty or unreliability to the judge.
 
-CONFIDENCE BRIEF: Two or three things to remember above everything. The final point must name the single most powerful document or fact in their favour — be specific by name.`;
+CONFIDENCE BRIEF: Two or three things to remember above everything. The final point must name the single most powerful document or fact in their favour — be specific by name.`+VOICE;
     const msg="CLIENT ROLE: "+(role||"not specified")+"\nHEARING TYPE: "+(hearing||"not specified")+"\n\nCASE FACTS AND CLIENT SITUATION:\n"+facts+authSection;
     try{await stream(sys,msg,v=>setOut(v));}catch(e){if(e.message==="FREE_LIMIT_REACHED")setLimitReached(true);else setOut("Error: "+e.message);}
     setLoading(false);
@@ -2777,9 +2784,9 @@ function WitnessPage({t,go}){
   const [loading,setLoading]=useState(false);const [limitReached,setLimitReached]=useState(false);
   const run=async()=>{
     if(!witness.trim())return;setLoading(true);setOut("");setLimitReached(false);
-    const sys=VOICE+`\n\nExpert witness preparation consultant. These are Nigerian court proceedings before a judge — no jury.\n\nWITNESS VULNERABILITY ASSESSMENT: Rate this witness from 1 to 10 for credibility risk. State the single most exploitable weakness.\n\nCRITICAL WEAKNESSES: Every inconsistency, gap, or dangerous statement in the statement.\n\nCROSS-EXAMINATION QUESTIONS: The 15 most dangerous questions opposing counsel will put to this witness. Every question must be a LEADING question. For each: the tactical objective and how it damages the case.\n\nSUGGESTED ANSWERS: For each of the 15 questions, the ideal answer — truthful, concise, non-combative, and protective of the client's legal position. Never concede negligence or fault.\n\nWITNESS COACHING NOTES: Tone, body language, how to handle aggressive questioning.\n\nREHEARSAL PLAN: Step-by-step plan for witness preparation sessions before trial.`;
+    const sys=`\n\nExpert witness preparation consultant. These are Nigerian court proceedings before a judge — no jury.\n\nWITNESS VULNERABILITY ASSESSMENT: Rate this witness from 1 to 10 for credibility risk. State the single most exploitable weakness.\n\nCRITICAL WEAKNESSES: Every inconsistency, gap, or dangerous statement in the statement.\n\nCROSS-EXAMINATION QUESTIONS: The 15 most dangerous questions opposing counsel will put to this witness. Every question must be a LEADING question. For each: the tactical objective and how it damages the case.\n\nSUGGESTED ANSWERS: For each of the 15 questions, the ideal answer — truthful, concise, non-combative, and protective of the client's legal position. Never concede negligence or fault.\n\nWITNESS COACHING NOTES: Tone, body language, how to handle aggressive questioning.\n\nREHEARSAL PLAN: Step-by-step plan for witness preparation sessions before trial.`+VOICE;
     const msg="WITNESS STATEMENT:\n"+witness+"\n\nWITNESS ROLE: "+role+(opp?"\n\nOPPOSING CASE:\n"+opp:"");
-    try{await stream(sys,msg,v=>setOut(v));}catch(e){if(e.message==="FREE_LIMIT_REACHED")setLimitReached(true);else setOut("Error: "+e.message);}
+    try{await stream(sys,msg,v=>setOut(v),0,'witness');}catch(e){if(e.message==="FREE_LIMIT_REACHED")setLimitReached(true);else setOut("Error: "+e.message);}
     setLoading(false);
   };
   const doClear=()=>{setWitness("");setOpp("");setOut("");clearPersist("wit_s","wit_o","wit_out");};
@@ -2813,9 +2820,9 @@ function EvidencePage({t,go}){
   const EVTYPES=["Document (Contract/Agreement)","Electronic Mail","WhatsApp / Text Message Screenshot","Bank Statement","Deed / Certificate","Court Judgment / Order","Expert Report","Medical Report","Photograph / Video","Affidavit","Company Record (CAC)","Police Statement","Voicemail / Audio Recording","Social Media Post","Survey Report","Valuation Report","Business Records","Government Document / Gazette","Witness Oral Testimony","Hearsay Evidence"];
   const run=async()=>{
     if(!evid.trim()||!evType)return;setLoading(true);setOut("");setLimitReached(false);
-    const sys=VOICE+`\n\nNigerian evidence law specialist. Apply the Evidence Act 2011. These are Nigerian court proceedings before a judge only — no jury.\n\nEVIDENCE CLASSIFICATION: Classify under the Evidence Act 2011.\n\nADMISSIBILITY RULING: YES, CONDITIONAL, or NO. Cite the specific section of the Evidence Act 2011 by full name and number — for electronic evidence this is Section 84(1) and Section 84(2) of the Evidence Act 2011.\n\nADMISSIBILITY PROBABILITY: Rate the likelihood of successful tendering as a percentage with full explanation.\n\nLEGAL FOUNDATION REQUIREMENTS: Every step counsel must take before tendering.\n\nANTICIPATED OBJECTIONS: Every specific objection opposing counsel will raise for this type of evidence. For each: the section they will cite and the precise response.\n\nWEIGHT ASSESSMENT: How much weight a Nigerian judge will give this evidence if admitted.\n\nDIGITAL EVIDENCE COMPLIANCE: If electronic — full Section 84(2) Evidence Act 2011 certificate requirements, all four elements that must be certified.\n\nWITHOUT PREJUDICE RISK: If this is a communication — assess whether it may be characterised as a without-prejudice communication and therefore inadmissible.\n\nSTRATEGIC ADVICE: How to present for maximum impact. How to attack it if appearing for the opponent.`;
+    const sys=`\n\nNigerian evidence law specialist. Apply the Evidence Act 2011. These are Nigerian court proceedings before a judge only — no jury.\n\nEVIDENCE CLASSIFICATION: Classify under the Evidence Act 2011.\n\nADMISSIBILITY RULING: YES, CONDITIONAL, or NO. Cite the specific section of the Evidence Act 2011 by full name and number — for electronic evidence this is Section 84(1) and Section 84(2) of the Evidence Act 2011.\n\nADMISSIBILITY PROBABILITY: Rate the likelihood of successful tendering as a percentage with full explanation.\n\nLEGAL FOUNDATION REQUIREMENTS: Every step counsel must take before tendering.\n\nANTICIPATED OBJECTIONS: Every specific objection opposing counsel will raise for this type of evidence. For each: the section they will cite and the precise response.\n\nWEIGHT ASSESSMENT: How much weight a Nigerian judge will give this evidence if admitted.\n\nDIGITAL EVIDENCE COMPLIANCE: If electronic — full Section 84(2) Evidence Act 2011 certificate requirements, all four elements that must be certified.\n\nWITHOUT PREJUDICE RISK: If this is a communication — assess whether it may be characterised as a without-prejudice communication and therefore inadmissible.\n\nSTRATEGIC ADVICE: How to present for maximum impact. How to attack it if appearing for the opponent.`+VOICE;
     const msg="EVIDENCE TYPE: "+evType+"\n\nEVIDENCE:\n"+evid+(ctx?"\n\nCASE CONTEXT:\n"+ctx:"");
-    try{await stream(sys,msg,v=>setOut(v));}catch(e){if(e.message==="FREE_LIMIT_REACHED")setLimitReached(true);else setOut("Error: "+e.message);}
+    try{await stream(sys,msg,v=>setOut(v),0,'evidence');}catch(e){if(e.message==="FREE_LIMIT_REACHED")setLimitReached(true);else setOut("Error: "+e.message);}
     setLoading(false);
   };
   const doClear=()=>{setEvid("");setEvType("");setCtx("");setOut("");clearPersist("ev_t","ev_ty","ev_c","ev_out");};
@@ -2848,9 +2855,9 @@ function SettlementPage({t,go}){
   const [loading,setLoading]=useState(false);const [limitReached,setLimitReached]=useState(false);
   const run=async()=>{
     if(!facts.trim())return;setLoading(true);setOut("");setLimitReached(false);
-    const sys=VOICE+`\n\nSenior settlement counsel.\n\nCASE SUMMARY: Brief summary of the dispute and what is at stake.\n\nLIKELY JUDICIAL OUTCOME: What a Nigerian court will most likely decide and why. Include the probability as a percentage.\n\nSETTLEMENT RANGE ANALYSIS: State the Claimant BATNA in naira. State the Defendant BATNA in naira. State the Zone of Possible Agreement in naira. State the most likely settlement point in naira.\n\nCOST-BENEFIT ANALYSIS: For each party: estimated litigation costs to trial in naira, time to judgment in months, enforcement risks, and the net value of litigating versus settling.\n\nLEVERAGE ASSESSMENT: Who has more negotiating leverage and precisely why.\n\nNEGOTIATION STRATEGY: Specific tactical moves, sequencing, what to concede first, red lines to hold.\n\nMEDIATION READINESS: Whether this matter is suitable for formal mediation. Which ADR body to approach.`;
+    const sys=`\n\nSenior settlement counsel.\n\nCASE SUMMARY: Brief summary of the dispute and what is at stake.\n\nLIKELY JUDICIAL OUTCOME: What a Nigerian court will most likely decide and why. Include the probability as a percentage.\n\nSETTLEMENT RANGE ANALYSIS: State the Claimant BATNA in naira. State the Defendant BATNA in naira. State the Zone of Possible Agreement in naira. State the most likely settlement point in naira.\n\nCOST-BENEFIT ANALYSIS: For each party: estimated litigation costs to trial in naira, time to judgment in months, enforcement risks, and the net value of litigating versus settling.\n\nLEVERAGE ASSESSMENT: Who has more negotiating leverage and precisely why.\n\nNEGOTIATION STRATEGY: Specific tactical moves, sequencing, what to concede first, red lines to hold.\n\nMEDIATION READINESS: Whether this matter is suitable for formal mediation. Which ADR body to approach.`+VOICE;
     const msg="CASE FACTS:\n"+facts+(claimant?"\n\nCLAIMANT POSITION:\n"+claimant:"")+(defendant?"\n\nDEFENDANT POSITION:\n"+defendant:"");
-    try{await stream(sys,msg,v=>setOut(v));}catch(e){if(e.message==="FREE_LIMIT_REACHED")setLimitReached(true);else setOut("Error: "+e.message);}
+    try{await stream(sys,msg,v=>setOut(v),0,'settlement');}catch(e){if(e.message==="FREE_LIMIT_REACHED")setLimitReached(true);else setOut("Error: "+e.message);}
     setLoading(false);
   };
   const doClear=()=>{setFacts("");setClaimant("");setDefendant("");setOut("");clearPersist("set_f","set_c","set_d","set_out");};
@@ -2883,9 +2890,9 @@ function NegotiationPage({t,go}){
   const [loading,setLoading]=useState(false);const [limitReached,setLimitReached]=useState(false);
   const run=async()=>{
     if(!v1.trim()||!v2.trim())return;setLoading(true);setOut("");setLimitReached(false);
-    const sys=VOICE+`\n\nSenior commercial lawyer reviewing redlined contract changes.\n\nCHANGES IDENTIFIED: For each change: the original wording, the new wording, and what changed. Write in full prose paragraphs.\n\nCLASSIFICATION: For each change rate it ACCEPTABLE, PUSH BACK, or RED LINE with a full explanation of why.\n\nMOST DANGEROUS CHANGES: The three changes carrying the most legal risk with full analysis.\n\nCHANGES THEY CONCEALED: Subtle changes that appear minor but actually shift risk significantly. Quote the exact language.\n\nNEGOTIATION RESPONSE LETTER: A complete formal response letter accepting acceptable changes, proposing alternative wording for push-back items with the exact alternative text, and firmly rejecting red-line items with the legal reason for rejection.`;
+    const sys=`\n\nSenior commercial lawyer reviewing redlined contract changes.\n\nCHANGES IDENTIFIED: For each change: the original wording, the new wording, and what changed. Write in full prose paragraphs.\n\nCLASSIFICATION: For each change rate it ACCEPTABLE, PUSH BACK, or RED LINE with a full explanation of why.\n\nMOST DANGEROUS CHANGES: The three changes carrying the most legal risk with full analysis.\n\nCHANGES THEY CONCEALED: Subtle changes that appear minor but actually shift risk significantly. Quote the exact language.\n\nNEGOTIATION RESPONSE LETTER: A complete formal response letter accepting acceptable changes, proposing alternative wording for push-back items with the exact alternative text, and firmly rejecting red-line items with the legal reason for rejection.`+VOICE;
     const msg="ORIGINAL VERSION:\n\n"+v1+"\n\n---\n\nREDLINED VERSION:\n\n"+v2;
-    try{await stream(sys,msg,v=>setOut(v));}catch(e){if(e.message==="FREE_LIMIT_REACHED")setLimitReached(true);else setOut("Error: "+e.message);}
+    try{await stream(sys,msg,v=>setOut(v),0,'negotiation');}catch(e){if(e.message==="FREE_LIMIT_REACHED")setLimitReached(true);else setOut("Error: "+e.message);}
     setLoading(false);
   };
   const doClear=()=>{setV1("");setV2("");setOut("");clearPersist("neg_v1","neg_v2","neg_out");};
@@ -2907,7 +2914,7 @@ function WhatsAppPage({t,go}){
   const [loading,setLoading]=useState(false);const [limitReached,setLimitReached]=useState(false);
   const run=async()=>{
     if(!raw.trim())return;setLoading(true);setOut("");setLimitReached(false);
-    const sys=VOICE+`
+    const sys=`
 
 Format these WhatsApp messages as a complete court exhibit for Nigerian court proceedings.
 
@@ -2921,7 +2928,7 @@ WITHOUT PREJUDICE RISK: Assess whether any of these messages may be characterise
 
 ADMISSIBILITY STEPS: The exact steps counsel must take before tendering.
 
-HIGHLIGHT SUMMARY: The three most legally significant messages, why each is significant, and its evidential value.`;
+HIGHLIGHT SUMMARY: The three most legally significant messages, why each is significant, and its evidential value.`+VOICE;
     const msg="RAW WHATSAPP EXPORT:\n\n"+raw+(wctx?"\n\nCASE CONTEXT:\n"+wctx:"");
     try{await stream(sys,msg,v=>setOut(v));}catch(e){if(e.message==="FREE_LIMIT_REACHED")setLimitReached(true);else setOut("Error: "+e.message);}
     setLoading(false);
