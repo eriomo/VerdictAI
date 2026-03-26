@@ -9,11 +9,75 @@ const { createClient } = require('@supabase/supabase-js');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Webhook needs raw body — must be BEFORE express.json()
+// ── Security headers (first middleware) ──────────────────────────────────────
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  next();
+});
+
+// ── Rate limiting (before everything — INCLUDING static files for /api) ───────
+const ipRequests  = new Map(); // ip → { count, resetAt }
+const userAiCalls = new Map(); // userId → { count, resetAt }
+
+function getIP(req) {
+  const fwd = req.headers['x-forwarded-for'];
+  return (fwd ? fwd.split(',')[0] : req.socket?.remoteAddress || 'unknown').trim();
+}
+
+function rateLimit(store, key, limit, windowMs) {
+  const now = Date.now();
+  let r = store.get(key);
+  if (!r || now > r.resetAt) { r = { count: 0, resetAt: now + windowMs }; store.set(key, r); }
+  r.count++;
+  return { allowed: r.count <= limit, count: r.count, limit };
+}
+
+// 60 req/min per IP on all /api/* routes
+app.use('/api', (req, res, next) => {
+  const ip = getIP(req);
+  const { allowed, count, limit } = rateLimit(ipRequests, `ip:${ip}`, 60, 60_000);
+  if (!allowed) {
+    console.log(`[RATE] IP ${ip} exceeded ${limit} req/min (count: ${count})`);
+    return res.status(429).json({ error: 'Too many requests. Please wait and try again.' });
+  }
+  next();
+});
+
+// Clean stale entries every 5 min
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of ipRequests)  if (now > v.resetAt) ipRequests.delete(k);
+  for (const [k, v] of userAiCalls) if (now > v.resetAt) userAiCalls.delete(k);
+}, 5 * 60_000);
+
+// ── Body parsing (webhook needs raw body — must be before express.json) ───────
 app.use('/api/payments/webhook', express.raw({ type: 'application/json' }));
 app.use(cors());
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '2mb' }));
+
+// ── Static files ──────────────────────────────────────────────────────────────
 app.use(express.static(path.join(__dirname, 'public')));
+
+// ── Profile cache (60s TTL — prevents hammering Supabase on every request) ───
+const profileCache = new Map(); // userId → { profile, expiresAt }
+const PROFILE_CACHE_TTL = 60_000;
+
+async function getCachedProfile(userId) {
+  const cached = profileCache.get(userId);
+  if (cached && Date.now() < cached.expiresAt) return cached.profile;
+  const { data } = await supabase
+    .from('profiles').select('tier, usage_count, usage_reset_date, tier_expiry')
+    .eq('id', userId).single();
+  if (data) profileCache.set(userId, { profile: data, expiresAt: Date.now() + PROFILE_CACHE_TTL });
+  return data;
+}
+
+function invalidateProfileCache(userId) {
+  profileCache.delete(userId);
+}
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY;
@@ -247,8 +311,8 @@ app.post('/api/ai', requireAuth, async (req, res) => {
   let { system, user, tool } = req.body;
   if (!system || !user) return res.status(400).json({ error: 'Missing system or user content' });
 
-  const MAX_USER_CHARS = 12000;
-  const MAX_SYS_CHARS  = 6000;
+  const MAX_USER_CHARS = 14000;
+  const MAX_SYS_CHARS  = 14000;
   if (user.length   > MAX_USER_CHARS) user   = user.slice(0, MAX_USER_CHARS) + '\n\n[Document truncated to fit AI limits.]';
   if (system.length > MAX_SYS_CHARS)  system = system.slice(0, MAX_SYS_CHARS);
 
@@ -256,15 +320,18 @@ app.post('/api/ai', requireAuth, async (req, res) => {
   const orKey   = (process.env.OPENROUTER_API_KEY || '').trim().replace(/[\r\n\t]/g,'');
   if (!groqKey) return res.status(500).json({ error: 'AI API key not configured' });
 
+  // Per-user AI rate limit: 30 calls/hour
+  const { allowed: aiAllowed } = rateLimit(userAiCalls, `user:${req.user.id}`, 30, 3_600_000);
+  if (!aiAllowed) return res.status(429).json({ error: 'AI rate limit reached. Max 30 requests per hour.' });
+
+  // Usage tracking — cached profile to avoid 4 Supabase reads per request
   try {
-    const { data: profile } = await supabase
-      .from('profiles').select('tier, usage_count, usage_reset_date, tier_expiry')
-      .eq('id', req.user.id).single();
+    const profile = await getCachedProfile(req.user.id);
     if (profile) {
       if (profile.tier !== 'free' && profile.tier_expiry) {
-        const expiry = new Date(profile.tier_expiry);
-        if (expiry < new Date()) {
+        if (new Date(profile.tier_expiry) < new Date()) {
           await supabase.from('profiles').update({ tier: 'free' }).eq('id', req.user.id);
+          invalidateProfileCache(req.user.id);
           profile.tier = 'free'; profile.usage_count = 0;
         }
       }
@@ -272,14 +339,16 @@ app.post('/api/ai', requireAuth, async (req, res) => {
       const now = new Date();
       if (now.getMonth() !== resetDate.getMonth() || now.getFullYear() !== resetDate.getFullYear()) {
         await supabase.from('profiles').update({ usage_count: 0, usage_reset_date: now.toISOString() }).eq('id', req.user.id);
+        invalidateProfileCache(req.user.id);
         profile.usage_count = 0;
       }
       if (profile.tier === 'free' && profile.usage_count >= 3) {
         return res.status(403).json({ error: 'FREE_LIMIT_REACHED', message: 'You have used all 3 free analyses this month. Upgrade to continue.' });
       }
       await supabase.from('profiles').update({ usage_count: (profile.usage_count || 0) + 1 }).eq('id', req.user.id);
+      invalidateProfileCache(req.user.id);
     }
-  } catch (e) { console.log('Profile check error:', e.message); }
+  } catch (e) { aiLog('Profile check error: ' + e.message); }
 
   try {
     res.setHeader('Content-Type', 'text/event-stream');
@@ -288,9 +357,7 @@ app.post('/api/ai', requireAuth, async (req, res) => {
     res.setHeader('X-Accel-Buffering', 'no');
 
     const toolId = (tool || '').toLowerCase();
-
-    // ✅ FIXED: was `routeAI(...)` — now correctly calls `orchestrate(...)`
-    const { aiRes, engine } = await orchestrate(toolId, system, user, groqKey, orKey);
+    const { aiRes, engine } = await routeAI(toolId, system, user, groqKey, orKey);
 
     if (aiRes.statusCode !== 200) {
       let body = '';
@@ -549,6 +616,9 @@ app.post('/api/documents', requireAuth, async (req, res) => {
   res.json(data);
 });
 app.delete('/api/documents/:id', requireAuth, async (req, res) => {
+  // First check it exists and belongs to this user
+  const { data: existing } = await supabase.from('documents').select('id').eq('id', req.params.id).eq('user_id', req.user.id).single();
+  if (!existing) return res.status(404).json({ error: 'Document not found' });
   const { error } = await supabase.from('documents').delete().eq('id', req.params.id).eq('user_id', req.user.id);
   if (error) return res.status(500).json({ error: error.message });
   res.json({ success: true });
@@ -580,14 +650,23 @@ app.delete('/api/cases/:id', requireAuth, async (req, res) => {
 
 // ── Profile ───────────────────────────────────────────────────────────────────
 app.get('/api/profile', requireAuth, async (req, res) => {
-  const { data, error } = await supabase.from('profiles').select('*').eq('id', req.user.id).single();
-  if (error) return res.status(500).json({ error: error.message });
-  res.json({ ...data, email: req.user.email });
+  try {
+    // Use full select for profile page (not the limited cache query)
+    const cached = profileCache.get(req.user.id + '_full');
+    if (cached && Date.now() < cached.expiresAt) return res.json({ ...cached.profile, email: req.user.email });
+    const { data, error } = await supabase.from('profiles').select('*').eq('id', req.user.id).single();
+    if (error) return res.status(500).json({ error: error.message });
+    profileCache.set(req.user.id + '_full', { profile: data, expiresAt: Date.now() + PROFILE_CACHE_TTL });
+    res.json({ ...data, email: req.user.email });
+  } catch(e) { res.status(500).json({ error: e.message }); }
 });
 app.patch('/api/profile', requireAuth, async (req, res) => {
   const { full_name, firm_name, practice_area } = req.body;
   const { data, error } = await supabase.from('profiles').update({ full_name, firm_name, practice_area }).eq('id', req.user.id).select().single();
   if (error) return res.status(500).json({ error: error.message });
+  // Invalidate all cached versions of this profile
+  invalidateProfileCache(req.user.id);
+  profileCache.delete(req.user.id + '_full');
   res.json(data);
 });
 
@@ -624,6 +703,7 @@ app.post('/api/payments/bank-transfer', requireAuth, async (req, res) => {
     // Send email notification via Gmail SMTP
     const gmailPass = process.env.GMAIL_APP_PASSWORD;
     if (gmailPass) {
+      const https = require('https');
       const emailBody = [
         'From: "Verdict AI" <trigxyfn@gmail.com>',
         'To: trigxyfn@gmail.com',
@@ -647,6 +727,7 @@ app.post('/api/payments/bank-transfer', requireAuth, async (req, res) => {
         'Supabase link: https://supabase.com/dashboard/project/xlykbkfwgqhldxrwhwbp/editor',
       ].join('\r\n');
 
+      // Use Gmail SMTP via nodemailer-style raw SMTP
       const nodemailerAvailable = !!nodemailer;
       if (nodemailerAvailable) {
         const transporter = nodemailer.createTransport({
@@ -677,6 +758,11 @@ Time: ${new Date().toISOString()}`);
     res.json({ success: true });
   }
 });
+// ── API 404 — must be BEFORE the catch-all ────────────────────────────────────
+app.use('/api', (req, res) => {
+  res.status(404).json({ error: `API route not found: ${req.method} ${req.path}` });
+});
 
+// ── SPA catch-all — only for non-API routes ──────────────────────────────────
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 app.listen(PORT, () => console.log(`Verdict AI v4.6 running on port ${PORT}`));
