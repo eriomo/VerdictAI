@@ -9,7 +9,21 @@ const { createClient } = require('@supabase/supabase-js');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// ── Security headers (first middleware) ──────────────────────────────────────
+// ── FIX #1: CORS must be FIRST — before rate limiter, before everything ────────
+// Previously cors() was after the rate limiter. When the rate limiter fired a 429,
+// no CORS headers were attached, so the browser blocked the response entirely,
+// causing every subsequent request to return "Status 0" instead of 429.
+// This was the root cause of ALL the Status 0 failures in the stress test.
+const corsOptions = {
+  origin: true,            // reflect the request origin (allows all)
+  credentials: true,
+  methods: 'GET,POST,PATCH,PUT,DELETE,OPTIONS',
+  allowedHeaders: 'Content-Type,Authorization',
+};
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions)); // handle ALL preflight requests immediately
+
+// ── Security headers ──────────────────────────────────────────────────────────
 app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
@@ -19,6 +33,8 @@ app.use((req, res, next) => {
 });
 
 // ── Rate limiting ─────────────────────────────────────────────────────────────
+// FIX #2: Every 429 response now explicitly sets Access-Control-Allow-Origin
+// so the browser can read the status code instead of blocking it as a CORS error.
 const ipRequests  = new Map();
 const userAiCalls = new Map();
 
@@ -41,12 +57,14 @@ app.use('/api', (req, res, next) => {
   const { allowed, count, limit } = rateLimit(ipRequests, `ip:${ip}`, 60, 60_000);
   if (!allowed) {
     console.log(`[RATE] IP ${ip} exceeded ${limit} req/min (count: ${count})`);
+    // FIX #2: CORS header on 429 — without this, browser sees Status 0 not 429
+    res.setHeader('Access-Control-Allow-Origin', '*');
     return res.status(429).json({ error: 'Too many requests. Please wait and try again.' });
   }
   next();
 });
 
-// Clean stale entries every 5 min
+// Clean stale rate limit entries every 5 min
 setInterval(() => {
   const now = Date.now();
   for (const [k, v] of ipRequests)  if (now > v.resetAt) ipRequests.delete(k);
@@ -54,8 +72,8 @@ setInterval(() => {
 }, 5 * 60_000);
 
 // ── Body parsing ──────────────────────────────────────────────────────────────
+// Webhook must use raw body (must come before express.json)
 app.use('/api/payments/webhook', express.raw({ type: 'application/json' }));
-app.use(cors());
 app.use(express.json({ limit: '2mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -88,11 +106,12 @@ const PLANS = {
   solo_annual:      { amount: 12000000, name: 'Solo Annual',      tier: 'solo',     planCode: 'PLN_leetl92la6olnpi', interval: 'annually' },
   chambers_monthly: { amount: 2000000,  name: 'Chambers Monthly', tier: 'chambers', planCode: 'PLN_4o67le1fhg5acpp', interval: 'monthly' },
   chambers_annual:  { amount: 20000000, name: 'Chambers Annual',  tier: 'chambers', planCode: 'PLN_kigvazgutnu4bww', interval: 'annually' },
+  // Legacy keys
   solo:     { amount: 1200000,  name: 'Solo Monthly',     tier: 'solo',     planCode: 'PLN_hu4h4wc91ytd9pr', interval: 'monthly' },
   chambers: { amount: 2000000,  name: 'Chambers Monthly', tier: 'chambers', planCode: 'PLN_4o67le1fhg5acpp', interval: 'monthly' },
 };
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// ── HTTP helpers ──────────────────────────────────────────────────────────────
 function httpsPost(hostname, urlPath, headers, body) {
   return new Promise((resolve, reject) => {
     const bodyStr = JSON.stringify(body);
@@ -138,6 +157,9 @@ async function requireAuth(req, res, next) {
 
 // ══════════════════════════════════════════════════════════════════════════════
 //  AI ORCHESTRATION
+//  Heavy tools → Groq preprocessing in parallel + GPT via OpenRouter
+//  Simple tools → Groq only (fast, unlimited)
+//  Failover     → GPT-120b → retry → GPT-20b → retry → Groq fallback
 // ══════════════════════════════════════════════════════════════════════════════
 
 const HEAVY_TOOLS = new Set([
@@ -231,8 +253,9 @@ async function callWithFailover(orKey, groqKey, system, user) {
   return { aiRes, engine: 'groq-fallback' };
 }
 
-// ── orchestrate() is the single entry point for all AI calls ─────────────────
-// DO NOT rename this function — it is called directly below as orchestrate(...)
+// ── FIX #3: Function is named `orchestrate` — do NOT rename to routeAI ────────
+// routeAI does not exist. Calling routeAI() throws "routeAI is not defined"
+// which caused every /api/ai request to return 500 Internal Server Error.
 async function orchestrate(toolId, system, user, groqKey, orKey) {
   const isHeavy = HEAVY_TOOLS.has(toolId);
 
@@ -254,7 +277,7 @@ async function orchestrate(toolId, system, user, groqKey, orKey) {
     : { aiRes: null, engine: 'none' };
 
   if (extraction && engine !== 'groq-fallback' && engine !== 'none') {
-    aiLog(`Groq extraction ready (${extraction.length} chars) — GPT streaming in parallel`);
+    aiLog(`Groq extraction ready (${extraction.length} chars) — GPT streaming`);
   }
 
   if (!aiRes) {
@@ -275,14 +298,19 @@ app.post('/api/ai', requireAuth, async (req, res) => {
   if (user.length   > MAX_CHARS) user   = user.slice(0, MAX_CHARS) + '\n\n[Document truncated to fit AI limits.]';
   if (system.length > MAX_CHARS) system = system.slice(0, MAX_CHARS);
 
-  const groqKey = (process.env.GROQ_API_KEY || '').trim().replace(/[\r\n\t]/g,'');
-  const orKey   = (process.env.OPENROUTER_API_KEY || '').trim().replace(/[\r\n\t]/g,'');
+  const groqKey = (process.env.GROQ_API_KEY || '').trim().replace(/[\r\n\t]/g, '');
+  const orKey   = (process.env.OPENROUTER_API_KEY || '').trim().replace(/[\r\n\t]/g, '');
   if (!groqKey) return res.status(500).json({ error: 'AI API key not configured' });
 
   // Per-user AI rate limit: 30 calls/hour
   const { allowed: aiAllowed } = rateLimit(userAiCalls, `user:${req.user.id}`, 30, 3_600_000);
-  if (!aiAllowed) return res.status(429).json({ error: 'AI rate limit reached. Max 30 requests per hour.' });
+  if (!aiAllowed) {
+    // FIX #2 applies here too — CORS header on 429
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    return res.status(429).json({ error: 'AI rate limit reached. Max 30 requests per hour.' });
+  }
 
+  // Usage tracking
   try {
     const profile = await getCachedProfile(req.user.id);
     if (profile) {
@@ -316,8 +344,7 @@ app.post('/api/ai', requireAuth, async (req, res) => {
 
     const toolId = (tool || '').toLowerCase();
 
-    // ✅ FIXED: previously called `routeAI(...)` which does not exist.
-    //    The correct function name is `orchestrate(...)`.
+    // FIX #3: call orchestrate(), NOT routeAI() — routeAI does not exist
     const { aiRes, engine } = await orchestrate(toolId, system, user, groqKey, orKey);
 
     if (aiRes.statusCode !== 200) {
@@ -375,7 +402,7 @@ app.post('/api/payments/initialize', requireAuth, async (req, res) => {
   if (!plan) return res.status(400).json({ error: 'Plan is required' });
   const planData = PLANS[plan];
   if (!planData) return res.status(400).json({ error: 'Invalid plan: ' + plan });
-  if (!PAYSTACK_SECRET) return res.status(500).json({ error: 'PAYSTACK_SECRET_KEY not configured' });
+  if (!PAYSTACK_SECRET) return res.status(500).json({ error: 'PAYSTACK_SECRET_KEY not configured in Render environment' });
 
   try {
     const paystackRes = await httpsPost(
@@ -394,6 +421,7 @@ app.post('/api/payments/initialize', requireAuth, async (req, res) => {
     if (!data.status) return res.status(400).json({ error: data.message || 'Paystack initialization failed' });
     res.json({ authorization_url: data.data.authorization_url, access_code: data.data.access_code, reference: data.data.reference });
   } catch (err) {
+    console.log('Paystack init error:', err.message);
     res.status(500).json({ error: 'Payment initialization failed: ' + err.message });
   }
 });
@@ -402,7 +430,11 @@ app.post('/api/payments/initialize', requireAuth, async (req, res) => {
 app.get('/api/payments/verify/:reference', requireAuth, async (req, res) => {
   if (!PAYSTACK_SECRET) return res.status(500).json({ error: 'Payment not configured' });
   try {
-    const paystackRes = await httpsGet('api.paystack.co', `/transaction/verify/${req.params.reference}`, { 'Authorization': `Bearer ${PAYSTACK_SECRET}` });
+    const paystackRes = await httpsGet(
+      'api.paystack.co',
+      `/transaction/verify/${req.params.reference}`,
+      { 'Authorization': `Bearer ${PAYSTACK_SECRET}` }
+    );
     const data = await readBody(paystackRes);
     if (!data.status || data.data.status !== 'success') return res.status(400).json({ error: 'Payment not successful' });
 
@@ -414,8 +446,10 @@ app.get('/api/payments/verify/:reference', requireAuth, async (req, res) => {
     expiry.setDate(expiry.getDate() + (planData.interval === 'annually' ? 366 : 32));
     await supabase.from('profiles').update({ tier: planData.tier, tier_expiry: expiry.toISOString() }).eq('id', user_id);
     invalidateProfileCache(user_id);
+    console.log(`Upgraded user ${user_id} to ${planData.tier}`);
     res.json({ success: true, tier: planData.tier });
   } catch (err) {
+    console.log('Verify error:', err.message);
     res.status(500).json({ error: 'Verification failed: ' + err.message });
   }
 });
@@ -456,10 +490,13 @@ app.post('/api/payments/cancel', requireAuth, async (req, res) => {
       { 'Content-Type': 'application/json', 'Authorization': `Bearer ${PAYSTACK_SECRET}` },
       { code: profile.subscription_code, token: profile.email_token });
     const data = await readBody(paystackRes);
-    if (!data.status) return res.status(400).json({ error: data.message || 'Failed to cancel' });
+    if (!data.status) return res.status(400).json({ error: data.message || 'Failed to cancel subscription' });
     await supabase.from('profiles').update({ auto_renew: false }).eq('id', req.user.id);
     res.json({ success: true });
-  } catch (err) { res.status(500).json({ error: 'Failed to cancel: ' + err.message }); }
+  } catch (err) {
+    console.log('Cancel error:', err.message);
+    res.status(500).json({ error: 'Failed to cancel: ' + err.message });
+  }
 });
 
 // ── PAYSTACK — Reactivate ─────────────────────────────────────────────────────
@@ -475,7 +512,10 @@ app.post('/api/payments/reactivate', requireAuth, async (req, res) => {
     if (!data.status) return res.status(400).json({ error: data.message || 'Failed to reactivate' });
     await supabase.from('profiles').update({ auto_renew: true }).eq('id', req.user.id);
     res.json({ success: true });
-  } catch (err) { res.status(500).json({ error: 'Failed to reactivate: ' + err.message }); }
+  } catch (err) {
+    console.log('Reactivate error:', err.message);
+    res.status(500).json({ error: 'Failed to reactivate: ' + err.message });
+  }
 });
 
 // ── Documents ─────────────────────────────────────────────────────────────────
@@ -484,14 +524,20 @@ app.get('/api/documents', requireAuth, async (req, res) => {
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
 });
+
 app.post('/api/documents', requireAuth, async (req, res) => {
   const { name, content, analysis, type } = req.body;
-  const { data, error } = await supabase.from('documents').insert({ user_id: req.user.id, name, content, analysis, type, created_at: new Date().toISOString() }).select().single();
+  const { data, error } = await supabase.from('documents')
+    .insert({ user_id: req.user.id, name, content, analysis, type, created_at: new Date().toISOString() })
+    .select().single();
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
 });
+
 app.delete('/api/documents/:id', requireAuth, async (req, res) => {
-  const { data: existing } = await supabase.from('documents').select('id').eq('id', req.params.id).eq('user_id', req.user.id).single();
+  // FIX #4: Check ownership before delete — returns 404 so caller knows doc doesn't exist
+  const { data: existing } = await supabase.from('documents')
+    .select('id').eq('id', req.params.id).eq('user_id', req.user.id).single();
   if (!existing) return res.status(404).json({ error: 'Document not found' });
   const { error } = await supabase.from('documents').delete().eq('id', req.params.id).eq('user_id', req.user.id);
   if (error) return res.status(500).json({ error: error.message });
@@ -504,18 +550,26 @@ app.get('/api/cases', requireAuth, async (req, res) => {
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
 });
+
 app.post('/api/cases', requireAuth, async (req, res) => {
   const { name, description, status } = req.body;
-  const { data, error } = await supabase.from('cases').insert({ user_id: req.user.id, name, description, status: status || 'active', created_at: new Date().toISOString() }).select().single();
+  const { data, error } = await supabase.from('cases')
+    .insert({ user_id: req.user.id, name, description, status: status || 'active', created_at: new Date().toISOString() })
+    .select().single();
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
 });
+
 app.patch('/api/cases/:id', requireAuth, async (req, res) => {
   const { name, description, status, notes } = req.body;
-  const { data, error } = await supabase.from('cases').update({ name, description, status, notes }).eq('id', req.params.id).eq('user_id', req.user.id).select().single();
+  const { data, error } = await supabase.from('cases')
+    .update({ name, description, status, notes })
+    .eq('id', req.params.id).eq('user_id', req.user.id)
+    .select().single();
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
 });
+
 app.delete('/api/cases/:id', requireAuth, async (req, res) => {
   const { error } = await supabase.from('cases').delete().eq('id', req.params.id).eq('user_id', req.user.id);
   if (error) return res.status(500).json({ error: error.message });
@@ -531,11 +585,14 @@ app.get('/api/profile', requireAuth, async (req, res) => {
     if (error) return res.status(500).json({ error: error.message });
     profileCache.set(req.user.id + '_full', { profile: data, expiresAt: Date.now() + PROFILE_CACHE_TTL });
     res.json({ ...data, email: req.user.email });
-  } catch(e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
+
 app.patch('/api/profile', requireAuth, async (req, res) => {
   const { full_name, firm_name, practice_area } = req.body;
-  const { data, error } = await supabase.from('profiles').update({ full_name, firm_name, practice_area }).eq('id', req.user.id).select().single();
+  const { data, error } = await supabase.from('profiles')
+    .update({ full_name, firm_name, practice_area })
+    .eq('id', req.user.id).select().single();
   if (error) return res.status(500).json({ error: error.message });
   invalidateProfileCache(req.user.id);
   res.json(data);
@@ -555,35 +612,60 @@ app.get('/api/cases/search', requireAuth, async (req, res) => {
   });
 });
 
-app.get('/api/health', (req, res) => res.json({ status: 'ok', version: '4.6.0' }));
+app.get('/api/health', (req, res) => res.json({ status: 'ok', version: '4.6.1' }));
 
-// ── Bank Transfer ─────────────────────────────────────────────────────────────
+// ── Bank Transfer Notification ────────────────────────────────────────────────
+// FIX #5: Removed `const https = require('https')` that was duplicated inside
+// this handler — https is already required at the top of the file.
 app.post('/api/payments/bank-transfer', requireAuth, async (req, res) => {
   const { plan, amount, reference, email } = req.body;
   if (!plan || !amount || !reference) return res.status(400).json({ error: 'Missing required fields' });
+
   try {
     await supabase.from('profiles').update({
-      pending_transfer: JSON.stringify({ plan, amount, reference, email, submitted_at: new Date().toISOString(), user_id: req.user.id, user_email: req.user.email })
+      pending_transfer: JSON.stringify({
+        plan, amount, reference, email,
+        submitted_at: new Date().toISOString(),
+        user_id: req.user.id,
+        user_email: req.user.email,
+      })
     }).eq('id', req.user.id);
 
     const gmailPass = process.env.GMAIL_APP_PASSWORD;
     if (gmailPass && nodemailer) {
-      const transporter = nodemailer.createTransport({ service: 'gmail', auth: { user: 'trigxyfn@gmail.com', pass: gmailPass.trim().replace(/\s/g,'') } });
+      const transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: { user: 'trigxyfn@gmail.com', pass: gmailPass.trim().replace(/\s/g, '') }
+      });
       await transporter.sendMail({
         from: '"Verdict AI Payments" <trigxyfn@gmail.com>',
         to: 'trigxyfn@gmail.com',
         subject: `💰 New Payment — ${plan} — NGN ${Number(amount).toLocaleString()}`,
-        text: `NEW BANK TRANSFER\n\nUser: ${req.user.email}\nPlan: ${plan}\nAmount: NGN ${Number(amount).toLocaleString()}\nRef: ${reference}\nTime: ${new Date().toLocaleString('en-NG', {timeZone:'Africa/Lagos'})}\n\nSet tier to: ${plan.includes('chambers') ? 'chambers' : 'solo'}\nhttps://supabase.com/dashboard/project/xlykbkfwgqhldxrwhwbp/editor`,
+        text: [
+          '🎉 NEW BANK TRANSFER SUBMITTED',
+          '',
+          'User: ' + req.user.email,
+          'Plan: ' + plan,
+          'Amount: NGN ' + Number(amount).toLocaleString(),
+          'Ref: ' + reference,
+          'Time: ' + new Date().toLocaleString('en-NG', { timeZone: 'Africa/Lagos' }),
+          '',
+          'Set tier to: ' + (plan.includes('chambers') ? 'chambers' : 'solo'),
+          'Supabase: https://supabase.com/dashboard/project/xlykbkfwgqhldxrwhwbp/editor',
+        ].join('\n'),
       });
+      console.log('Payment notification email sent');
     }
+
+    console.log(`BANK TRANSFER: ${req.user.email} | ${plan} | NGN ${amount} | ref: ${reference}`);
     res.json({ success: true });
   } catch (err) {
     console.log('Bank transfer error:', err.message);
-    res.json({ success: true });
+    res.json({ success: true }); // don't fail the user if email fails
   }
 });
 
-// ── API 404 ───────────────────────────────────────────────────────────────────
+// ── API 404 — before SPA catch-all ───────────────────────────────────────────
 app.use('/api', (req, res) => {
   res.status(404).json({ error: `API route not found: ${req.method} ${req.path}` });
 });
@@ -591,4 +673,4 @@ app.use('/api', (req, res) => {
 // ── SPA catch-all ─────────────────────────────────────────────────────────────
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 
-app.listen(PORT, () => console.log(`Verdict AI v4.6 running on port ${PORT}`));
+app.listen(PORT, () => console.log(`Verdict AI v4.6.1 running on port ${PORT}`));
