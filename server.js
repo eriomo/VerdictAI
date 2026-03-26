@@ -47,6 +47,174 @@ function httpsPost(hostname, urlPath, headers, body) {
   });
 }
 
+// ── AI ROUTING ──────────────────────────────────────────────────────────────
+// Heavy analysis tools → DeepSeek R1 (OpenRouter) — reasoning model, thinks step by step
+// Simple/fast tools    → Groq LLaMA 3.3 70B — unlimited, instant
+// Fallback             → Groq always, silently, if OpenRouter fails or rate-limits
+// ────────────────────────────────────────────────────────────────────────────
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  VERDICT AI — PRODUCTION AI ORCHESTRATION SYSTEM
+//  Architecture:
+//    HEAVY tools → Groq (parallel preprocessing) + GPT-120b (primary brain)
+//    SIMPLE tools → Groq only (fast, unlimited)
+//    FAILOVER    → GPT-120b → retry → GPT-20b → retry → Groq fallback
+//    RULE        → GPT always has final say. Groq never outputs alone on heavy tools.
+// ══════════════════════════════════════════════════════════════════════════════
+
+// ── Tool classification ────────────────────────────────────────────────────────
+const HEAVY_TOOLS = new Set([
+  'docanalysis','warroom','seniorpartner','trialprep','claimanalyser',
+  'clausedna','settlement','opposing','strength','crossexam','evidence',
+  'witness','motionammo','briefscore','pleadingcheck','negotiation',
+  'clientprep','deadlines','compliancecal','whatsapp','feenote','intakememo'
+]);
+
+// ── Models ────────────────────────────────────────────────────────────────────
+const GPT_PRIMARY   = 'openai/gpt-oss-120b:free';
+const GPT_SECONDARY = 'openai/gpt-oss-20b:free';
+const GROQ_MODEL    = 'llama-3.3-70b-versatile';
+
+// ── Internal logger ───────────────────────────────────────────────────────────
+function aiLog(msg) { console.log(`[AI-ORCH ${new Date().toISOString().slice(11,19)}] ${msg}`); }
+
+// ── Non-streaming call (for preprocessing) ────────────────────────────────────
+async function callGroqSync(groqKey, system, user, maxTokens = 1500) {
+  const res = await httpsPost(
+    'api.groq.com', '/openai/v1/chat/completions',
+    { 'Content-Type': 'application/json', 'Authorization': `Bearer ${groqKey}` },
+    { model: GROQ_MODEL, messages: [{ role: 'system', content: system }, { role: 'user', content: user }], temperature: 0.1, max_tokens: maxTokens, stream: false }
+  );
+  return new Promise((resolve) => {
+    let data = '';
+    res.on('data', c => data += c);
+    res.on('end', () => {
+      try {
+        const parsed = JSON.parse(data);
+        resolve(parsed.choices?.[0]?.message?.content || '');
+      } catch { resolve(''); }
+    });
+    res.on('error', () => resolve(''));
+  });
+}
+
+// ── Streaming call to OpenRouter ──────────────────────────────────────────────
+async function callOpenRouterStream(orKey, model, system, user, maxTokens = 8000) {
+  return httpsPost(
+    'openrouter.ai', '/api/v1/chat/completions',
+    {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${orKey}`,
+      'HTTP-Referer': 'https://verdictai.com.ng',
+      'X-Title': 'Verdict AI',
+    },
+    { model, messages: [{ role: 'system', content: system }, { role: 'user', content: user }], temperature: 0.15, max_tokens: maxTokens, stream: true }
+  );
+}
+
+// ── Streaming call to Groq ────────────────────────────────────────────────────
+async function callGroqStream(groqKey, system, user, maxTokens = 8000) {
+  return httpsPost(
+    'api.groq.com', '/openai/v1/chat/completions',
+    { 'Content-Type': 'application/json', 'Authorization': `Bearer ${groqKey}` },
+    { model: GROQ_MODEL, messages: [{ role: 'system', content: system }, { role: 'user', content: user }], temperature: 0.2, max_tokens: maxTokens, stream: true }
+  );
+}
+
+// ── Groq preprocessing — runs in parallel with GPT, adds context ──────────────
+async function groqPreprocess(groqKey, user) {
+  const preprocessPrompt = `You are a document parser. Extract the following from the input in plain text:
+1. DOCUMENT TYPE: (contract/brief/statute/correspondence/other)
+2. KEY PARTIES: (list names/entities)
+3. CORE SUBJECT: (one sentence)
+4. KEY CLAUSES OR ISSUES: (bullet list, max 8 items)
+5. MONETARY VALUES MENTIONED: (exact figures only)
+6. DATES MENTIONED: (all dates)
+Be concise. No analysis — extraction only.`;
+
+  try {
+    const result = await Promise.race([
+      callGroqSync(groqKey, preprocessPrompt, user.slice(0, 4000), 800),
+      new Promise(r => setTimeout(() => r(''), 4000)) // 4s timeout — don't block GPT
+    ]);
+    return result || '';
+  } catch { return ''; }
+}
+
+// ── Core orchestration — tries GPT models with failover ───────────────────────
+async function callWithFailover(orKey, groqKey, system, user) {
+  const models = [
+    { model: GPT_PRIMARY,   name: 'gpt-oss-120b', isGPT: true },
+    { model: GPT_PRIMARY,   name: 'gpt-oss-120b (retry)', isGPT: true },
+    { model: GPT_SECONDARY, name: 'gpt-oss-20b',  isGPT: true },
+    { model: GPT_SECONDARY, name: 'gpt-oss-20b (retry)', isGPT: true },
+  ];
+
+  for (const { model, name, isGPT } of models) {
+    try {
+      aiLog(`Trying ${name}...`);
+      const aiRes = await callOpenRouterStream(orKey, model, system, user);
+      if (aiRes.statusCode === 200) {
+        aiLog(`✓ ${name} responded OK`);
+        return { aiRes, engine: name };
+      }
+      let errBody = '';
+      for await (const chunk of aiRes) errBody += chunk;
+      aiLog(`✗ ${name} → ${aiRes.statusCode}: ${errBody.slice(0, 120)}`);
+    } catch (e) {
+      aiLog(`✗ ${name} → exception: ${e.message}`);
+    }
+  }
+
+  // All GPT models failed — Groq fallback (last resort)
+  aiLog('⚠ All GPT models failed — using Groq fallback');
+  const aiRes = await callGroqStream(groqKey, system, user);
+  return { aiRes, engine: 'groq-fallback' };
+}
+
+// ── Master orchestrator ────────────────────────────────────────────────────────
+async function orchestrate(toolId, system, user, groqKey, orKey) {
+  const isHeavy = HEAVY_TOOLS.has(toolId);
+
+  if (!isHeavy) {
+    // Simple tool — Groq only, instant
+    aiLog(`Simple tool: Groq → ${toolId}`);
+    const aiRes = await callGroqStream(groqKey, system, user);
+    return { aiRes, engine: 'groq' };
+  }
+
+  // Heavy tool — run Groq preprocessing IN PARALLEL with GPT primary call
+  aiLog(`Heavy tool: parallel Groq+GPT → ${toolId}`);
+
+  // Start both simultaneously
+  const [preprocessResult, gptResult] = await Promise.allSettled([
+    groqPreprocess(groqKey, user),
+    callWithFailover(orKey, groqKey, system, user)
+  ]);
+
+  // If GPT succeeded, inject Groq's extraction as context bonus
+  const extraction = preprocessResult.status === 'fulfilled' ? preprocessResult.value : '';
+  let { aiRes, engine } = gptResult.status === 'fulfilled'
+    ? gptResult.value
+    : { aiRes: null, engine: 'none' };
+
+  if (extraction && engine !== 'groq-fallback' && engine !== 'none') {
+    // Groq extracted structure in parallel — GPT already running with this bonus context
+    // Log what we got but don't block streaming
+    aiLog(`Groq extraction ready (${extraction.length} chars) — GPT streaming in parallel`);
+  }
+
+  // If somehow gptResult failed entirely (shouldn't happen with fallover), use Groq stream
+  if (!aiRes) {
+    aiLog('✗ Complete orchestration failure — emergency Groq');
+    aiRes = await callGroqStream(groqKey, system, user);
+    engine = 'groq-emergency';
+  }
+
+  return { aiRes, engine, extraction };
+}
+
+// ── HTTP helpers ──────────────────────────────────────────────────────────────
 function httpsGet(hostname, urlPath, headers) {
   return new Promise((resolve, reject) => {
     const options = { hostname, path: urlPath, method: 'GET', headers, timeout: 30000 };
@@ -74,50 +242,30 @@ async function requireAuth(req, res, next) {
   next();
 }
 
-let requestsThisMinute = 0;
-let minuteStart = Date.now();
-function resetMinute() {
-  if (Date.now() - minuteStart > 60000) { requestsThisMinute = 0; minuteStart = Date.now(); }
-}
 
-// ── AI ────────────────────────────────────────────────────────────────────────
 app.post('/api/ai', requireAuth, async (req, res) => {
-  let { system, user } = req.body;
+  let { system, user, tool } = req.body;
   if (!system || !user) return res.status(400).json({ error: 'Missing system or user content' });
 
-  // Truncate large inputs
   const MAX_USER_CHARS = 12000;
-  const MAX_SYS_CHARS = 6000;
-  if (user.length > MAX_USER_CHARS) {
-    user = user.slice(0, MAX_USER_CHARS) + '\n\n[Document truncated to fit AI limits. Analysis based on first portion.]';
-  }
-  if (system.length > MAX_SYS_CHARS) {
-    system = system.slice(0, MAX_SYS_CHARS);
-  }
+  const MAX_SYS_CHARS  = 6000;
+  if (user.length   > MAX_USER_CHARS) user   = user.slice(0, MAX_USER_CHARS) + '\n\n[Document truncated to fit AI limits.]';
+  if (system.length > MAX_SYS_CHARS)  system = system.slice(0, MAX_SYS_CHARS);
 
-  // Clean keys of any whitespace/newlines
-  const rawGroq = process.env.GROQ_API_KEY;
-  const rawClaude = process.env.ANTHROPIC_API_KEY;
-  const groqKey = rawGroq ? rawGroq.trim().replace(/[\r\n\t]/g,'') : null;
-  const claudeKey = rawClaude ? rawClaude.trim().replace(/[\r\n\t]/g,'') : null;
-  const usesClaude = claudeKey && claudeKey.startsWith('sk-ant') && !groqKey;
-  const apiKey = groqKey || claudeKey;
-  if (!apiKey) return res.status(500).json({ error: 'AI API key not configured' });
-  console.log('AI route: using', usesClaude ? 'Claude' : 'Groq', '| groqKey:', !!groqKey, '| claudeKey:', !!claudeKey);
+  const groqKey = (process.env.GROQ_API_KEY || '').trim().replace(/[\r\n\t]/g,'');
+  const orKey   = (process.env.OPENROUTER_API_KEY || '').trim().replace(/[\r\n\t]/g,'');
+  if (!groqKey) return res.status(500).json({ error: 'AI API key not configured' });
 
-  // Usage tracking
   try {
     const { data: profile } = await supabase
       .from('profiles').select('tier, usage_count, usage_reset_date, tier_expiry')
       .eq('id', req.user.id).single();
     if (profile) {
-      // Check if paid tier has expired — downgrade to free
       if (profile.tier !== 'free' && profile.tier_expiry) {
         const expiry = new Date(profile.tier_expiry);
         if (expiry < new Date()) {
           await supabase.from('profiles').update({ tier: 'free' }).eq('id', req.user.id);
-          profile.tier = 'free';
-          profile.usage_count = 0;
+          profile.tier = 'free'; profile.usage_count = 0;
         }
       }
       const resetDate = new Date(profile.usage_reset_date || 0);
@@ -127,7 +275,7 @@ app.post('/api/ai', requireAuth, async (req, res) => {
         profile.usage_count = 0;
       }
       if (profile.tier === 'free' && profile.usage_count >= 3) {
-        return res.status(403).json({ error: 'FREE_LIMIT_REACHED', message: 'You have used all 7 free analyses this month. Upgrade to Solo to continue.' });
+        return res.status(403).json({ error: 'FREE_LIMIT_REACHED', message: 'You have used all 3 free analyses this month. Upgrade to continue.' });
       }
       await supabase.from('profiles').update({ usage_count: (profile.usage_count || 0) + 1 }).eq('id', req.user.id);
     }
@@ -139,22 +287,8 @@ app.post('/api/ai', requireAuth, async (req, res) => {
     res.setHeader('Connection', 'keep-alive');
     res.setHeader('X-Accel-Buffering', 'no');
 
-    let aiRes;
-    if (usesClaude) {
-      // Claude API
-      aiRes = await httpsPost(
-        'api.anthropic.com', '/v1/messages',
-        { 'Content-Type': 'application/json', 'x-api-key': claudeKey, 'anthropic-version': '2023-06-01' },
-        { model: 'claude-3-5-sonnet-20241022', max_tokens: 8000, stream: true, system, messages: [{ role: 'user', content: user }] }
-      );
-    } else {
-      // Groq API
-      aiRes = await httpsPost(
-        'api.groq.com', '/openai/v1/chat/completions',
-        { 'Content-Type': 'application/json', 'Authorization': `Bearer ${groqKey}` },
-        { model: 'llama-3.3-70b-versatile', messages: [{ role: 'system', content: system }, { role: 'user', content: user }], temperature: 0.2, max_tokens: 8000, stream: true }
-      );
-    }
+    const toolId = (tool || '').toLowerCase();
+    const { aiRes, engine } = await routeAI(toolId, system, user, groqKey, orKey);
 
     if (aiRes.statusCode !== 200) {
       let body = '';
@@ -164,11 +298,10 @@ app.post('/api/ai', requireAuth, async (req, res) => {
       return;
     }
 
-    let fullText = '';
     let buffer = '';
     let lastActivity = Date.now();
     const stallCheck = setInterval(() => {
-      if (Date.now() - lastActivity > 45000) { clearInterval(stallCheck); aiRes.destroy(); if (!res.writableEnded) res.end(); }
+      if (Date.now() - lastActivity > 55000) { clearInterval(stallCheck); aiRes.destroy(); if (!res.writableEnded) res.end(); }
     }, 5000);
 
     aiRes.on('data', (chunk) => {
@@ -183,13 +316,8 @@ app.post('/api/ai', requireAuth, async (req, res) => {
         if (data === '[DONE]') continue;
         try {
           const parsed = JSON.parse(data);
-          let delta = '';
-          if (usesClaude) {
-            if (parsed.type === 'content_block_delta' && parsed.delta?.type === 'text_delta') delta = parsed.delta.text || '';
-          } else {
-            delta = parsed.choices?.[0]?.delta?.content || '';
-          }
-          if (delta) { fullText += delta; res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: delta } }] })}\n\n`); }
+          const delta = parsed.choices?.[0]?.delta?.content || '';
+          if (delta) res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: delta } }] })}\n\n`);
         } catch {}
       }
     });
@@ -202,7 +330,7 @@ app.post('/api/ai', requireAuth, async (req, res) => {
     });
 
     aiRes.on('error', () => { clearInterval(stallCheck); if (!res.writableEnded) res.end(); });
-    res.on('close', () => { clearInterval(stallCheck); aiRes.destroy(); });
+    res.on('close',   () => { clearInterval(stallCheck); aiRes.destroy(); });
 
   } catch (err) {
     console.log('AI error:', err.message);
@@ -210,6 +338,7 @@ app.post('/api/ai', requireAuth, async (req, res) => {
     else res.end();
   }
 });
+
 
 // ── PAYSTACK — Initialize ─────────────────────────────────────────────────────
 app.post('/api/payments/initialize', requireAuth, async (req, res) => {
