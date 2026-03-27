@@ -8,6 +8,7 @@ const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+app.set('trust proxy', 1);
 
 // ── FIX #1: CORS must be FIRST — before rate limiter, before everything ────────
 // Previously cors() was after the rate limiter. When the rate limiter fired a 429,
@@ -28,7 +29,10 @@ app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  res.setHeader('Content-Security-Policy', "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'");
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  if (req.path.startsWith('/api/')) res.setHeader('Cache-Control', 'no-store');
   next();
 });
 
@@ -54,10 +58,11 @@ function rateLimit(store, key, limit, windowMs) {
 // 60 req/min per IP on all /api/* routes
 app.use('/api', (req, res, next) => {
   const ip = getIP(req);
-  const { allowed, count, limit } = rateLimit(ipRequests, `ip:${ip}`, 60, 60_000);
+  const { allowed, count, limit } = rateLimit(ipRequests, `ip:${ip}`, 240, 60_000);
   if (!allowed) {
     console.log(`[RATE] IP ${ip} exceeded ${limit} req/min (count: ${count})`);
     // FIX #2: CORS header on 429 — without this, browser sees Status 0 not 429
+    res.setHeader('Retry-After', '60');
     res.setHeader('Access-Control-Allow-Origin', '*');
     return res.status(429).json({ error: 'Too many requests. Please wait and try again.' });
   }
@@ -77,6 +82,15 @@ app.use('/api/payments/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json({ limit: '2mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
+app.use((err, req, res, next) => {
+  if (!err) return next();
+  if (err.type === 'entity.too.large') return res.status(413).json({ error: 'Payload too large' });
+  if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+    return res.status(400).json({ error: 'Malformed JSON body' });
+  }
+  return next(err);
+});
+
 // ── Profile cache (60s TTL) ───────────────────────────────────────────────────
 const profileCache = new Map();
 const PROFILE_CACHE_TTL = 60_000;
@@ -94,6 +108,14 @@ async function getCachedProfile(userId) {
 function invalidateProfileCache(userId) {
   profileCache.delete(userId);
   profileCache.delete(userId + '_full');
+}
+
+function stringOrEmpty(value) {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function isUuidLike(value) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
@@ -291,7 +313,9 @@ async function orchestrate(toolId, system, user, groqKey, orKey) {
 
 // ── AI endpoint ───────────────────────────────────────────────────────────────
 app.post('/api/ai', requireAuth, async (req, res) => {
-  let { system, user, tool } = req.body;
+  let { system, user, tool } = req.body || {};
+  system = stringOrEmpty(system);
+  user = stringOrEmpty(user);
   if (!system || !user) return res.status(400).json({ error: 'Missing system or user content' });
 
   const MAX_CHARS = 14000;
@@ -525,16 +549,34 @@ app.get('/api/documents', requireAuth, async (req, res) => {
   res.json(data);
 });
 
-app.post('/api/documents', requireAuth, async (req, res) => {
-  const { name, content, analysis, type } = req.body;
+app.get('/api/documents/:id', requireAuth, async (req, res) => {
+  if (!isUuidLike(req.params.id)) return res.status(404).json({ error: 'Document not found' });
   const { data, error } = await supabase.from('documents')
-    .insert({ user_id: req.user.id, name, content, analysis, type, created_at: new Date().toISOString() })
+    .select('*')
+    .eq('id', req.params.id)
+    .eq('user_id', req.user.id)
+    .single();
+  if (error || !data) return res.status(404).json({ error: 'Document not found' });
+  res.json(data);
+});
+
+app.post('/api/documents', requireAuth, async (req, res) => {
+  const { name, content, analysis, type } = req.body || {};
+  const cleanName = stringOrEmpty(name);
+  const cleanContent = typeof content === 'string' ? content : '';
+  if (!cleanName || !cleanContent) return res.status(400).json({ error: 'Document name and content are required' });
+  if (Buffer.byteLength(cleanContent, 'utf8') > 1024 * 1024) {
+    return res.status(413).json({ error: 'Document content exceeds the 1MB limit' });
+  }
+  const { data, error } = await supabase.from('documents')
+    .insert({ user_id: req.user.id, name: cleanName, content: cleanContent, analysis, type, created_at: new Date().toISOString() })
     .select().single();
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
 });
 
 app.delete('/api/documents/:id', requireAuth, async (req, res) => {
+  if (!isUuidLike(req.params.id)) return res.status(404).json({ error: 'Document not found' });
   // FIX #4: Check ownership before delete — returns 404 so caller knows doc doesn't exist
   const { data: existing } = await supabase.from('documents')
     .select('id').eq('id', req.params.id).eq('user_id', req.user.id).single();
@@ -552,25 +594,29 @@ app.get('/api/cases', requireAuth, async (req, res) => {
 });
 
 app.post('/api/cases', requireAuth, async (req, res) => {
-  const { name, description, status } = req.body;
+  const { name, description, status } = req.body || {};
+  const cleanName = stringOrEmpty(name);
+  if (!cleanName) return res.status(400).json({ error: 'Case name is required' });
   const { data, error } = await supabase.from('cases')
-    .insert({ user_id: req.user.id, name, description, status: status || 'active', created_at: new Date().toISOString() })
+    .insert({ user_id: req.user.id, name: cleanName, description: stringOrEmpty(description), status: stringOrEmpty(status) || 'active', created_at: new Date().toISOString() })
     .select().single();
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
 });
 
 app.patch('/api/cases/:id', requireAuth, async (req, res) => {
+  if (!isUuidLike(req.params.id)) return res.status(404).json({ error: 'Case not found' });
   const { name, description, status, notes } = req.body;
   const { data, error } = await supabase.from('cases')
-    .update({ name, description, status, notes })
+    .update({ name: stringOrEmpty(name), description: stringOrEmpty(description), status: stringOrEmpty(status), notes: stringOrEmpty(notes) })
     .eq('id', req.params.id).eq('user_id', req.user.id)
     .select().single();
-  if (error) return res.status(500).json({ error: error.message });
+  if (error || !data) return res.status(404).json({ error: 'Case not found' });
   res.json(data);
 });
 
 app.delete('/api/cases/:id', requireAuth, async (req, res) => {
+  if (!isUuidLike(req.params.id)) return res.status(404).json({ error: 'Case not found' });
   const { error } = await supabase.from('cases').delete().eq('id', req.params.id).eq('user_id', req.user.id);
   if (error) return res.status(500).json({ error: error.message });
   res.json({ success: true });
@@ -671,6 +717,11 @@ app.use('/api', (req, res) => {
 });
 
 // ── SPA catch-all ─────────────────────────────────────────────────────────────
-app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
+app.get('*', (req, res) => {
+  const accept = req.headers.accept || '';
+  const wantsHtml = accept.includes('text/html');
+  if (req.path !== '/' && !wantsHtml) return res.status(404).json({ error: 'Not found' });
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
 
 app.listen(PORT, () => console.log(`Verdict AI v4.6.1 running on port ${PORT}`));
