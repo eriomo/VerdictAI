@@ -3596,7 +3596,7 @@ function WarrantDrafterPage({t,go}){
   return React.createElement("div",{className:"fade"},
     React.createElement(Hdr,{title:"Warrant Drafter",desc:"Draft any Nigerian Magistrate Court warrant in proper judicial format.",t,onClear:out?()=>{setOut("");setInp("");clearPersist("wd_inp","wd_out");}:null,hasContent:!!out}),
     React.createElement(Two,{
-      l:React.createElement("div",null,React.createElement(Lbl,{t},"Warrant Type"),React.createElement(Sel,{val:type,set:setType,opts:TYPES,ph:"Select warrant type...",t}),React.createElement("div",{style:{height:10}}),React.createElement(Lbl,{t},"Details"),React.createElement(Inp,{val:inp,set:setInp,ph:"Name of accused, address, offence, court name, suit number, date...",rows:10,t}),React.createElement("div",{style:{height:12}}),React.createElement(Btn,{full:true,onClick:run,disabled:loading||!inp.trim()||!type},loading?"Drafting...","Draft Warrant")),
+      l:React.createElement("div",null,React.createElement(Lbl,{t},"Warrant Type"),React.createElement(Sel,{val:type,set:setType,opts:TYPES,ph:"Select warrant type...",t}),React.createElement("div",{style:{height:10}}),React.createElement(Lbl,{t},"Details"),React.createElement(Inp,{val:inp,set:setInp,ph:"Name of accused, address, offence, court name, suit number, date...",rows:10,t}),React.createElement("div",{style:{height:12}}),React.createElement(Btn,{full:true,onClick:run,disabled:loading||!inp.trim()||!type},loading?"Drafting...":"Draft Warrant")),
       r:React.createElement(SmartOutputPanel,{text:out,loading,ph:"Enter details and click Draft Warrant.",t,go,title:"Court-Warrant"})
     })
   );
