@@ -646,9 +646,16 @@ app.get('/api/profile', requireAuth, async (req, res) => {
 });
 
 app.patch('/api/profile', requireAuth, async (req, res) => {
-  const { full_name, firm_name, practice_area } = req.body;
+  const { full_name, firm_name, practice_area, role, billing_interval, auto_renew } = req.body;
+  const updateFields = {};
+  if (full_name !== undefined) updateFields.full_name = full_name;
+  if (firm_name !== undefined) updateFields.firm_name = firm_name;
+  if (practice_area !== undefined) updateFields.practice_area = practice_area;
+  if (role !== undefined) updateFields.role = role;
+  if (billing_interval !== undefined) updateFields.billing_interval = billing_interval;
+  if (auto_renew !== undefined) updateFields.auto_renew = auto_renew;
   const { data, error } = await supabase.from('profiles')
-    .update({ full_name, firm_name, practice_area })
+    .update(updateFields)
     .eq('id', req.user.id).select().single();
   if (error) return res.status(500).json({ error: error.message });
   invalidateProfileCache(req.user.id);
