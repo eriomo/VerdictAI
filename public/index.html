@@ -872,7 +872,7 @@ function AuthoritiesBox({val,set,t}){
   return React.createElement("div",{style:{background:"rgba(200,164,94,0.05)",border:"1px solid rgba(200,164,94,0.2)",borderRadius:9,padding:"12px 14px",marginBottom:12}},
     React.createElement("div",{style:{fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"1.3px",color:GOLD,marginBottom:5}},"Your Verified Authorities (Optional)"),
     React.createElement("div",{style:{fontSize:12,color:"rgba(200,164,94,0.7)",marginBottom:8,lineHeight:1.6}},"Paste cases or statutory provisions you have verified on Primsol. The AI will build its analysis around your authorities."),
-    React.createElement("textarea",{value:val,onChange:e=>set(e.target.value),placeholder:"e.g. Section 84 Evidence Act 2011 — electronic evidence requirements...",rows:4,style:{width:"100%",background:t.input,border:"1px solid rgba(200,164,94,0.15)",borderRadius:7,padding:"9px 12px",fontFamily:"'DM Sans',sans-serif",fontSize:12.5,color:t.text,outline:"none",resize:"vertical",lineHeight:1.6}})
+    React.createElement("textarea",{name:"statute-explainer-input",value:val,onChange:e=>set(e.target.value),placeholder:"e.g. Section 84 Evidence Act 2011 — electronic evidence requirements...",rows:4,style:{width:"100%",background:t.input,border:"1px solid rgba(200,164,94,0.15)",borderRadius:7,padding:"9px 12px",fontFamily:"'DM Sans',sans-serif",fontSize:12.5,color:t.text,outline:"none",resize:"vertical",lineHeight:1.6}})
   );
 }
 
@@ -924,17 +924,17 @@ function Inp({val,set,ph,rows,t,style={},onKey}){
   const showCounter=rows&&len>2000;
   const counterColor=len>=MAX?"#E05252":len>=WARN?"#F0A500":t.muted;
   if(rows)return React.createElement("div",{style:{position:"relative"}},
-    React.createElement("textarea",{value:val,onChange:e=>set(e.target.value),placeholder:ph,rows,onFocus:focus,onBlur:blur,style:{...base,resize:"vertical",lineHeight:1.7}}),
+    React.createElement("textarea",{name:((ph||"textarea-field").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"")||"textarea-field"),value:val,onChange:e=>set(e.target.value),placeholder:ph,rows,onFocus:focus,onBlur:blur,style:{...base,resize:"vertical",lineHeight:1.7}}),
     showCounter&&React.createElement("div",{style:{textAlign:"right",fontSize:10,color:counterColor,marginTop:3}},
       len>=MAX?"⚠ Will be truncated at 12,000 chars":len>=WARN?`${len.toLocaleString()} chars — approaching limit`:`${len.toLocaleString()} chars`
     )
   );
-  return React.createElement("input",{value:val,onChange:e=>set(e.target.value),placeholder:ph,onFocus:focus,onBlur:blur,onKeyDown:onKey,style:base});
+  return React.createElement("input",{name:((ph||"input-field").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"")||"input-field"),value:val,onChange:e=>set(e.target.value),placeholder:ph,onFocus:focus,onBlur:blur,onKeyDown:onKey,style:base});
 }
 
 function Sel({val,set,opts,ph,t}){
   const isGrouped=Array.isArray(opts)&&opts.length>0&&typeof opts[0]==='object'&&opts[0].group;
-  return React.createElement("select",{value:val,onChange:e=>set(e.target.value),style:{width:"100%",background:t.input,border:`1px solid ${t.border}`,borderRadius:8,padding:"11px 14px",fontFamily:"'DM Sans',sans-serif",fontSize:13.5,color:val?t.text:t.muted,outline:"none"}},
+  return React.createElement("select",{name:((ph||"select-field").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"")||"select-field"),value:val,onChange:e=>set(e.target.value),style:{width:"100%",background:t.input,border:`1px solid ${t.border}`,borderRadius:8,padding:"11px 14px",fontFamily:"'DM Sans',sans-serif",fontSize:13.5,color:val?t.text:t.muted,outline:"none"}},
     React.createElement("option",{value:""},ph||"Select..."),
     isGrouped?opts.map(g=>React.createElement("optgroup",{key:g.group,label:"— "+g.group+" —"},g.items.map(o=>React.createElement("option",{key:o,value:o},o)))):opts.map(o=>React.createElement("option",{key:o,value:o},o))
   );
@@ -1119,7 +1119,7 @@ function FileUpload({onText,t,label}){
       )
     ),
     warn&&React.createElement("div",{style:{fontSize:11,color:"#F0A500",marginTop:6,padding:"6px 10px",background:"rgba(240,165,0,0.08)",borderRadius:6,border:"1px solid rgba(240,165,0,0.2)"}},warn),
-    React.createElement("input",{ref,type:"file",accept:".pdf,.doc,.docx,.txt,.md",style:{display:"none"},onChange:e=>handle(e.target.files[0])})
+    React.createElement("input",{ref,name:"document-upload",type:"file",accept:".pdf,.doc,.docx,.txt,.md",style:{display:"none"},onChange:e=>handle(e.target.files[0])})
   );
 }
 
@@ -2135,7 +2135,7 @@ function CasesPage({cases,onAdd,onUpdate,onDelete,t}){
         React.createElement("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:7}},
           React.createElement("div",null,React.createElement("div",{style:{fontFamily:"'Playfair Display',serif",fontSize:13.5,fontWeight:600,color:t.text}},c.name),React.createElement("div",{style:{fontSize:11,color:t.muted,marginTop:2}},new Date(c.created_at).toLocaleDateString())),
           React.createElement("div",{style:{display:"flex",gap:6,alignItems:"center"}},
-            React.createElement("select",{value:c.status,onChange:e=>onUpdate(c.id,{status:e.target.value}),style:{background:t.input,border:`1px solid ${t.border}`,borderRadius:6,color:c.status==="active"?"#2ECC8A":c.status==="pending"?"#F0A500":t.muted,fontSize:11,padding:"3px 7px",fontFamily:"inherit",outline:"none"}},
+            React.createElement("select",{name:"case-status",value:c.status,onChange:e=>onUpdate(c.id,{status:e.target.value}),style:{background:t.input,border:`1px solid ${t.border}`,borderRadius:6,color:c.status==="active"?"#2ECC8A":c.status==="pending"?"#F0A500":t.muted,fontSize:11,padding:"3px 7px",fontFamily:"inherit",outline:"none"}},
               ["active","pending","closed"].map(s=>React.createElement("option",{key:s,value:s},s.charAt(0).toUpperCase()+s.slice(1)))
             ),
             React.createElement("button",{onClick:()=>{if(confirm("Delete?"))onDelete(c.id);},style:{background:"rgba(224,82,82,0.1)",border:"1px solid rgba(224,82,82,0.2)",borderRadius:6,color:"#E05252",cursor:"pointer",padding:"3px 8px",fontSize:12}},"×")
@@ -2523,8 +2523,8 @@ function MatterClockPage({t}){
         React.createElement("div",null,React.createElement(Lbl,{t},"Court"),React.createElement(Inp,{val:nm.court,set:v=>setNm(p=>({...p,court:v})),ph:"e.g. FHC Lagos Div 3",t}))
       ),
       React.createElement("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}},
-        React.createElement("div",null,React.createElement(Lbl,{t},"Next Hearing"),React.createElement("input",{type:"date",value:nm.nextHearing,onChange:e=>setNm(p=>({...p,nextHearing:e.target.value})),style:{width:"100%",background:t.input,border:"1px solid "+t.border,borderRadius:8,padding:"11px 14px",fontFamily:"'DM Sans',sans-serif",fontSize:13.5,color:t.text,outline:"none",colorScheme:"dark"}})),
-        React.createElement("div",null,React.createElement(Lbl,{t},"Limitation Deadline"),React.createElement("input",{type:"date",value:nm.limitDate,onChange:e=>setNm(p=>({...p,limitDate:e.target.value})),style:{width:"100%",background:t.input,border:"1px solid "+t.border,borderRadius:8,padding:"11px 14px",fontFamily:"'DM Sans',sans-serif",fontSize:13.5,color:t.text,outline:"none",colorScheme:"dark"}}))
+        React.createElement("div",null,React.createElement(Lbl,{t},"Next Hearing"),React.createElement("input",{name:"next-hearing",type:"date",value:nm.nextHearing,onChange:e=>setNm(p=>({...p,nextHearing:e.target.value})),style:{width:"100%",background:t.input,border:"1px solid "+t.border,borderRadius:8,padding:"11px 14px",fontFamily:"'DM Sans',sans-serif",fontSize:13.5,color:t.text,outline:"none",colorScheme:"dark"}})),
+        React.createElement("div",null,React.createElement(Lbl,{t},"Limitation Deadline"),React.createElement("input",{name:"limitation-deadline",type:"date",value:nm.limitDate,onChange:e=>setNm(p=>({...p,limitDate:e.target.value})),style:{width:"100%",background:t.input,border:"1px solid "+t.border,borderRadius:8,padding:"11px 14px",fontFamily:"'DM Sans',sans-serif",fontSize:13.5,color:t.text,outline:"none",colorScheme:"dark"}}))
       ),
       React.createElement(Lbl,{t},"Last Action"),
       React.createElement(Inp,{val:nm.lastAction,set:v=>setNm(p=>({...p,lastAction:v})),ph:"e.g. Filed motion, appeared in court...",t}),
@@ -2998,7 +2998,7 @@ function SeniorPartnerPage({t,go}){
         React.createElement("div",{ref:endRef})
       ),
       React.createElement("div",{style:{borderTop:"1px solid "+t.border,padding:16,display:"flex",gap:10}},
-        React.createElement("textarea",{value:input,onChange:e=>setInput(e.target.value),placeholder:"Type your question or describe your situation...",onKeyDown:e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send();}},rows:2,style:{flex:1,background:t.input,border:"1px solid "+t.border,borderRadius:8,padding:"11px 14px",fontFamily:"'DM Sans',sans-serif",fontSize:13.5,color:t.text,outline:"none",resize:"none",lineHeight:1.6},onFocus:e=>e.target.style.borderColor="#C8A45E",onBlur:e=>e.target.style.borderColor=t.border}),
+        React.createElement("textarea",{name:"chat-message",value:input,onChange:e=>setInput(e.target.value),placeholder:"Type your question or describe your situation...",onKeyDown:e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send();}},rows:2,style:{flex:1,background:t.input,border:"1px solid "+t.border,borderRadius:8,padding:"11px 14px",fontFamily:"'DM Sans',sans-serif",fontSize:13.5,color:t.text,outline:"none",resize:"none",lineHeight:1.6},onFocus:e=>e.target.style.borderColor="#C8A45E",onBlur:e=>e.target.style.borderColor=t.border}),
         React.createElement("button",{onClick:send,disabled:loading||!input.trim(),style:{padding:"0 20px",borderRadius:8,background:"linear-gradient(135deg,#C8A45E,#D4B474)",border:"none",color:"#0D1B2E",fontWeight:700,fontSize:13,cursor:loading||!input.trim()?"not-allowed":"pointer",opacity:loading||!input.trim()?0.5:1,fontFamily:"'DM Sans',sans-serif"}},"Send")
       )
     )
@@ -3020,22 +3020,17 @@ function AppContent(){
 
   useEffect(()=>{
     if(!user)return;
-    // Check if returning from a payment
     const pendingRef=sessionStorage.getItem("vd_pay_ref");
     const pendingPlan=sessionStorage.getItem("vd_pay_plan");
     if(pendingRef&&pendingPlan){
-      sessionStorage.removeItem("vd_pay_ref");
-      sessionStorage.removeItem("vd_pay_plan");
+      sessionStorage.removeItem("vd_pay_ref");sessionStorage.removeItem("vd_pay_plan");
       sb.auth.getSession().then(({data:{session}})=>{
         if(!session?.access_token)return;
         setTimeout(async()=>{
           try{
             const vRes=await fetch(`/api/payments/verify/${pendingRef}`,{headers:{"Authorization":`Bearer ${session.access_token}`}});
             const vData=await vRes.json();
-            if(vData.success){
-              setProfile(p=>({...p,tier:vData.tier}));
-              setPage("dashboard");
-            }
+            if(vData.success){setProfile(p=>({...p,tier:vData.tier}));setPage("dashboard");}
           }catch(e){console.log("Pending payment check error:",e.message);}
         },2000);
       });
@@ -3064,21 +3059,77 @@ function AppContent(){
   const toggleDark=()=>{setDark(p=>{const n=!p;saveTheme(n);return n;});};
   const go=id=>{setPage(id);setSideOpen(false);try{const el=document.querySelector(".content-area");if(el)el.scrollTop=0;}catch{}};
 
+  // ── Loading splash ──
   if(authLoading)return React.createElement("div",{style:{display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",background:"#07101c",flexDirection:"column",gap:18}},
     React.createElement("div",{style:{width:58,height:58,background:`linear-gradient(135deg,${GOLD},${GOLD2})`,borderRadius:16,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Playfair Display',serif",fontWeight:700,fontSize:28,color:"#0D1B2E"}},"V"),
     React.createElement("div",{style:{fontFamily:"'Playfair Display',serif",fontSize:22,fontWeight:700,color:"#F0EDE6"}},"Verdict",React.createElement("span",{style:{color:GOLD}},"AI")),
     React.createElement("div",{style:{display:"flex",gap:8}},[0,1,2].map(i=>React.createElement("div",{key:i,style:{width:8,height:8,borderRadius:"50%",background:GOLD,animation:`vPulse 1.2s ${i*0.2}s infinite ease-in-out`}})))
   );
 
+  // ── Not logged in ──
   if(!user){
     if(showAuth)return React.createElement(AuthPage,{t:theme(true),onBack:()=>setShowAuth(false)});
     return React.createElement(LandingPage,{onGetStarted:()=>setShowAuth(true),t:theme(true)});
   }
 
-  const pageTitle={dashboard:"Dashboard",matterclock:"Matter Clock",reader:"Document Analysis",qa:"Legal Q&A",draft:"Draft Documents",jurisdiction:"Jurisdiction Translator",nigeriancases:"Nigerian Case Law",lawdatabases:"Law Research Hub",vault:"Document Vault",cases:"Case Workspaces",profile:"My Profile",upgrade:"Upgrade Plan",witness:"Witness Forge",evidence:"Evidence Analyser",settlement:"Settlement Intelligence",seniorpartner:"AI Senior Partner",crossexam:"Witness Cross-Examiner",motionammo:"Motion Ammunition",claimanalyser:"Claim Analyser",clientprep:"Client Prep Coach",negotiation:"Contract Negotiation",whatsapp:"WhatsApp Evidence"};
+  // ── Role selection (first login) ──
+  if(profile&&!profile.role){
+    return React.createElement(RoleSelectPage,{t,onSelect:(role)=>{
+      setProfile(p=>({...p,role}));
+    }});
+  }
+
+  // ── Role config ──
+  const userRole=profile?.role||"lawyer";
+  const roleConfig=ROLES_CONFIG[userRole]||ROLES_CONFIG.lawyer;
+
+  const getActiveNav=()=>{
+    switch(userRole){
+      case "judge":      return JUDGE_NAV;
+      case "magistrate": return MAGISTRATE_NAV;
+      case "clerk":      return CLERK_NAV;
+      case "legislator": return LEGISLATOR_NAV;
+      case "paralegal":  return PARALEGAL_NAV;
+      default:           return NAV;
+    }
+  };
+  const activeNav=getActiveNav();
+
+  // ── Mobile bottom tabs (role-specific) ──
+  const getMobileTabs=()=>{
+    switch(userRole){
+      case "judge":      return [{id:"dashboard",icon:"⚖️",label:"Bench"},{id:"judgment_composer",icon:"📝",label:"Compose"},{id:"court_order",icon:"📜",label:"Orders"},{id:"nigeriancases",icon:"📚",label:"Research"},{id:"profile",icon:"👤",label:"Profile"}];
+      case "magistrate": return [{id:"dashboard",icon:"🔨",label:"Court"},{id:"quick_ruling",icon:"⚖️",label:"Ruling"},{id:"bail_decision",icon:"🔓",label:"Bail"},{id:"nigeriancases",icon:"📚",label:"Research"},{id:"profile",icon:"👤",label:"Profile"}];
+      case "clerk":      return [{id:"dashboard",icon:"📋",label:"Registry"},{id:"clerk_filing",icon:"📄",label:"File"},{id:"clerk_classify",icon:"🏷️",label:"Classify"},{id:"vault",icon:"🗄️",label:"Vault"},{id:"profile",icon:"👤",label:"Profile"}];
+      case "legislator": return [{id:"dashboard",icon:"📜",label:"Bills"},{id:"bill_drafter",icon:"✍️",label:"Draft"},{id:"law_comparison",icon:"⚖️",label:"Compare"},{id:"nigeriancases",icon:"📚",label:"Research"},{id:"profile",icon:"👤",label:"Profile"}];
+      case "paralegal":  return [{id:"dashboard",icon:"📚",label:"Home"},{id:"paralegal_research",icon:"🔬",label:"Research"},{id:"draft",icon:"✍️",label:"Draft"},{id:"vault",icon:"🗄️",label:"Vault"},{id:"profile",icon:"👤",label:"Profile"}];
+      default:           return [{id:"dashboard",icon:"🏛️",label:"Home"},{id:"reader",icon:"📄",label:"Analyse"},{id:"draft",icon:"✍️",label:"Draft"},{id:"vault",icon:"🗄️",label:"Vault"},{id:"profile",icon:"👤",label:"Profile"}];
+    }
+  };
+  const mobileTabs=getMobileTabs();
+
+  // ── Page titles ──
+  const ALL_PAGE_TITLES={
+    dashboard:"Dashboard",matterclock:"Matter Clock",reader:"Document Analysis",qa:"Legal Q&A",
+    draft:"Draft Documents",jurisdiction:"Jurisdiction Translator",nigeriancases:"Nigerian Case Law",
+    lawdatabases:"Law Research Hub",vault:"Document Vault",cases:"Case Workspaces",
+    profile:"My Profile",upgrade:"Upgrade Plan",witness:"Witness Forge",evidence:"Evidence Analyser",
+    settlement:"Settlement Intelligence",seniorpartner:"AI Senior Partner",crossexam:"Witness Cross-Examiner",
+    motionammo:"Motion Ammunition",claimanalyser:"Claim Analyser",clientprep:"Client Prep Coach",
+    negotiation:"Contract Negotiation",whatsapp:"WhatsApp Evidence",
+    judgment_composer:"Judgment Composer",court_order:"Court Order Generator",
+    case_summary_judge:"Case Summary",issue_spotter:"Issue Spotter",
+    quick_ruling:"Quick Ruling",bail_decision:"Bail Decision",
+    warrant_drafter:"Warrant Drafter",sentencing_guide:"Sentencing Guide",
+    clerk_filing:"Digital Filing",clerk_classify:"Document Classifier",
+    bill_drafter:"Bill Drafter",law_comparison:"Law Comparison",
+    law_simplifier:"Plain English Summarizer",impact_assessment:"Impact Assessment",
+    paralegal_research:"Research Hub",
+  };
 
   const tier=profile?.tier||"free";
 
+  // ── Render page ──
   const renderPage=()=>{
     if(CHAMBERS_FEATURES.includes(page)&&tier!=="chambers"){
       const names={crossexam:"Witness Cross-Examiner",motionammo:"Motion Ammunition",claimanalyser:"Claim Analyser",clientprep:"Client Prep Coach",witness:"Witness Forge",evidence:"Evidence Analyser",settlement:"Settlement Intelligence",seniorpartner:"AI Senior Partner"};
@@ -3090,36 +3141,78 @@ function AppContent(){
     }
     if(AI_CFGS[page])return React.createElement(AIPage,{cfg:AI_CFGS[page],t,go,pageId:page});
     switch(page){
-      case "dashboard": return React.createElement(Dashboard,{go,t,docCount:docs.length,caseCount:cases.length,profile});
-      case "reader": return React.createElement(ReaderPage,{onSave:saveDoc,t,go});
-      case "qa": return React.createElement(QAPage,{t,go});
-      case "draft": return React.createElement(DraftPage,{t,go});
-      case "jurisdiction": return React.createElement(JurisdictionPage,{t,go});
+      // ── Dashboard (role-specific) ──────────────────────────────────────
+      case "dashboard":
+        switch(userRole){
+          case "judge":      return React.createElement(JudgeDashboard,{go,t,profile});
+          case "magistrate": return React.createElement(MagistrateDashboard,{go,t,profile});
+          case "clerk":      return React.createElement(ClerkDashboardPage,{go,t,profile});
+          case "legislator": return React.createElement(LegislatorDashboard,{go,t,profile});
+          case "paralegal":  return React.createElement(ParalegalDashboard,{go,t,profile});
+          default:           return React.createElement(Dashboard,{go,t,docCount:docs.length,caseCount:cases.length,profile});
+        }
+      // ── Core shared ────────────────────────────────────────────────────
+      case "reader":        return React.createElement(ReaderPage,{onSave:saveDoc,t,go});
+      case "qa":            return React.createElement(QAPage,{t,go});
+      case "draft":         return React.createElement(DraftPage,{t,go});
+      case "jurisdiction":  return React.createElement(JurisdictionPage,{t,go});
       case "nigeriancases": return React.createElement(NigerianCasesPage,{t,go});
-      case "lawdatabases": return React.createElement(LawDatabasesPage,{t});
-      case "matterclock": return React.createElement(MatterClockPage,{t});
-      case "witness": return React.createElement(WitnessPage,{t,go});
-      case "evidence": return React.createElement(EvidencePage,{t,go});
-      case "settlement": return React.createElement(SettlementPage,{t,go});
-      case "negotiation": return React.createElement(NegotiationPage,{t,go});
-      case "whatsapp": return React.createElement(WhatsAppPage,{t,go});
+      case "lawdatabases":  return React.createElement(LawDatabasesPage,{t});
+      case "matterclock":   return React.createElement(MatterClockPage,{t});
+      case "witness":       return React.createElement(WitnessPage,{t,go});
+      case "evidence":      return React.createElement(EvidencePage,{t,go});
+      case "settlement":    return React.createElement(SettlementPage,{t,go});
+      case "negotiation":   return React.createElement(NegotiationPage,{t,go});
+      case "whatsapp":      return React.createElement(WhatsAppPage,{t,go});
       case "seniorpartner": return React.createElement(SeniorPartnerPage,{t,go});
-      case "crossexam": return React.createElement(CrossExamPage,{t,go});
-      case "motionammo": return React.createElement(MotionAmmoPage,{t,go});
+      case "crossexam":     return React.createElement(CrossExamPage,{t,go});
+      case "motionammo":    return React.createElement(MotionAmmoPage,{t,go});
       case "claimanalyser": return React.createElement(ClaimAnalyserPage,{t,go});
-      case "clientprep": return React.createElement(ClientPrepPage,{t,go});
-      case "vault": return React.createElement(VaultPage,{docs,onDelete:deleteDoc,onRefresh:loadAll,t,go});
-      case "cases": return React.createElement(CasesPage,{cases,onAdd:addCase,onUpdate:updateCase,onDelete:deleteCase,t});
-      case "profile": return React.createElement(ProfilePage,{profile,onUpdate:updateProfile,t,go});
-      case "upgrade": return React.createElement(UpgradePage,{t,go,userTier:tier,userEmail:user?.email,onUpgradeSuccess:(newTier)=>{setProfile(p=>({...p,tier:newTier}));}});
-      default: return React.createElement(Dashboard,{go,t,docCount:docs.length,caseCount:cases.length,profile});
+      case "clientprep":    return React.createElement(ClientPrepPage,{t,go});
+      case "vault":         return React.createElement(VaultPage,{docs,onDelete:deleteDoc,onRefresh:loadAll,t,go});
+      case "cases":         return React.createElement(CasesPage,{cases,onAdd:addCase,onUpdate:updateCase,onDelete:deleteCase,t});
+      case "profile":       return React.createElement(ProfilePage,{profile,onUpdate:updateProfile,t,go});
+      case "upgrade":       return React.createElement(UpgradePage,{t,go,userTier:tier,userEmail:user?.email,onUpgradeSuccess:(newTier)=>{setProfile(p=>({...p,tier:newTier}));}});
+      // ── Judge tools ─────────────────────────────────────────────────────
+      case "judgment_composer":  return React.createElement(JudgmentComposerPage,{t,go});
+      case "court_order":        return React.createElement(CourtOrderPage,{t,go});
+      case "case_summary_judge": return React.createElement(CaseSummaryJudgePage,{t,go});
+      case "issue_spotter":      return React.createElement(IssueSpotterPage,{t,go});
+      // ── Magistrate tools ─────────────────────────────────────────────────
+      case "quick_ruling":   return React.createElement(QuickRulingPage,{t,go});
+      case "bail_decision":  return React.createElement(BailDecisionPage,{t,go});
+      case "warrant_drafter":return React.createElement(WarrantDrafterPage,{t,go});
+      case "sentencing_guide":return React.createElement(SentencingGuidePage,{t,go});
+      // ── Clerk tools ───────────────────────────────────────────────────────
+      case "clerk_filing":   return React.createElement(ClerkFilingPage,{t,go});
+      case "clerk_classify": return React.createElement(ClerkClassifyPage,{t,go});
+      // ── Legislator tools ──────────────────────────────────────────────────
+      case "bill_drafter":      return React.createElement(BillDrafterPage,{t,go});
+      case "law_comparison":    return React.createElement(LawComparisonPage,{t,go});
+      case "law_simplifier":    return React.createElement(LawSimplifierPage,{t,go});
+      case "impact_assessment": return React.createElement(ImpactAssessmentPage,{t,go});
+      // ── Paralegal tools ───────────────────────────────────────────────────
+      case "paralegal_research": return React.createElement(ParalegalResearchPage,{t,go});
+      // ── Fallback (role dashboard) ─────────────────────────────────────────
+      default:
+        switch(userRole){
+          case "judge":      return React.createElement(JudgeDashboard,{go,t,profile});
+          case "magistrate": return React.createElement(MagistrateDashboard,{go,t,profile});
+          case "clerk":      return React.createElement(ClerkDashboardPage,{go,t,profile});
+          case "legislator": return React.createElement(LegislatorDashboard,{go,t,profile});
+          case "paralegal":  return React.createElement(ParalegalDashboard,{go,t,profile});
+          default:           return React.createElement(Dashboard,{go,t,docCount:docs.length,caseCount:cases.length,profile});
+        }
     }
   };
 
+  // ── Render shell ──
   return React.createElement(SessProvider,null,
     React.createElement("div",{className:"app-shell",style:{background:t.bg,color:t.text,transition:"background 0.3s,color 0.3s"}},
       sideOpen&&React.createElement("div",{className:"sidebar-overlay",onClick:()=>setSideOpen(false)}),
+      // ── Sidebar ────────────────────────────────────────────────────────
       React.createElement("div",{className:"sidebar",style:{background:t.card,borderRight:`1px solid ${t.border}`,transform:sideOpen?"translateX(0)":"translateX(-100%)"}},
+        // Brand
         React.createElement("div",{style:{padding:"18px 16px 14px",borderBottom:`1px solid ${t.border}`,display:"flex",alignItems:"center",justifyContent:"space-between"}},
           React.createElement("div",{style:{display:"flex",alignItems:"center",gap:9}},
             React.createElement("div",{style:{width:32,height:32,background:`linear-gradient(135deg,${GOLD},${GOLD2})`,borderRadius:9,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Playfair Display',serif",fontWeight:700,fontSize:16,color:"#0D1B2E"}},"V"),
@@ -3127,21 +3220,27 @@ function AppContent(){
           ),
           React.createElement("button",{onClick:()=>setSideOpen(false),style:{background:"none",border:"none",color:t.muted,cursor:"pointer",fontSize:22,padding:4,lineHeight:1}},"×")
         ),
+        // Profile row
         React.createElement("div",{style:{padding:"10px 14px 12px",borderBottom:`1px solid ${t.border}`,display:"flex",alignItems:"center",gap:10,cursor:"pointer"},onClick:()=>go("profile")},
-          React.createElement("div",{style:{width:30,height:30,borderRadius:"50%",background:GOLD,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,color:"#0D1B2E",flexShrink:0}},(profile?.full_name||user.email||"U")[0].toUpperCase()),
-          React.createElement("div",{style:{minWidth:0}},
+          React.createElement("div",{style:{width:30,height:30,borderRadius:"50%",background:`linear-gradient(135deg,${roleConfig.color},${roleConfig.color}cc)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,color:"#fff",flexShrink:0}},(profile?.full_name||user.email||"U")[0].toUpperCase()),
+          React.createElement("div",{style:{minWidth:0,flex:1}},
             React.createElement("div",{style:{fontSize:13,fontWeight:600,color:t.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},profile?.full_name||"My Account"),
-            React.createElement("div",{style:{fontSize:10,color:GOLD,fontWeight:700}},({"free":"FREE","solo":"SOLO","chambers":"CHAMBERS"}[profile?.tier||"free"]||"FREE")+" PLAN")
+            React.createElement("div",{style:{display:"flex",alignItems:"center",gap:5,flexWrap:"wrap"}},
+              React.createElement("div",{style:{fontSize:10,color:GOLD,fontWeight:700}},({"free":"FREE","solo":"SOLO","chambers":"CHAMBERS"}[profile?.tier||"free"]||"FREE")+" PLAN"),
+              React.createElement("div",{style:{fontSize:10,color:roleConfig.color,fontWeight:600,background:roleConfig.color+"18",padding:"1px 6px",borderRadius:100}},roleConfig.emoji+" "+roleConfig.label)
+            )
           )
         ),
+        // Nav
         React.createElement("nav",{style:{flex:1,padding:"8px 6px",overflowY:"auto"}},
-          NAV.map(s=>React.createElement("div",{key:s.sec},
+          activeNav.map(s=>React.createElement("div",{key:s.sec},
             React.createElement("div",{style:{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:"1.5px",color:t.muted,padding:"9px 8px 3px"}},s.sec),
-            s.items.map(item=>React.createElement("button",{key:item.id,onClick:()=>go(item.id),style:{display:"flex",alignItems:"center",gap:8,width:"100%",padding:"8px 9px",borderRadius:7,border:page===item.id?"1px solid rgba(200,164,94,0.22)":"1px solid transparent",background:page===item.id?"rgba(200,164,94,0.11)":"none",color:page===item.id?GOLD:t.dim,fontSize:13,fontWeight:500,cursor:"pointer",fontFamily:"inherit",marginBottom:1,textAlign:"left",transition:"all 0.12s"}},
+            s.items.map(item=>React.createElement("button",{key:item.id,onClick:()=>go(item.id),style:{display:"flex",alignItems:"center",gap:8,width:"100%",padding:"8px 9px",borderRadius:7,border:page===item.id?`1px solid ${roleConfig.color}44`:"1px solid transparent",background:page===item.id?roleConfig.color+"14":"none",color:page===item.id?roleConfig.color:t.dim,fontSize:13,fontWeight:500,cursor:"pointer",fontFamily:"inherit",marginBottom:1,textAlign:"left",transition:"all 0.12s"}},
               React.createElement("span",{style:{fontSize:14}},item.icon),item.label
             ))
           ))
         ),
+        // Sidebar footer
         React.createElement("div",{style:{padding:"8px 6px",borderTop:`1px solid ${t.border}`}},
           tier==="free"&&React.createElement("button",{onClick:()=>go("upgrade"),style:{display:"flex",alignItems:"center",justifyContent:"center",width:"100%",padding:"8px",marginBottom:6,borderRadius:7,background:`linear-gradient(135deg,${GOLD},${GOLD2})`,border:"none",color:"#0D1B2E",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}},"Upgrade — from NGN 12,000"),
           React.createElement("div",{style:{display:"flex",alignItems:"center",gap:8,padding:"4px 8px"}},
@@ -3151,29 +3250,32 @@ function AppContent(){
             ),
             React.createElement("span",null,"🌙"),
             React.createElement("span",{style:{fontSize:11,color:t.muted}},dark?"Dark":"Light")
-          )
+          ),
+          React.createElement("button",{
+            onClick:()=>{if(window.confirm("Switch your role? You can always come back."))updateProfile({role:""}).then(()=>setProfile(p=>({...p,role:""})));},
+            style:{display:"flex",alignItems:"center",gap:6,width:"100%",padding:"5px 8px",marginTop:3,borderRadius:7,background:"transparent",border:"none",color:t.muted,fontSize:11,cursor:"pointer",fontFamily:"inherit",textAlign:"left"}
+          },React.createElement("span",null,roleConfig.emoji),"Switch Role")
         )
       ),
+      // ── Main body ──────────────────────────────────────────────────────
       React.createElement("div",{className:"app-body"},
         React.createElement("div",{className:"main-col"},
+          // Topbar
           React.createElement("div",{className:"topbar",style:{background:t.card,borderBottom:`1px solid ${t.border}`,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 16px",gap:8}},
             React.createElement("div",{style:{display:"flex",alignItems:"center",gap:10,minWidth:0,flex:1}},
               React.createElement("button",{onClick:()=>setSideOpen(true),style:{background:"none",border:"none",cursor:"pointer",padding:6,display:"flex",alignItems:"center",justifyContent:"center",borderRadius:8,color:t.muted,flexShrink:0}},
                 Icon({name:"more",size:20,color:t.dim,strokeWidth:2})
               ),
-              React.createElement("h2",{style:{fontFamily:"'Playfair Display',serif",fontSize:"clamp(14px,3.5vw,17px)",fontWeight:700,margin:0,color:t.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},AI_CFGS[page]?.title||pageTitle[page]||"Verdict AI")
+              React.createElement("h2",{style:{fontFamily:"'Playfair Display',serif",fontSize:"clamp(14px,3.5vw,17px)",fontWeight:700,margin:0,color:t.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},AI_CFGS[page]?.title||ALL_PAGE_TITLES[page]||"Verdict AI")
             ),
             React.createElement("div",{style:{display:"flex",alignItems:"center",gap:8,flexShrink:0}},
-              // Theme toggle
-              React.createElement("button",{onClick:toggleDark,style:{background:"none",border:"none",cursor:"pointer",padding:6,borderRadius:8,color:t.muted,display:"flex",alignItems:"center"}},
-                React.createElement("span",{style:{fontSize:16}},dark?"☀️":"🌙")
-              ),
-              // Profile avatar
-              React.createElement("div",{onClick:()=>go("profile"),style:{width:30,height:30,borderRadius:"50%",background:`linear-gradient(135deg,${GOLD},${GOLD2})`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,color:"#0D1B2E",cursor:"pointer",flexShrink:0}},
+              React.createElement("button",{onClick:toggleDark,style:{background:"none",border:"none",cursor:"pointer",padding:6,borderRadius:8,color:t.muted,display:"flex",alignItems:"center"}},React.createElement("span",{style:{fontSize:16}},dark?"☀️":"🌙")),
+              React.createElement("div",{onClick:()=>go("profile"),style:{width:30,height:30,borderRadius:"50%",background:`linear-gradient(135deg,${roleConfig.color},${roleConfig.color}cc)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,color:"#fff",cursor:"pointer",flexShrink:0}},
                 (profile?.full_name||user?.email||"U")[0].toUpperCase()
               )
             )
           ),
+          // Content
           React.createElement("div",{key:page,className:"content-area"},
             dataLoading&&docs.length===0&&cases.length===0&&!profile
               ?React.createElement("div",{style:{display:"flex",alignItems:"center",justifyContent:"center",height:200,color:t.muted,fontSize:13,gap:10}},
@@ -3183,10 +3285,18 @@ function AppContent(){
               :renderPage()
           )
         )
+      ),
+      // ── Mobile bottom tabs ──────────────────────────────────────────────
+      React.createElement("div",{className:"bottom-tabs",style:{background:t.card,borderTop:`1px solid ${t.border}`}},
+        mobileTabs.map(tab=>React.createElement("button",{key:tab.id,className:"bottom-tab",onClick:()=>go(tab.id),style:{color:page===tab.id?roleConfig.color:t.muted}},
+          React.createElement("span",{style:{fontSize:18,lineHeight:1}},tab.icon),
+          React.createElement("span",null,tab.label)
+        ))
       )
     )
   );
 }
+
 
 function App(){return React.createElement(AuthProvider,null,React.createElement(AppContent));}
 ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(App));
