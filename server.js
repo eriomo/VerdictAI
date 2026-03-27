@@ -30,7 +30,10 @@ app.use((req, res, next) => {
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('X-XSS-Protection', '1; mode=block');
   res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
-  res.setHeader('Content-Security-Policy', "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'");
+  res.setHeader(
+    'Content-Security-Policy',
+    "default-src 'self'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: https: blob:; manifest-src 'self'; connect-src 'self' https://api.groq.com https://openrouter.ai https://api.anthropic.com https://verdictai.com.ng"
+  );
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   if (req.path.startsWith('/api/')) res.setHeader('Cache-Control', 'no-store');
   next();
@@ -79,7 +82,7 @@ setInterval(() => {
 // ── Body parsing ──────────────────────────────────────────────────────────────
 // Webhook must use raw body (must come before express.json)
 app.use('/api/payments/webhook', express.raw({ type: 'application/json' }));
-app.use(express.json({ limit: '2mb' }));
+app.use(express.json({ limit: '4mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use((err, req, res, next) => {
@@ -254,6 +257,10 @@ Be concise. No analysis — extraction only.`;
 }
 
 async function callWithFailover(orKey, groqKey, system, user) {
+  if (!orKey) {
+    aiLog('No OpenRouter key configured - using Groq directly');
+    return { aiRes: await callGroqStream(groqKey, system, user), engine: 'groq-direct' };
+  }
   const models = [
     { model: GPT_PRIMARY,   name: 'gpt-oss-120b' },
     { model: GPT_PRIMARY,   name: 'gpt-oss-120b (retry)' },
@@ -268,6 +275,10 @@ async function callWithFailover(orKey, groqKey, system, user) {
       let errBody = '';
       for await (const chunk of aiRes) errBody += chunk;
       aiLog(`✗ ${name} → ${aiRes.statusCode}: ${errBody.slice(0, 120)}`);
+      if (aiRes.statusCode === 404 && /guardrail restrictions|No endpoints available/i.test(errBody)) {
+        aiLog('OpenRouter policy blocked GPT models - switching to Groq fallback immediately');
+        return { aiRes: await callGroqStream(groqKey, system, user), engine: 'groq-policy-fallback' };
+      }
     } catch (e) { aiLog(`✗ ${name} → ${e.message}`); }
   }
   aiLog('⚠ All GPT failed — Groq fallback');
