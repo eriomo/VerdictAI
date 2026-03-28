@@ -654,9 +654,29 @@ app.patch('/api/profile', requireAuth, async (req, res) => {
   if (role !== undefined) updateFields.role = role;
   if (billing_interval !== undefined) updateFields.billing_interval = billing_interval;
   if (auto_renew !== undefined) updateFields.auto_renew = auto_renew;
-  const { data, error } = await supabase.from('profiles')
+  if (!Object.keys(updateFields).length) {
+    const { data, error } = await supabase.from('profiles').select('*').eq('id', req.user.id).single();
+    if (error) return res.status(500).json({ error: error.message });
+    return res.json(data);
+  }
+
+  let { data, error } = await supabase.from('profiles')
     .update(updateFields)
     .eq('id', req.user.id).select().single();
+
+  if (error && role !== undefined && /Could not find the 'role' column/i.test(error.message || '')) {
+    delete updateFields.role;
+    if (!Object.keys(updateFields).length) {
+      const retry = await supabase.from('profiles').select('*').eq('id', req.user.id).single();
+      if (retry.error) return res.status(500).json({ error: retry.error.message });
+      return res.json({ ...retry.data, role });
+    }
+    const retry = await supabase.from('profiles').update(updateFields).eq('id', req.user.id).select().single();
+    data = retry.data;
+    error = retry.error;
+    if (!error && data) data = { ...data, role };
+  }
+
   if (error) return res.status(500).json({ error: error.message });
   invalidateProfileCache(req.user.id);
   res.json(data);
