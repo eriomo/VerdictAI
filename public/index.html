@@ -546,52 +546,52 @@ const LEGISLATOR_VOICE=`You are a senior Nigerian legislative drafter with 20 ye
 
 // â”€â”€ ROLE DEFINITIONS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const ROLES_CONFIG={
-  lawyer:{id:"lawyer",label:"Lawyer / Counsel",emoji:"ðŸ›ï¸",color:"#9B59B6",tagline:"Barrister & Solicitor of the Supreme Court",desc:"35+ AI tools for research, drafting, strategy, and trial prep."},
-  judge:{id:"judge",label:"Judge",emoji:"âš–ï¸",color:"#C8A45E",tagline:"Court of Appeal / Federal High Court / State High Court",desc:"Judgment composer, issue spotting, court orders, case summaries."},
-  magistrate:{id:"magistrate",label:"Magistrate",emoji:"ðŸ”¨",color:"#4A9EE8",tagline:"Magistrate Court â€” Criminal, Civil & Family",desc:"Quick rulings, bail decisions, sentencing guides, warrants."},
-  clerk:{id:"clerk",label:"Court Clerk",emoji:"ðŸ“‹",color:"#2ECC8A",tagline:"Case Filing, Registry & Administration",desc:"Digital filing, document classification, case registry tools."},
-  legislator:{id:"legislator",label:"Legislator / Lawmaker",emoji:"ðŸ“œ",color:"#E67E22",tagline:"National / State House of Assembly",desc:"Bill drafting, law comparison, plain-English summaries, impact analysis."},
-  paralegal:{id:"paralegal",label:"Paralegal",emoji:"ðŸ“š",color:"#E05252",tagline:"Legal Research & Document Preparation",desc:"Research automation, document templates, citation checking."},
+  lawyer:{id:"lawyer",label:"Lawyer / Counsel",emoji:"LW",color:"#9B59B6",tagline:"Barrister & Solicitor of the Supreme Court",desc:"35+ AI tools for research, drafting, strategy, and trial prep."},
+  judge:{id:"judge",label:"Judge",emoji:"JG",color:"#C8A45E",tagline:"Court of Appeal / Federal High Court / State High Court",desc:"Judgment composer, issue spotting, court orders, case summaries."},
+  magistrate:{id:"magistrate",label:"Magistrate",emoji:"MG",color:"#4A9EE8",tagline:"Magistrate Court â€” Criminal, Civil & Family",desc:"Quick rulings, bail decisions, sentencing guides, warrants."},
+  clerk:{id:"clerk",label:"Court Clerk",emoji:"CK",color:"#2ECC8A",tagline:"Case Filing, Registry & Administration",desc:"Digital filing, document classification, case registry tools."},
+  legislator:{id:"legislator",label:"Legislator / Lawmaker",emoji:"LG",color:"#E67E22",tagline:"National / State House of Assembly",desc:"Bill drafting, law comparison, plain-English summaries, impact analysis."},
+  paralegal:{id:"paralegal",label:"Paralegal",emoji:"PL",color:"#E05252",tagline:"Legal Research & Document Preparation",desc:"Research automation, document templates, citation checking."},
 };
 
 // â”€â”€ ROLE-SPECIFIC NAV â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const JUDGE_NAV=[
-  {sec:"JUDGMENT TOOLS",items:[{id:"judgment_composer",icon:"âš–ï¸",label:"Judgment Composer"},{id:"court_order",icon:"ðŸ“œ",label:"Court Order Generator"},{id:"case_summary_judge",icon:"ðŸ“‹",label:"Case Summary"},{id:"issue_spotter",icon:"ðŸ”",label:"Issue Spotter"}]},
-  {sec:"RESEARCH",items:[{id:"digest",icon:"ðŸ“–",label:"Case Digest Builder"},{id:"statute",icon:"ðŸ”¬",label:"Statute Explainer"},{id:"nigeriancases",icon:"ðŸ“š",label:"Nigerian Case Law"}]},
-  {sec:"ACCOUNT",items:[{id:"vault",icon:"ðŸ—„ï¸",label:"Document Vault"},{id:"cases",icon:"ðŸ“",label:"Case Files"},{id:"profile",icon:"ðŸ‘¤",label:"My Profile"}]},
+  {sec:"JUDGMENT TOOLS",items:[{id:"judgment_composer",icon:"JC",label:"Judgment Composer"},{id:"court_order",icon:"CO",label:"Court Order Generator"},{id:"case_summary_judge",icon:"CS",label:"Case Summary"},{id:"issue_spotter",icon:"IS",label:"Issue Spotter"}]},
+  {sec:"RESEARCH",items:[{id:"digest",icon:"DG",label:"Case Digest Builder"},{id:"statute",icon:"ST",label:"Statute Explainer"},{id:"nigeriancases",icon:"NC",label:"Nigerian Case Law"}]},
+  {sec:"ACCOUNT",items:[{id:"vault",icon:"VT",label:"Document Vault"},{id:"cases",icon:"CF",label:"Case Files"},{id:"profile",icon:"PF",label:"My Profile"}]},
 ];
 const MAGISTRATE_NAV=[
-  {sec:"COURT TOOLS",items:[{id:"quick_ruling",icon:"ðŸ”¨",label:"Quick Ruling"},{id:"bail_decision",icon:"ðŸ”“",label:"Bail Decision"},{id:"warrant_drafter",icon:"ðŸ“„",label:"Warrant Drafter"},{id:"sentencing_guide",icon:"âš–ï¸",label:"Sentencing Guide"}]},
-  {sec:"RESEARCH",items:[{id:"statute",icon:"ðŸ”",label:"Statute Explainer"},{id:"nigeriancases",icon:"ðŸ“š",label:"Nigerian Case Law"}]},
-  {sec:"ACCOUNT",items:[{id:"vault",icon:"ðŸ—„ï¸",label:"Document Vault"},{id:"profile",icon:"ðŸ‘¤",label:"My Profile"}]},
+  {sec:"COURT TOOLS",items:[{id:"quick_ruling",icon:"QR",label:"Quick Ruling"},{id:"bail_decision",icon:"BD",label:"Bail Decision"},{id:"warrant_drafter",icon:"WD",label:"Warrant Drafter"},{id:"sentencing_guide",icon:"SG",label:"Sentencing Guide"}]},
+  {sec:"RESEARCH",items:[{id:"statute",icon:"ST",label:"Statute Explainer"},{id:"nigeriancases",icon:"NC",label:"Nigerian Case Law"}]},
+  {sec:"ACCOUNT",items:[{id:"vault",icon:"VT",label:"Document Vault"},{id:"profile",icon:"PF",label:"My Profile"}]},
 ];
 const CLERK_NAV=[
-  {sec:"FILING TOOLS",items:[{id:"clerk_filing",icon:"ðŸ“‹",label:"Digital Filing"},{id:"clerk_classify",icon:"ðŸ·ï¸",label:"Document Classifier"}]},
-  {sec:"RESEARCH",items:[{id:"nigeriancases",icon:"ðŸ“š",label:"Nigerian Case Law"}]},
-  {sec:"ACCOUNT",items:[{id:"vault",icon:"ðŸ—„ï¸",label:"Document Vault"},{id:"profile",icon:"ðŸ‘¤",label:"My Profile"}]},
+  {sec:"FILING TOOLS",items:[{id:"clerk_filing",icon:"DF",label:"Digital Filing"},{id:"clerk_classify",icon:"DC",label:"Document Classifier"}]},
+  {sec:"RESEARCH",items:[{id:"nigeriancases",icon:"NC",label:"Nigerian Case Law"}]},
+  {sec:"ACCOUNT",items:[{id:"vault",icon:"VT",label:"Document Vault"},{id:"profile",icon:"PF",label:"My Profile"}]},
 ];
 const LEGISLATOR_NAV=[
-  {sec:"LEGISLATIVE TOOLS",items:[{id:"bill_drafter",icon:"ðŸ“œ",label:"Bill Drafter"},{id:"law_comparison",icon:"âš–ï¸",label:"Law Comparison"},{id:"law_simplifier",icon:"ðŸ’¬",label:"Plain English Summarizer"},{id:"impact_assessment",icon:"ðŸ“Š",label:"Impact Assessment"}]},
-  {sec:"RESEARCH",items:[{id:"statute",icon:"ðŸ”",label:"Statute Explainer"},{id:"nigeriancases",icon:"ðŸ“š",label:"Nigerian Case Law"}]},
-  {sec:"ACCOUNT",items:[{id:"vault",icon:"ðŸ—„ï¸",label:"Document Vault"},{id:"profile",icon:"ðŸ‘¤",label:"My Profile"}]},
+  {sec:"LEGISLATIVE TOOLS",items:[{id:"bill_drafter",icon:"BD",label:"Bill Drafter"},{id:"law_comparison",icon:"LC",label:"Law Comparison"},{id:"law_simplifier",icon:"PS",label:"Plain English Summarizer"},{id:"impact_assessment",icon:"IA",label:"Impact Assessment"}]},
+  {sec:"RESEARCH",items:[{id:"statute",icon:"ST",label:"Statute Explainer"},{id:"nigeriancases",icon:"NC",label:"Nigerian Case Law"}]},
+  {sec:"ACCOUNT",items:[{id:"vault",icon:"VT",label:"Document Vault"},{id:"profile",icon:"PF",label:"My Profile"}]},
 ];
 const PARALEGAL_NAV=[
-  {sec:"RESEARCH TOOLS",items:[{id:"paralegal_research",icon:"ðŸ”¬",label:"Research Hub"},{id:"digest",icon:"ðŸ“–",label:"Case Digest Builder"},{id:"statute",icon:"ðŸ”",label:"Statute Explainer"},{id:"nigeriancases",icon:"ðŸ“š",label:"Nigerian Case Law"}]},
-  {sec:"DRAFTING",items:[{id:"draft",icon:"âœï¸",label:"Draft Documents"},{id:"legalmemo",icon:"ðŸ—’ï¸",label:"Legal Research Memo"},{id:"explainer",icon:"ðŸ—£ï¸",label:"Client Explainer"},{id:"deadlines",icon:"â°",label:"Deadline Intelligence"}]},
-  {sec:"ACCOUNT",items:[{id:"vault",icon:"ðŸ—„ï¸",label:"Document Vault"},{id:"cases",icon:"ðŸ“",label:"Case Workspaces"},{id:"profile",icon:"ðŸ‘¤",label:"My Profile"}]},
+  {sec:"RESEARCH TOOLS",items:[{id:"paralegal_research",icon:"RH",label:"Research Hub"},{id:"digest",icon:"DG",label:"Case Digest Builder"},{id:"statute",icon:"ST",label:"Statute Explainer"},{id:"nigeriancases",icon:"NC",label:"Nigerian Case Law"}]},
+  {sec:"DRAFTING",items:[{id:"draft",icon:"DR",label:"Draft Documents"},{id:"legalmemo",icon:"LM",label:"Legal Research Memo"},{id:"explainer",icon:"CE",label:"Client Explainer"},{id:"deadlines",icon:"DL",label:"Deadline Intelligence"}]},
+  {sec:"ACCOUNT",items:[{id:"vault",icon:"VT",label:"Document Vault"},{id:"cases",icon:"CW",label:"Case Workspaces"},{id:"profile",icon:"PF",label:"My Profile"}]},
 ];
 
 // â”€â”€ NAV â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const NAV=[
-  {sec:"MAIN",items:[{id:"dashboard",icon:"ðŸ›ï¸",label:"Dashboard"},{id:"matterclock",icon:"â±ï¸",label:"Matter Clock"}]},
-  {sec:"THE READER",items:[{id:"reader",icon:"ðŸ“„",label:"Document Analysis"},{id:"qa",icon:"ðŸ’¬",label:"Legal Q&A"}]},
-  {sec:"THE THINKER",items:[{id:"warroom",icon:"ðŸ§ ",label:"Case War Room"},{id:"opposing",icon:"âš”ï¸",label:"Opposing Counsel"},{id:"strength",icon:"âš–ï¸",label:"Strength Assessment"},{id:"courtpredictor",icon:"ðŸ“Š",label:"Court Success Predictor"}]},
-  {sec:"THE CREATOR",items:[{id:"draft",icon:"âœï¸",label:"Draft Documents"},{id:"briefscore",icon:"ðŸ“Š",label:"Brief-to-Win Score"},{id:"explainer",icon:"ðŸ—£ï¸",label:"Client Explainer"},{id:"clientreport",icon:"ðŸ“¬",label:"Client Report"},{id:"feenote",icon:"ðŸ§¾",label:"Fee Note Builder"},{id:"intakememo",icon:"ðŸ“‹",label:"Client Intake Memo"}]},
-  {sec:"INTELLIGENCE",items:[{id:"clausedna",icon:"ðŸ§¬",label:"Clause DNA"},{id:"deadlines",icon:"â°",label:"Deadline Intelligence"},{id:"jurisdiction",icon:"ðŸŒ",label:"Jurisdiction Translator"},{id:"statute",icon:"ðŸ”",label:"Statute Explainer"},{id:"precedent",icon:"ðŸ“–",label:"Precedent Clause Library"},{id:"correspondence",icon:"ðŸ“©",label:"Correspondence Tracker"}]},
-  {sec:"POWER TOOLS",items:[{id:"digest",icon:"ðŸ“‹",label:"Case Digest Builder"},{id:"legalmemo",icon:"ðŸ—’ï¸",label:"Legal Research Memo"},{id:"pleadingcheck",icon:"âš ï¸",label:"Pleadings Checker"},{id:"compliancecal",icon:"ðŸ“…",label:"Compliance Calendar"},{id:"witness",icon:"ðŸŽ¯",label:"Witness Forge"},{id:"evidence",icon:"ðŸ”¬",label:"Evidence Analyser"},{id:"settlement",icon:"ðŸ’°",label:"Settlement Intelligence"},{id:"negotiation",icon:"ðŸ”„",label:"Contract Negotiation"},{id:"whatsapp",icon:"ðŸ’¬",label:"WhatsApp Evidence"},{id:"seniorpartner",icon:"ðŸ¤",label:"AI Senior Partner"}]},
-  {sec:"TRIAL PREP SUITE",items:[{id:"crossexam",icon:"ðŸ”¥",label:"Witness Cross-Examiner"},{id:"motionammo",icon:"ðŸŽ¯",label:"Motion Ammunition"},{id:"claimanalyser",icon:"ðŸ“‹",label:"Claim Analyser"},{id:"clientprep",icon:"ðŸ§‘â€âš–ï¸",label:"Client Prep Coach"}]},
-  {sec:"RESEARCH",items:[{id:"nigeriancases",icon:"ðŸ“–",label:"Nigerian Case Law"}]},
-  {sec:"THE VAULT",items:[{id:"vault",icon:"ðŸ—„ï¸",label:"Document Vault"},{id:"cases",icon:"ðŸ“",label:"Case Workspaces"}]},
+  {sec:"MAIN",items:[{id:"dashboard",icon:"DB",label:"Dashboard"},{id:"matterclock",icon:"MC",label:"Matter Clock"}]},
+  {sec:"THE READER",items:[{id:"reader",icon:"DA",label:"Document Analysis"},{id:"qa",icon:"QA",label:"Legal Q&A"}]},
+  {sec:"THE THINKER",items:[{id:"warroom",icon:"WR",label:"Case War Room"},{id:"opposing",icon:"OC",label:"Opposing Counsel"},{id:"strength",icon:"SA",label:"Strength Assessment"},{id:"courtpredictor",icon:"CP",label:"Court Success Predictor"}]},
+  {sec:"THE CREATOR",items:[{id:"draft",icon:"DR",label:"Draft Documents"},{id:"briefscore",icon:"BS",label:"Brief-to-Win Score"},{id:"explainer",icon:"CE",label:"Client Explainer"},{id:"clientreport",icon:"CR",label:"Client Report"},{id:"feenote",icon:"FN",label:"Fee Note Builder"},{id:"intakememo",icon:"IM",label:"Client Intake Memo"}]},
+  {sec:"INTELLIGENCE",items:[{id:"clausedna",icon:"CD",label:"Clause DNA"},{id:"deadlines",icon:"DL",label:"Deadline Intelligence"},{id:"jurisdiction",icon:"JT",label:"Jurisdiction Translator"},{id:"statute",icon:"ST",label:"Statute Explainer"},{id:"precedent",icon:"PL",label:"Precedent Clause Library"},{id:"correspondence",icon:"CT",label:"Correspondence Tracker"}]},
+  {sec:"POWER TOOLS",items:[{id:"digest",icon:"DG",label:"Case Digest Builder"},{id:"legalmemo",icon:"LM",label:"Legal Research Memo"},{id:"pleadingcheck",icon:"PC",label:"Pleadings Checker"},{id:"compliancecal",icon:"CC",label:"Compliance Calendar"},{id:"witness",icon:"WF",label:"Witness Forge"},{id:"evidence",icon:"EA",label:"Evidence Analyser"},{id:"settlement",icon:"SI",label:"Settlement Intelligence"},{id:"negotiation",icon:"CN",label:"Contract Negotiation"},{id:"whatsapp",icon:"WE",label:"WhatsApp Evidence"},{id:"seniorpartner",icon:"SP",label:"AI Senior Partner"}]},
+  {sec:"TRIAL PREP SUITE",items:[{id:"crossexam",icon:"CX",label:"Witness Cross-Examiner"},{id:"motionammo",icon:"MA",label:"Motion Ammunition"},{id:"claimanalyser",icon:"CA",label:"Claim Analyser"},{id:"clientprep",icon:"PC",label:"Client Prep Coach"}]},
+  {sec:"RESEARCH",items:[{id:"nigeriancases",icon:"NC",label:"Nigerian Case Law"}]},
+  {sec:"THE VAULT",items:[{id:"vault",icon:"VT",label:"Document Vault"},{id:"cases",icon:"CW",label:"Case Workspaces"}]},
 ];
 
 const DOC_TYPES=[
@@ -981,12 +981,12 @@ function UpgradeBanner({t,go}){
 
 function ChambersGate({t,go,featureName}){
   return React.createElement("div",{className:"fade",style:{textAlign:"center",padding:"60px 20px"}},
-    React.createElement("div",{style:{fontSize:52,marginBottom:16}},"âš–ï¸"),
+    React.createElement("div",{style:{fontSize:52,marginBottom:16,fontWeight:700,color:GOLD}},"CH"),
     React.createElement("div",{style:{display:"inline-flex",alignItems:"center",gap:8,background:"rgba(200,164,94,0.1)",border:"1px solid rgba(200,164,94,0.3)",borderRadius:100,padding:"5px 16px",fontSize:11,fontWeight:700,color:GOLD,letterSpacing:"1px",marginBottom:20}},"CHAMBERS EXCLUSIVE"),
     React.createElement("h2",{style:{fontFamily:"'Playfair Display',serif",fontSize:26,fontWeight:700,color:t.text,marginBottom:12}},featureName||"This Feature"),
     React.createElement("p",{style:{fontSize:14,color:t.dim,lineHeight:1.8,maxWidth:440,margin:"0 auto 28px"}},"This is a Chambers-only litigation weapon. Upgrade to unlock the full Trial Prep Suite plus AI Senior Partner, Witness Forge, Evidence Analyser, and Settlement Intelligence."),
     React.createElement("div",{style:{display:"flex",gap:10,justifyContent:"center",flexWrap:"wrap"}},
-      React.createElement("button",{onClick:()=>go("upgrade"),style:{padding:"13px 32px",borderRadius:8,background:"linear-gradient(135deg,#C8A45E,#D4B474)",border:"none",color:"#0D1B2E",fontWeight:700,fontSize:15,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}},"Upgrade to Chambers â€” NGN 20,000/mo"),
+      React.createElement("button",{onClick:()=>go("upgrade"),style:{padding:"13px 32px",borderRadius:8,background:"linear-gradient(135deg,#C8A45E,#D4B474)",border:"none",color:"#0D1B2E",fontWeight:700,fontSize:15,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}},"Upgrade to Chambers - NGN 20,000/mo"),
       React.createElement("button",{onClick:()=>go("upgrade"),style:{padding:"13px 20px",borderRadius:8,background:"transparent",border:"1px solid rgba(200,164,94,0.3)",color:GOLD,fontWeight:600,fontSize:13,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}},"See All Plans")
     )
   );
@@ -994,11 +994,11 @@ function ChambersGate({t,go,featureName}){
 
 function FreeGate({t,go,featureName}){
   return React.createElement("div",{className:"fade",style:{textAlign:"center",padding:"60px 20px"}},
-    React.createElement("div",{style:{fontSize:52,marginBottom:16}},"ðŸ”’"),
+    React.createElement("div",{style:{fontSize:52,marginBottom:16,fontWeight:700,color:"#4A9EE8"}},"LK"),
     React.createElement("div",{style:{display:"inline-flex",alignItems:"center",gap:8,background:"rgba(74,158,232,0.1)",border:"1px solid rgba(74,158,232,0.3)",borderRadius:100,padding:"5px 16px",fontSize:11,fontWeight:700,color:"#4A9EE8",letterSpacing:"1px",marginBottom:20}},"SOLO FEATURE"),
     React.createElement("h2",{style:{fontFamily:"'Playfair Display',serif",fontSize:26,fontWeight:700,color:t.text,marginBottom:12}},featureName||"This Feature"),
     React.createElement("p",{style:{fontSize:14,color:t.dim,lineHeight:1.8,maxWidth:440,margin:"0 auto 28px"}},"Upgrade to Solo for NGN 12,000/month and unlock every tool a working Nigerian lawyer needs."),
-    React.createElement("button",{onClick:()=>go("upgrade"),style:{padding:"13px 32px",borderRadius:8,background:"linear-gradient(135deg,#C8A45E,#D4B474)",border:"none",color:"#0D1B2E",fontWeight:700,fontSize:15,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}},"Upgrade to Solo â€” NGN 12,000/mo")
+    React.createElement("button",{onClick:()=>go("upgrade"),style:{padding:"13px 32px",borderRadius:8,background:"linear-gradient(135deg,#C8A45E,#D4B474)",border:"none",color:"#0D1B2E",fontWeight:700,fontSize:15,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}},"Upgrade to Solo - NGN 12,000/mo")
   );
 }
 
@@ -1019,7 +1019,7 @@ function Inp({val,set,ph,rows,t,style={},onKey}){
   if(rows)return React.createElement("div",{style:{position:"relative"}},
     React.createElement("textarea",{name:((ph||"textarea-field").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"")||"textarea-field"),value:val,onChange:e=>set(e.target.value),placeholder:ph,rows,onFocus:focus,onBlur:blur,style:{...base,resize:"vertical",lineHeight:1.7}}),
     showCounter&&React.createElement("div",{style:{textAlign:"right",fontSize:10,color:counterColor,marginTop:3}},
-      len>=MAX?"âš  Will be truncated at 12,000 chars":len>=WARN?`${len.toLocaleString()} chars â€” approaching limit`:`${len.toLocaleString()} chars`
+      len>=MAX?"Limit: will be truncated at 12,000 chars":len>=WARN?`${len.toLocaleString()} chars - approaching limit`:`${len.toLocaleString()} chars`
     )
   );
   return React.createElement("input",{name:((ph||"input-field").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"")||"input-field"),value:val,onChange:e=>set(e.target.value),placeholder:ph,onFocus:focus,onBlur:blur,onKeyDown:onKey,style:base});
@@ -1029,7 +1029,7 @@ function Sel({val,set,opts,ph,t}){
   const isGrouped=Array.isArray(opts)&&opts.length>0&&typeof opts[0]==='object'&&opts[0].group;
   return React.createElement("select",{name:((ph||"select-field").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"")||"select-field"),value:val,onChange:e=>set(e.target.value),style:{width:"100%",background:t.input,border:`1px solid ${t.border}`,borderRadius:8,padding:"11px 14px",fontFamily:"'DM Sans',sans-serif",fontSize:13.5,color:val?t.text:t.muted,outline:"none"}},
     React.createElement("option",{value:""},ph||"Select..."),
-    isGrouped?opts.map(g=>React.createElement("optgroup",{key:g.group,label:"â€” "+g.group+" â€”"},g.items.map(o=>React.createElement("option",{key:o,value:o},o)))):opts.map(o=>React.createElement("option",{key:o,value:o},o))
+    isGrouped?opts.map(g=>React.createElement("optgroup",{key:g.group,label:"- "+g.group+" -"},g.items.map(o=>React.createElement("option",{key:o,value:o},o)))):opts.map(o=>React.createElement("option",{key:o,value:o},o))
   );
 }
 
@@ -1126,7 +1126,7 @@ function Hdr({title,desc,isNew,t,onClear,hasContent}){
       ),
       React.createElement("p",{style:{color:t.dim,fontSize:"clamp(12px,3vw,13.5px)",margin:0,lineHeight:1.6}},desc)
     ),
-    hasContent&&onClear&&React.createElement("button",{onClick:onClear,style:{flexShrink:0,padding:"6px 10px",borderRadius:7,background:"rgba(224,82,82,0.08)",border:"1px solid rgba(224,82,82,0.2)",color:"#E05252",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:4,whiteSpace:"nowrap"}},"ðŸ—‘ Clear")
+    hasContent&&onClear&&React.createElement("button",{onClick:onClear,style:{flexShrink:0,padding:"6px 10px",borderRadius:7,background:"rgba(224,82,82,0.08)",border:"1px solid rgba(224,82,82,0.2)",color:"#E05252",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:4,whiteSpace:"nowrap"}},"Clear")
   );
 }
 
@@ -1207,7 +1207,7 @@ function FileUpload({onText,t,label}){
       loading?React.createElement("div",{style:{color:GOLD,fontSize:13}},"Extracting text..."):
       React.createElement("div",null,
         React.createElement("div",{style:{marginBottom:6}},Icon({name:"document",size:20,color:name?GOLD:t.muted})),
-        React.createElement("div",{style:{fontSize:13,fontWeight:600,color:t.text,marginBottom:2}},name?`âœ“ ${name}`:(label||"Drop file here or click to upload")),
+        React.createElement("div",{style:{fontSize:13,fontWeight:600,color:t.text,marginBottom:2}},name?`Loaded: ${name}`:(label||"Drop file here or click to upload")),
         React.createElement("div",{style:{fontSize:11,color:t.muted}},"Supports PDF, DOCX, TXT")
       )
     ),
@@ -1325,7 +1325,7 @@ function AuthPage({t,onBack}){
         React.createElement(Btn,{full:true,onClick:submit,disabled:loading||!email||!password},loading?"Please wait...":mode==="login"?"Log In to Verdict AI":"Create Account"),
         React.createElement("div",{style:{textAlign:"center",marginTop:14,fontSize:13,color:t.muted}},mode==="login"?"Don't have an account? ":"Already have an account? ",React.createElement("button",{onClick:()=>setMode(mode==="login"?"signup":"login"),style:{background:"none",border:"none",color:GOLD,cursor:"pointer",fontFamily:"inherit",fontSize:13,fontWeight:600}},mode==="login"?"Sign up free":"Log in")),
         mode==="login"&&React.createElement("div",{style:{textAlign:"center",marginTop:10}},
-          React.createElement("button",{onClick:handleForgotPassword,disabled:loading||resetSent,style:{background:"none",border:"none",color:t.muted,cursor:"pointer",fontFamily:"inherit",fontSize:12,textDecoration:"underline"}},resetSent?"Reset email sent âœ“":"Forgot password?")
+          React.createElement("button",{onClick:handleForgotPassword,disabled:loading||resetSent,style:{background:"none",border:"none",color:t.muted,cursor:"pointer",fontFamily:"inherit",fontSize:12,textDecoration:"underline"}},resetSent?"Reset email sent":"Forgot password?")
         )
       ),
       React.createElement("div",{style:{textAlign:"center",marginTop:14,fontSize:11,color:t.muted,lineHeight:1.6}},"Free tier: 3 analyses/month. No credit card required.")
@@ -1703,7 +1703,7 @@ function LandingPage({onGetStarted,t}){
         ),
         React.createElement("div",{style:{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(280px,1fr))",gap:14,marginBottom:40}},
           [
-            {title:"ChatGPT / General AI",icon:"ðŸ¤–",color:"#E05252",verdict:"FAILS",points:[
+            {title:"ChatGPT / General AI",icon:"AI",color:"#E05252",verdict:"FAILS",points:[
               "Invents Nigerian cases that do not exist",
               "No knowledge of Nigerian court rules or procedure",
               "Generic output â€” not structured for Nigerian courts",
@@ -1711,7 +1711,7 @@ function LandingPage({onGetStarted,t}){
               "Will cite Section 84 wrong, get the Act name wrong",
               "Zero role awareness â€” gives a magistrate lawyer tools",
             ]},
-            {title:"Ungrounded Search",icon:"ðŸ“š",color:"#F0A500",verdict:"LIMITED",points:[
+            {title:"Ungrounded Search",icon:"DB",color:"#F0A500",verdict:"LIMITED",points:[
               "Search alone cannot reason through your case",
               "No integrated drafting, workflow, or court output",
               "No role-specific tools for judges or magistrates",
@@ -1719,10 +1719,10 @@ function LandingPage({onGetStarted,t}){
               "No strategic synthesis from facts to outcome",
               "Cannot turn verified authorities into finished work product",
             ]},
-            {title:"Verdict AI",icon:"âš–ï¸",color:"#2ECC8A",verdict:"BUILT FOR THIS",points:[
+            {title:"Verdict AI",icon:"VA",color:"#2ECC8A",verdict:"BUILT FOR THIS",points:[
               "Knows Nigerian law â€” statutes, courts, procedures",
               "Never invents case names or statute sections",
-              "Full judgment workflow: facts â†’ issues â†’ orders",
+              "Full judgment workflow: facts > issues > orders",
               "Role-specific: judges, magistrates, clerks, lawyers",
               "Drafts Written Addresses, court orders, bail rulings",
               "Works directly with verified Nigerian case law in our database",
@@ -1736,7 +1736,7 @@ function LandingPage({onGetStarted,t}){
               )
             ),
             col.points.map((p,j)=>React.createElement("div",{key:j,style:{fontSize:13,color:i===2?"rgba(46,204,138,0.9)":"rgba(240,237,230,0.55)",marginBottom:9,display:"flex",gap:8,alignItems:"flex-start",lineHeight:1.5}},
-              React.createElement("span",{style:{fontSize:14,flexShrink:0}},i===2?"âœ“":i===1?"â€”":"âœ—"),p
+              React.createElement("span",{style:{fontSize:12,fontWeight:700,flexShrink:0}},i===2?"YES":i===1?"MID":"NO"),p
             ))
           ))
         ),
@@ -1760,17 +1760,17 @@ function LandingPage({onGetStarted,t}){
             {
               icon:React.createElement("svg",{viewBox:"0 0 24 24",width:32,height:32,fill:"none",stroke:GOLD,strokeWidth:1.5},React.createElement("rect",{x:2,y:3,width:20,height:14,rx:2}),React.createElement("line",{x1:8,y1:21,x2:16,y2:21}),React.createElement("line",{x1:12,y1:17,x2:12,y2:21})),
               name:"Windows & Mac",
-              steps:"Open verdictai.com.ng in Chrome â†’ click the install icon in the address bar â†’ click Install"
+              steps:"Open verdictai.com.ng in Chrome > click the install icon in the address bar > click Install"
             },
             {
               icon:React.createElement("svg",{viewBox:"0 0 24 24",width:32,height:32,fill:"none",stroke:GOLD,strokeWidth:1.5},React.createElement("rect",{x:5,y:2,width:14,height:20,rx:2}),React.createElement("line",{x1:12,y1:18,x2:12,y2:18.5})),
               name:"iPhone & iPad",
-              steps:"Open verdictai.com.ng in Safari â†’ tap the Share button â†’ tap Add to Home Screen â†’ tap Add"
+              steps:"Open verdictai.com.ng in Safari > tap the Share button > tap Add to Home Screen > tap Add"
             },
             {
               icon:React.createElement("svg",{viewBox:"0 0 24 24",width:32,height:32,fill:"none",stroke:GOLD,strokeWidth:1.5},React.createElement("rect",{x:5,y:2,width:14,height:20,rx:2}),React.createElement("circle",{cx:12,cy:17,r:1})),
               name:"Android",
-              steps:"Open verdictai.com.ng in Chrome â†’ tap the 3-dot menu â†’ tap Add to Home Screen â†’ tap Add"
+              steps:"Open verdictai.com.ng in Chrome > tap the 3-dot menu > tap Add to Home Screen > tap Add"
             },
           ].map((p,i)=>React.createElement("div",{key:i,style:{background:"rgba(12,26,46,0.6)",border:"1px solid rgba(30,52,82,0.8)",borderRadius:16,padding:"28px 20px",textAlign:"center"}},
             React.createElement("div",{style:{display:"flex",justifyContent:"center",marginBottom:16}},p.icon),
@@ -1788,7 +1788,7 @@ function LandingPage({onGetStarted,t}){
                 window.deferredPrompt.prompt();
                 window.deferredPrompt.userChoice.then(()=>{window.deferredPrompt=null;});
               } else {
-                alert("To install: use Chrome on desktop (look for install icon in address bar) or Safari on iPhone (Share â†’ Add to Home Screen)");
+                alert("To install: use Chrome on desktop (look for install icon in address bar) or Safari on iPhone (Share > Add to Home Screen)");
               }
             },
             style:{display:"flex",alignItems:"center",gap:10,padding:"13px 28px",borderRadius:10,background:`linear-gradient(135deg,${GOLD},${GOLD2})`,color:"#0D1B2E",fontWeight:700,fontSize:15,border:"none",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",margin:"0 auto"}
@@ -2125,7 +2125,7 @@ function NigerianCasesPage({t,go}){
   const [liveLoading,setLiveLoading]=useState(false);
   const [searched,setSearched]=useState(false);
   const [limitReached,setLimitReached]=useState(false);
-  const sys=`\n\nNigerian legal research specialist. Begin immediately with the analysis â€” no introduction.\n\nRESEARCH SUMMARY: The state of Nigerian law on this issue â€” the principles, doctrines, and statutory frameworks that apply. State the law clearly and directly.\n\nAPPLICABLE STATUTES: Nigerian statutes and legislation by full name and section. Do not invent statute names. If a statute does not exist, do not cite it.\n\nLEGAL PRINCIPLES: The common law principles and doctrines that apply, by their correct names.\n\nCURRENT LEGAL POSITION: The current state of Nigerian law on this issue stated clearly.\n\nDECISIVE FACTORS: The factors that courts weigh in determining this issue. With realistic probability ranges.\n\nFINANCIAL EXPOSURE: State the realistic financial exposure using only the naira figures that appear in the user's input. Never substitute different amounts. If the input states NGN 180 million, write NGN 180 million. Do not invent or alter any financial figure.\n\nDATABASE GROUNDING: Base the answer on verified Nigerian case law in our database and integrate those authorities into the reasoning.`+VOICE;
+  const sys=`\n\nNigerian legal research specialist. Begin immediately with the analysis and no introduction.\n\nRESEARCH SUMMARY: State the Nigerian legal position on the issue directly and concretely. Where the issue is state-specific, identify the relevant Nigerian state law and distinguish it from the federal position.\n\nLOCAL LEGAL INTELLIGENCE: Prioritise Nigerian authorities, Nigerian statutes, Nigerian procedural rules, and Nigerian court practice. Where the problem concerns tenancy, land, notice, recovery of possession, self-help eviction, or rent disputes, analyse the legally required notices, whether self-help is unlawful, the correct court process, and any deposit or forfeiture issues only from Nigerian law.\n\nAPPLICABLE STATUTES: Cite only real Nigerian statutes or rules of court by correct name and section. Never invent a statute, rule, or section.\n\nCASE AUTHORITIES: Use only case titles and citations that are present in the verified database records supplied to you. If a citation is not present in the database grounding, do not create one, do not guess one, and do not borrow one from model memory. Say that the citation is not yet available in our database.\n\nCURRENT LEGAL POSITION: State the current Nigerian legal position clearly.\n\nDECISIVE FACTORS: Identify the factors Nigerian courts weigh in determining the issue.\n\nFINANCIAL EXPOSURE: Use only the naira figures that appear in the user's input. Never change, round, or substitute the amount.\n\nDATABASE GROUNDING: Treat the verified database as the authority layer and your reasoning layer together. Every case reference, citation, and authority must come from our database.`+VOICE;
   const runAI=async()=>{
     if(!query.trim())return;setLoading(true);setAiOut("");setLimitReached(false);
     try{await stream(sys,"Nigerian law research: "+query,v=>setAiOut(v));}
@@ -2144,7 +2144,7 @@ function NigerianCasesPage({t,go}){
       React.createElement("div",{style:{fontSize:13,fontWeight:600,color:GOLD,marginBottom:2}},r.title),
       React.createElement("div",{style:{fontSize:11,color:t.muted}},r.court),
       React.createElement("p",{style:{fontSize:12,color:t.dim,marginTop:3,lineHeight:1.5}},r.snippet)
-    ),React.createElement("span",{style:{color:GOLD,fontSize:16}},r.isLink?"â†’":"â€¢")
+    ),React.createElement("span",{style:{color:GOLD,fontSize:12,fontWeight:700}},r.isLink?">":"DB")
   );
   return React.createElement("div",{className:"fade"},
     React.createElement(Hdr,{title:"Nigerian Case Law Research",desc:"AI analysis grounded in verified Nigerian case law in our database. No invented cases or statutes.",t,onClear:doClear,hasContent:!!(query||aiOut)}),
@@ -2224,11 +2224,11 @@ function VaultPage({docs,onDelete,onRefresh,t,go}){
     ),
     limitReached&&React.createElement(UpgradeBanner,{t,go}),
     out&&React.createElement("div",{style:{marginBottom:16}},React.createElement(Lbl,{t},"AI Search Results"),React.createElement(Out,{text:out,loading,t})),
-    !docs.length?React.createElement("div",{style:{textAlign:"center",padding:"60px 20px",color:t.muted}},React.createElement("div",{style:{fontSize:40,marginBottom:10}},"ðŸ—„ï¸"),React.createElement("div",{style:{fontSize:13}},"Documents you analyze will be saved here.")):
+    !docs.length?React.createElement("div",{style:{textAlign:"center",padding:"60px 20px",color:t.muted}},React.createElement("div",{style:{fontSize:32,marginBottom:10,fontWeight:700}},"DV"),React.createElement("div",{style:{fontSize:13}},"Documents you analyze will be saved here.")):
     React.createElement("div",null,
       React.createElement("div",{style:{fontSize:12,color:t.muted,marginBottom:10}},`${filtered.length} of ${docs.length} documents`),
       filtered.map((d,i)=>React.createElement("div",{key:d.id||i,style:{background:t.card,border:`1px solid ${t.border}`,borderRadius:9,padding:"11px 14px",marginBottom:7,display:"flex",alignItems:"center",gap:12}},
-        React.createElement("span",{style:{fontSize:20}},"ðŸ“„"),
+        React.createElement("span",{style:{fontSize:12,fontWeight:700}},"DOC"),
         React.createElement("div",{style:{flex:1}},React.createElement("div",{style:{fontWeight:600,fontSize:13.5,color:t.text}},d.name),React.createElement("div",{style:{fontSize:11,color:t.muted,marginTop:2}},new Date(d.created_at).toLocaleDateString())),
         React.createElement(Btn,{variant:"ghost",sm:true,onClick:()=>setView(d)},"View"),
         React.createElement("button",{onClick:async()=>{if(confirm("Delete?"))await onDelete(d.id);},style:{background:"rgba(224,82,82,0.1)",border:"1px solid rgba(224,82,82,0.2)",borderRadius:6,color:"#E05252",cursor:"pointer",padding:"5px 10px",fontSize:12}},"Delete")
@@ -2249,7 +2249,7 @@ function CasesPage({cases,onAdd,onUpdate,onDelete,t}){
       React.createElement("div",{style:{marginBottom:14}},React.createElement(Lbl,{t},"Description"),React.createElement(Inp,{val:desc,set:setDesc,ph:"Brief description...",rows:2,t})),
       React.createElement("div",{style:{display:"flex",gap:8}},React.createElement(Btn,{onClick:add},"Create"),React.createElement(Btn,{variant:"ghost",onClick:()=>setShowNew(false)},"Cancel"))
     ),
-    !cases.length?React.createElement("div",{style:{textAlign:"center",padding:"60px 20px",color:t.muted}},React.createElement("div",{style:{fontSize:40,marginBottom:10}},"ðŸ“"),React.createElement("div",{style:{fontSize:13}},"Create a workspace to organise your matters.")):
+    !cases.length?React.createElement("div",{style:{textAlign:"center",padding:"60px 20px",color:t.muted}},React.createElement("div",{style:{fontSize:32,marginBottom:10,fontWeight:700}},"WS"),React.createElement("div",{style:{fontSize:13}},"Create a workspace to organise your matters.")):
     React.createElement("div",{className:"two-col",style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}},
       cases.map(c=>React.createElement("div",{key:c.id,style:{background:t.card,border:`1px solid ${t.border}`,borderRadius:10,padding:16}},
         React.createElement("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:7}},
@@ -2258,7 +2258,7 @@ function CasesPage({cases,onAdd,onUpdate,onDelete,t}){
             React.createElement("select",{name:"case-status",value:c.status,onChange:e=>onUpdate(c.id,{status:e.target.value}),style:{background:t.input,border:`1px solid ${t.border}`,borderRadius:6,color:c.status==="active"?"#2ECC8A":c.status==="pending"?"#F0A500":t.muted,fontSize:11,padding:"3px 7px",fontFamily:"inherit",outline:"none"}},
               ["active","pending","closed"].map(s=>React.createElement("option",{key:s,value:s},s.charAt(0).toUpperCase()+s.slice(1)))
             ),
-            React.createElement("button",{onClick:()=>{if(confirm("Delete?"))onDelete(c.id);},style:{background:"rgba(224,82,82,0.1)",border:"1px solid rgba(224,82,82,0.2)",borderRadius:6,color:"#E05252",cursor:"pointer",padding:"3px 8px",fontSize:12}},"Ã—")
+            React.createElement("button",{onClick:()=>{if(confirm("Delete?"))onDelete(c.id);},style:{background:"rgba(224,82,82,0.1)",border:"1px solid rgba(224,82,82,0.2)",borderRadius:6,color:"#E05252",cursor:"pointer",padding:"3px 8px",fontSize:12}},"x")
           )
         ),
         c.description&&React.createElement("div",{style:{fontSize:12.5,color:t.dim,lineHeight:1.55}},c.description)
@@ -2297,7 +2297,7 @@ function ProfilePage({profile,onUpdate,t,go}){
       React.createElement("div",{style:{marginBottom:10}},React.createElement(Lbl,{t},"Full Name"),React.createElement(Inp,{val:name,set:setName,ph:"Your full name",t})),
       React.createElement("div",{style:{marginBottom:10}},React.createElement(Lbl,{t},"Firm"),React.createElement(Inp,{val:firm,set:setFirm,ph:"Your firm name",t})),
       React.createElement("div",{style:{marginBottom:16}},React.createElement(Lbl,{t},"Practice Area"),React.createElement(Inp,{val:area,set:setArea,ph:"e.g. Commercial Litigation",t})),
-      React.createElement(Btn,{onClick:save},saved?"âœ“ Saved!":"Save Changes")
+      React.createElement(Btn,{onClick:save},saved?"Saved":"Save Changes")
     ),
     React.createElement("div",{style:{background:t.card,border:`1px solid ${t.border}`,borderRadius:12,padding:22,marginBottom:16}},
       React.createElement("h3",{style:{fontFamily:"'Playfair Display',serif",fontSize:16,marginBottom:12,color:t.text}},"Subscription"),
@@ -2326,7 +2326,7 @@ function ProfilePage({profile,onUpdate,t,go}){
     ),
     React.createElement("div",{style:{background:t.card,border:`1px solid ${t.border}`,borderRadius:12,padding:22,marginBottom:16}},
       React.createElement("h3",{style:{fontFamily:"'Playfair Display',serif",fontSize:16,marginBottom:8,color:t.text}},"Page Content"),
-      cleared&&React.createElement("div",{style:{background:"rgba(46,204,138,0.1)",border:"1px solid rgba(46,204,138,0.3)",borderRadius:7,padding:"9px 12px",marginBottom:12,fontSize:12.5,color:"#2ECC8A"}},"âœ“ Cleared."),
+      cleared&&React.createElement("div",{style:{background:"rgba(46,204,138,0.1)",border:"1px solid rgba(46,204,138,0.3)",borderRadius:7,padding:"9px 12px",marginBottom:12,fontSize:12.5,color:"#2ECC8A"}},"Cleared."),
       React.createElement(Btn,{variant:"ghost",onClick:handleClearAll},"Clear All Saved Page Content")
     ),
     React.createElement("div",{style:{background:t.card,border:`1px solid ${t.border}`,borderRadius:12,padding:22}},
@@ -2475,7 +2475,7 @@ function UpgradePage({t,go,userTier,userEmail,onUpgradeSuccess,profile,onUpdate}
         sessionStorage.removeItem("vd_pay_plan");
         if(onUpgradeSuccess)onUpgradeSuccess(vData.tier);
         setPaying(null);
-        setSuccess("ðŸŽ‰ Payment successful! Your plan has been upgraded.");
+        setSuccess("Payment successful! Your plan has been upgraded.");
         if(onUpdate)onUpdate({billing_interval:billing});
         setTimeout(()=>{go("dashboard");},1500);
       }else{
@@ -2584,7 +2584,7 @@ function UpgradePage({t,go,userTier,userEmail,onUpgradeSuccess,profile,onUpdate}
           Icon({name:"check",size:13,color:plan.color}),f
         )),
         plan.locked&&plan.locked.length>0&&plan.locked.map((f,j)=>React.createElement("div",{key:"l"+j,style:{fontSize:12,color:t.muted,marginBottom:6,display:"flex",gap:8,alignItems:"flex-start",opacity:0.5}},
-          React.createElement("span",{style:{fontSize:12,marginTop:1}}),"âœ• "+f
+          React.createElement("span",{style:{fontSize:12,marginTop:1}}),"No: "+f
         )),
 
         // Buttons
@@ -3098,13 +3098,13 @@ function SeniorPartnerPage({t,go}){
     React.createElement("div",{style:{background:t.card,border:"2px solid rgba(200,164,94,0.3)",borderRadius:14,overflow:"hidden"}},
       React.createElement("div",{style:{background:"linear-gradient(135deg,rgba(200,164,94,0.12),rgba(200,164,94,0.04))",padding:"14px 20px",borderBottom:"1px solid rgba(200,164,94,0.2)",display:"flex",alignItems:"center",gap:12}},
         React.createElement("div",{style:{width:40,height:40,borderRadius:"50%",background:"linear-gradient(135deg,#C8A45E,#D4B474)",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Playfair Display',serif",fontSize:16,fontWeight:700,color:"#0D1B2E",flexShrink:0}},"AB"),
-        React.createElement("div",null,React.createElement("div",{style:{fontFamily:"'Playfair Display',serif",fontSize:15,fontWeight:700,color:t.text}},"Ade Bello, SAN"),React.createElement("div",{style:{fontSize:11,color:t.dim}},"Senior Partner Â· 28 Years Â· Commercial Litigation and Corporate")),
+        React.createElement("div",null,React.createElement("div",{style:{fontFamily:"'Playfair Display',serif",fontSize:15,fontWeight:700,color:t.text}},"Ade Bello, SAN"),React.createElement("div",{style:{fontSize:11,color:t.dim}},"Senior Partner - 28 Years - Commercial Litigation and Corporate")),
         messages.length>0&&React.createElement("button",{onClick:()=>exportPDF(messages.map(m=>(m.role==="partner"?"BELLO SP: ":"YOU: ")+m.content).join("\n\n---\n\n"),"Senior-Partner-Session"),style:{marginLeft:"auto",padding:"6px 12px",borderRadius:7,background:"transparent",color:"#C8A45E",border:"1px solid rgba(200,164,94,0.3)",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}},"Export PDF")
       ),
       React.createElement("div",{style:{height:400,overflowY:"auto",padding:20,display:"flex",flexDirection:"column",gap:16}},
         messages.length===0&&React.createElement("div",{style:{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",textAlign:"center",color:t.muted}},
-          React.createElement("div",{style:{fontSize:36,marginBottom:12}},"ðŸ¤"),
-          React.createElement("p",{style:{fontSize:13,lineHeight:1.7,maxWidth:400,marginBottom:16}},"Bring me a case, a clause, a strategy question, or a problem. I will give you my view first â€” then I will ask you the hard questions."),
+          React.createElement("div",{style:{fontSize:36,marginBottom:12,fontWeight:700}},"AB"),
+          React.createElement("p",{style:{fontSize:13,lineHeight:1.7,maxWidth:400,marginBottom:16}},"Bring me a case, a clause, a strategy question, or a problem. I will give you my view first - then I will ask you the hard questions."),
           React.createElement("div",{style:{display:"flex",gap:8,flexWrap:"wrap",justifyContent:"center"}},STARTERS.map(q=>React.createElement("button",{key:q,onClick:()=>setInput(q),style:{background:t.input,border:"1px solid "+t.border,borderRadius:8,padding:"8px 12px",fontSize:12,color:t.dim,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",textAlign:"left",lineHeight:1.4},onMouseEnter:e=>e.target.style.borderColor="#C8A45E",onMouseLeave:e=>e.target.style.borderColor=t.border},q)))
         ),
         messages.map((m,i)=>React.createElement("div",{key:i,style:{display:"flex",gap:12,flexDirection:m.role==="user"?"row-reverse":"row",alignItems:"flex-start"}},
@@ -3152,11 +3152,11 @@ function RoleSelectPage({onSelect,t}){
           React.createElement("div",{style:{fontFamily:"'Playfair Display',serif",fontSize:14,fontWeight:700,color:"#F0EDE6",marginBottom:4}},role.label),
           React.createElement("div",{style:{fontSize:10,color:role.color,fontWeight:600,marginBottom:6}},role.tagline),
           React.createElement("div",{style:{fontSize:11,color:"rgba(240,237,230,0.5)",lineHeight:1.5}},role.desc),
-          selected===role.id&&React.createElement("div",{style:{position:"absolute",top:10,right:10,width:20,height:20,borderRadius:"50%",background:role.color,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,color:"#07101c"}},"âœ“")
+          selected===role.id&&React.createElement("div",{style:{position:"absolute",top:10,right:10,width:20,height:20,borderRadius:"50%",background:role.color,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,color:"#07101c"}},"OK")
         ))
       ),
       React.createElement("button",{onClick:save,disabled:!selected||saving,style:{width:"100%",padding:"15px",borderRadius:10,background:selected?`linear-gradient(135deg,${GOLD},${GOLD2})`:"rgba(30,52,82,0.5)",border:"none",color:selected?"#0D1B2E":"rgba(240,237,230,0.3)",fontFamily:"'DM Sans',sans-serif",fontSize:15,fontWeight:700,cursor:selected&&!saving?"pointer":"not-allowed",transition:"all 0.2s"}},
-        saving?"Setting up your workspace...":selected?"Enter Verdict AI â†’":"Select your role to continue"
+        saving?"Setting up your workspace...":selected?"Enter Verdict AI >":"Select your role to continue"
       )
     )
   );
@@ -3165,12 +3165,12 @@ function RoleSelectPage({onSelect,t}){
 // â”€â”€ JUDGE DASHBOARD â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function JudgeDashboard({go,t,profile}){
   const tools=[
-    {id:"court_order",icon:"ðŸ“œ",label:"Court Order Generator",desc:"Formal orders â€” any outcome type instantly",color:"#4A9EE8"},
-    {id:"case_summary_judge",icon:"ðŸ“‹",label:"Case Summary",desc:"200-page file â†’ 2-page bench brief",color:"#2ECC8A"},
-    {id:"issue_spotter",icon:"ðŸ”",label:"Issue Spotter",desc:"Auto-identify issues from grounds of appeal",color:"#9B59B6"},
-    {id:"digest",icon:"ðŸ“–",label:"Case Digest",desc:"Publication-quality digest of any judgment",color:"#E67E22"},
-    {id:"statute",icon:"ðŸ”¬",label:"Statute Explainer",desc:"Any provision â€” meaning, approach, traps",color:"#E05252"},
-    {id:"nigeriancases",icon:"ðŸ“š",label:"Nigerian Case Law",desc:"Research precedents instantly",color:GOLD},
+    {id:"court_order",icon:"CO",label:"Court Order Generator",desc:"Formal orders â€” any outcome type instantly",color:"#4A9EE8"},
+    {id:"case_summary_judge",icon:"CS",label:"Case Summary",desc:"200-page file â€” 2-page bench brief",color:"#2ECC8A"},
+    {id:"issue_spotter",icon:"IS",label:"Issue Spotter",desc:"Auto-identify issues from grounds of appeal",color:"#9B59B6"},
+    {id:"digest",icon:"DG",label:"Case Digest",desc:"Publication-quality digest of any judgment",color:"#E67E22"},
+    {id:"statute",icon:"SE",label:"Statute Explainer",desc:"Any provision â€” meaning, approach, traps",color:"#E05252"},
+    {id:"nigeriancases",icon:"NC",label:"Nigerian Case Law",desc:"Research precedents instantly",color:GOLD},
   ];
   return React.createElement("div",{className:"fade"},
     React.createElement("div",{style:{marginBottom:24}},
@@ -3181,11 +3181,11 @@ function JudgeDashboard({go,t,profile}){
     React.createElement("div",{style:{background:`linear-gradient(135deg,rgba(200,164,94,0.12),rgba(200,164,94,0.04))`,border:"1px solid rgba(200,164,94,0.25)",borderRadius:14,padding:"20px 24px",marginBottom:24,cursor:"pointer"},onClick:()=>go("judgment_composer"),
       onMouseEnter:e=>e.currentTarget.style.transform="translateY(-2px)",onMouseLeave:e=>e.currentTarget.style.transform="none"},
       React.createElement("div",{style:{display:"flex",alignItems:"center",gap:12,marginBottom:4}},
-        React.createElement("div",{style:{fontSize:28}},"âš–ï¸"),
+        React.createElement("div",{style:{fontSize:16,fontWeight:700,color:GOLD}},"JC"),
         React.createElement("div",null,
           React.createElement("div",{style:{fontFamily:"'Playfair Display',serif",fontSize:18,fontWeight:700,color:GOLD}},"Judgment Composer ",
             React.createElement("span",{style:{fontSize:9,padding:"3px 8px",borderRadius:100,background:"rgba(200,164,94,0.15)",color:GOLD,fontFamily:"'DM Sans',sans-serif",fontWeight:700}},"STAR FEATURE")),
-          React.createElement("div",{style:{fontSize:12,color:t.dim,marginTop:2}},"Upload facts â†’ Extract â†’ Identify issues â†’ Analyse one by one â†’ Conclusion â†’ Formal court orders")
+          React.createElement("div",{style:{fontSize:12,color:t.dim,marginTop:2}},"Upload facts > Extract > Identify issues > Analyse one by one > Conclusion > Formal court orders")
         ),
         React.createElement("div",{style:{marginLeft:"auto"}},Icon({name:"chevron",size:20,color:GOLD}))
       )
@@ -3295,18 +3295,18 @@ function JudgmentComposerPage({t,go}){
   };
   const doClear=()=>{if(!window.confirm("Clear all judgment progress?"))return;setCaseText("");setCaseTitle("");setExtracted(null);setIssues([]);setConclusion("");setOrderType("");setCourtOrder("");setAssembled("");clearPersist("jc_facts","jc_title","jc_extracted","jc_issues","jc_conclusion","jc_ordertype","jc_order","jc_assembled");setStep(1);};
   return React.createElement("div",{className:"fade"},
-    React.createElement(Hdr,{title:"Judgment Composer",desc:"Complete workflow: upload facts â†’ identify issues â†’ analyse each issue â†’ conclusion â†’ formal court orders.",t,onClear:doClear,hasContent:!!(caseText||assembled)}),
+    React.createElement(Hdr,{title:"Judgment Composer",desc:"Complete workflow: upload facts > identify issues > analyse each issue > conclusion > formal court orders.",t,onClear:doClear,hasContent:!!(caseText||assembled)}),
     React.createElement("div",{className:"step-bar"},
       STEPS.map((s,i)=>React.createElement("div",{key:s.n,className:"step-item"},
         i>0&&React.createElement("div",{className:"step-connector "+(stepDone(s.n)?"done":"todo")}),
         React.createElement("div",{className:"step-wrapper"},
-          React.createElement("div",{className:"step-dot "+(stepDone(s.n)?"done":stepActive(s.n)?"active":"todo"),onClick:()=>stepDone(s.n)&&setStep(s.n),style:{cursor:stepDone(s.n)?"pointer":"default"}},stepDone(s.n)?"âœ“":s.n),
+          React.createElement("div",{className:"step-dot "+(stepDone(s.n)?"done":stepActive(s.n)?"active":"todo"),onClick:()=>stepDone(s.n)&&setStep(s.n),style:{cursor:stepDone(s.n)?"pointer":"default"}},stepDone(s.n)?"OK":s.n),
           React.createElement("div",{className:"step-label",style:{color:stepActive(s.n)?GOLD:stepDone(s.n)?"#2ECC8A":"rgba(240,237,230,0.35)"}},s.label)
         )
       ))
     ),
     step===1&&React.createElement("div",{className:"judgment-panel gold-border"},
-      React.createElement("div",{style:{fontSize:13,fontWeight:600,color:GOLD,marginBottom:14}},"âš–ï¸  Step 1 â€” Upload Case Facts & Grounds of Appeal"),
+      React.createElement("div",{style:{fontSize:13,fontWeight:600,color:GOLD,marginBottom:14}},"Step 1 - Upload Case Facts & Grounds of Appeal"),
       React.createElement("div",{style:{fontSize:12.5,color:t.dim,marginBottom:14,lineHeight:1.7,background:"rgba(200,164,94,0.06)",borderRadius:8,padding:"10px 14px",border:"1px solid rgba(200,164,94,0.15)"}},"Upload the full case file â€” pleadings, affidavits, grounds of appeal. The AI extracts facts, identifies parties, and proposes issues for determination."),
       React.createElement(Lbl,{t},"Case Title (optional)"),
       React.createElement(Inp,{val:caseTitle,set:setCaseTitle,ph:"e.g. Adetunji v. First Bank Plc â€” Suit No. FHC/L/CS/234/2024",rows:1,t}),
@@ -3316,7 +3316,7 @@ function JudgmentComposerPage({t,go}){
       React.createElement(Lbl,{t},"Case Facts, Pleadings & Grounds of Appeal"),
       React.createElement(Inp,{val:caseText,set:setCaseText,ph:"Paste statement of claim/defence, affidavits, grounds of appeal...",rows:12,t}),
       React.createElement("div",{style:{height:14}}),
-      React.createElement(Btn,{full:true,onClick:()=>{setStep(2);extract();},disabled:!caseText.trim()},"Extract Facts & Identify Issues â†’")
+      React.createElement(Btn,{full:true,onClick:()=>{setStep(2);extract();},disabled:!caseText.trim()},"Extract Facts & Identify Issues >")
     ),
     step===2&&React.createElement("div",{className:"judgment-panel gold-border",style:{textAlign:"center",padding:40}},
       React.createElement(Pulse),
@@ -3333,7 +3333,7 @@ function JudgmentComposerPage({t,go}){
       ),
       React.createElement("div",{className:"judgment-panel gold-border"},
         React.createElement("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14,gap:10,flexWrap:"wrap"}},
-          React.createElement("div",{style:{fontSize:13,fontWeight:600,color:GOLD}},"âš–ï¸  Issues for Determination"),
+          React.createElement("div",{style:{fontSize:13,fontWeight:600,color:GOLD}},"Issues for Determination"),
           React.createElement("button",{onClick:()=>setEditIssues(p=>!p),style:{fontSize:11,padding:"5px 12px",borderRadius:6,border:"1px solid "+t.border,background:"transparent",color:t.dim,cursor:"pointer",fontFamily:"inherit"}},editIssues?"Done Editing":"Edit Issues")
         ),
         issues.length===0&&React.createElement("div",{style:{textAlign:"center",padding:20,color:t.muted,fontSize:13}},React.createElement(Pulse)),
@@ -3347,12 +3347,12 @@ function JudgmentComposerPage({t,go}){
         )),
         editIssues&&React.createElement("button",{onClick:()=>setIssues(prev=>[...prev,{id:prev.length+1,text:"Whether...",analysis:""}]),style:{marginTop:8,fontSize:12,padding:"6px 14px",borderRadius:6,border:"1px solid rgba(200,164,94,0.3)",background:"transparent",color:GOLD,cursor:"pointer",fontFamily:"inherit"}},"+  Add Issue"),
         React.createElement("div",{style:{height:16}}),
-        React.createElement(Btn,{full:true,onClick:()=>setStep(4),disabled:issues.length===0},"Proceed to Issue Analysis â†’")
+        React.createElement(Btn,{full:true,onClick:()=>setStep(4),disabled:issues.length===0},"Proceed to Issue Analysis >")
       )
     ),
     step===4&&React.createElement("div",null,
       React.createElement("div",{className:"judgment-panel gold-border",style:{marginBottom:16}},
-        React.createElement("div",{style:{fontSize:13,fontWeight:600,color:GOLD,marginBottom:4}},"âš–ï¸  Step 4 â€” Analyse Issues One by One"),
+        React.createElement("div",{style:{fontSize:13,fontWeight:600,color:GOLD,marginBottom:4}},"Step 4 - Analyse Issues One by One"),
         React.createElement("div",{style:{fontSize:12,color:t.dim,lineHeight:1.6}},"Click each issue to generate the court's analysis.")
       ),
       React.createElement("div",{style:{display:"grid",gridTemplateColumns:"220px 1fr",gap:16}},
@@ -3360,12 +3360,12 @@ function JudgmentComposerPage({t,go}){
           issues.map((iss,i)=>React.createElement("div",{key:iss.id,className:"issue-card"+(currentIssue===i?" active":"")+(iss.analysis?" done-issue":""),
             style:{background:t.card,border:"1px solid "+t.border},onClick:()=>setCurrentIssue(i)},
             React.createElement("div",{style:{display:"flex",gap:8,alignItems:"center",marginBottom:4}},
-              React.createElement("div",{style:{width:22,height:22,borderRadius:"50%",background:iss.analysis?"rgba(46,204,138,0.15)":"rgba(200,164,94,0.1)",border:"1px solid "+(iss.analysis?"rgba(46,204,138,0.4)":"rgba(200,164,94,0.3)"),display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,color:iss.analysis?"#2ECC8A":GOLD}},iss.analysis?"âœ“":i+1),
+              React.createElement("div",{style:{width:22,height:22,borderRadius:"50%",background:iss.analysis?"rgba(46,204,138,0.15)":"rgba(200,164,94,0.1)",border:"1px solid "+(iss.analysis?"rgba(46,204,138,0.4)":"rgba(200,164,94,0.3)"),display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,color:iss.analysis?"#2ECC8A":GOLD}},iss.analysis?"OK":i+1),
               React.createElement("div",{style:{fontSize:12,fontWeight:600,color:t.text}},"Issue "+(i+1))
             ),
             React.createElement("div",{style:{fontSize:11,color:t.dim,lineHeight:1.4}},iss.text.slice(0,70)+(iss.text.length>70?"...":""))
           )),
-          issues.every(iss=>iss.analysis)&&React.createElement("div",{style:{marginTop:14}},React.createElement(Btn,{full:true,onClick:generateConclusion},"Generate Conclusion â†’"))
+          issues.every(iss=>iss.analysis)&&React.createElement("div",{style:{marginTop:14}},React.createElement(Btn,{full:true,onClick:generateConclusion},"Generate Conclusion >"))
         ),
         React.createElement("div",null,
           issues[currentIssue]&&React.createElement("div",null,
@@ -3378,8 +3378,8 @@ function JudgmentComposerPage({t,go}){
               React.createElement("div",{className:"judgment-panel gold-border",style:{maxHeight:380,overflowY:"auto",marginBottom:8}},formatLegalOutput(issues[currentIssue].analysis)),
               React.createElement("div",{style:{display:"flex",gap:8,flexWrap:"wrap"}},
                 React.createElement(Btn,{variant:"ghost",sm:true,onClick:()=>analyseIssue(currentIssue),disabled:loading},"Regenerate"),
-                currentIssue<issues.length-1&&React.createElement(Btn,{sm:true,onClick:()=>setCurrentIssue(i=>i+1)},"Next Issue â†’"),
-                currentIssue===issues.length-1&&issues.every(iss=>iss.analysis)&&React.createElement(Btn,{onClick:generateConclusion},"Generate Conclusion â†’")
+                currentIssue<issues.length-1&&React.createElement(Btn,{sm:true,onClick:()=>setCurrentIssue(i=>i+1)},"Next Issue >"),
+                currentIssue===issues.length-1&&issues.every(iss=>iss.analysis)&&React.createElement(Btn,{onClick:generateConclusion},"Generate Conclusion >")
               )
             ),
             loading&&React.createElement(Pulse)
@@ -3388,19 +3388,19 @@ function JudgmentComposerPage({t,go}){
       )
     ),
     step===5&&React.createElement("div",{className:"judgment-panel gold-border"},
-      React.createElement("div",{style:{fontSize:13,fontWeight:600,color:GOLD,marginBottom:14}},"âš–ï¸  Step 5 â€” Conclusion"),
+      React.createElement("div",{style:{fontSize:13,fontWeight:600,color:GOLD,marginBottom:14}},"Step 5 - Conclusion"),
       stepLoading&&React.createElement(Pulse),
       conclusion&&React.createElement("div",null,
         React.createElement("div",{style:{background:t.input,border:"1px solid "+t.border,borderRadius:10,padding:20,minHeight:160,maxHeight:360,overflowY:"auto",marginBottom:12}},formatLegalOutput(conclusion)),
         React.createElement("div",{style:{display:"flex",gap:8,flexWrap:"wrap"}},
           React.createElement(Btn,{variant:"ghost",sm:true,onClick:generateConclusion,disabled:stepLoading},"Regenerate"),
-          React.createElement(Btn,{onClick:()=>setStep(6)},"Select Court Order â†’")
+          React.createElement(Btn,{onClick:()=>setStep(6)},"Select Court Order >")
         )
       )
     ),
     step===6&&React.createElement("div",null,
       React.createElement("div",{className:"judgment-panel gold-border",style:{marginBottom:16}},
-        React.createElement("div",{style:{fontSize:13,fontWeight:600,color:GOLD,marginBottom:4}},"âš–ï¸  Step 6 â€” Court Order Type"),
+        React.createElement("div",{style:{fontSize:13,fontWeight:600,color:GOLD,marginBottom:4}},"Step 6 - Court Order Type"),
         React.createElement("div",{style:{fontSize:12,color:t.dim,marginBottom:16}})
       ),
       React.createElement("div",{className:"order-type-grid"},
@@ -3410,17 +3410,17 @@ function JudgmentComposerPage({t,go}){
           React.createElement("div",{style:{fontSize:11,color:orderType===ot.id?"rgba(200,164,94,0.7)":t.muted}},ot.sub)
         ))
       ),
-      React.createElement(Btn,{full:true,onClick:generateOrder,disabled:!orderType||stepLoading},stepLoading?"Drafting orders...":"Generate Formal Court Orders â†’")
+      React.createElement(Btn,{full:true,onClick:generateOrder,disabled:!orderType||stepLoading},stepLoading?"Drafting orders...":"Generate Formal Court Orders >")
     ),
     step===7&&React.createElement("div",null,
       courtOrder&&!assembled&&React.createElement("div",{className:"judgment-panel gold-border",style:{marginBottom:16}},
         React.createElement("div",{style:{fontSize:13,fontWeight:600,color:GOLD,marginBottom:8}},"Court Orders Drafted"),
         React.createElement("div",{style:{background:t.input,border:"1px solid "+t.border,borderRadius:10,padding:16,maxHeight:220,overflowY:"auto",marginBottom:12}},formatLegalOutput(courtOrder)),
-        React.createElement(Btn,{full:true,onClick:assembleJudgment,disabled:stepLoading},stepLoading?"Assembling...":"Assemble Complete Judgment â†’")
+        React.createElement(Btn,{full:true,onClick:assembleJudgment,disabled:stepLoading},stepLoading?"Assembling...":"Assemble Complete Judgment >")
       ),
       assembled&&React.createElement("div",null,
         React.createElement("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12,flexWrap:"wrap",gap:10}},
-          React.createElement("div",{style:{fontSize:13,fontWeight:700,color:"#2ECC8A"}},"âœ“  Complete Judgment Assembled"),
+          React.createElement("div",{style:{fontSize:13,fontWeight:700,color:"#2ECC8A"}},"Ready: Complete Judgment Assembled"),
           React.createElement("div",{style:{display:"flex",gap:8,flexWrap:"wrap"}},
             React.createElement(Btn,{variant:"ghost",sm:true,onClick:()=>navigator.clipboard.writeText(assembled)},"Copy"),
             React.createElement(Btn,{variant:"ghost",sm:true,onClick:()=>exportPDF(assembled,"Judgment-"+caseTitle)},"PDF"),
@@ -3428,7 +3428,7 @@ function JudgmentComposerPage({t,go}){
           )
         ),
         React.createElement("div",{style:{background:"rgba(3,8,18,0.95)",border:"1px solid rgba(200,164,94,0.2)",borderRadius:12,padding:28,fontFamily:"'Georgia',serif",fontSize:13.5,lineHeight:2,color:"#F0EDE6",maxHeight:"70vh",overflowY:"auto"}},assembled),
-        React.createElement("div",{style:{marginTop:12,padding:"10px 14px",background:"rgba(46,204,138,0.06)",border:"1px solid rgba(46,204,138,0.2)",borderRadius:8,fontSize:12,color:"rgba(46,204,138,0.9)"}},"âœ“  Ready for your review. Verify all case citations in official law reports before delivery.")
+        React.createElement("div",{style:{marginTop:12,padding:"10px 14px",background:"rgba(46,204,138,0.06)",border:"1px solid rgba(46,204,138,0.2)",borderRadius:8,fontSize:12,color:"rgba(46,204,138,0.9)"}},"Ready for your review. Any case citation shown should come from the verified database records supplied to the analysis.")
       )
     )
   );
@@ -3493,12 +3493,12 @@ function IssueSpotterPage({t,go}){
 // â”€â”€ MAGISTRATE DASHBOARD â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function MagistrateDashboard({go,t,profile}){
   const tools=[
-    {id:"quick_ruling",icon:"ðŸ”¨",label:"Quick Ruling",desc:"Any Magistrate Court ruling instantly",color:"#4A9EE8"},
-    {id:"bail_decision",icon:"ðŸ”“",label:"Bail Decision",desc:"Grant or refuse bail with full judicial reasoning",color:"#2ECC8A"},
-    {id:"warrant_drafter",icon:"ðŸ“„",label:"Warrant Drafter",desc:"Arrest, search, bench â€” any warrant type",color:"#E67E22"},
-    {id:"sentencing_guide",icon:"âš–ï¸",label:"Sentencing Guide",desc:"Options, factors, and draft pronouncement",color:"#9B59B6"},
-    {id:"statute",icon:"ðŸ”¬",label:"Statute Explainer",desc:"Any provision â€” meaning and judicial approach",color:"#E05252"},
-    {id:"nigeriancases",icon:"ðŸ“š",label:"Nigerian Case Law",desc:"Research relevant precedents instantly",color:GOLD},
+    {id:"quick_ruling",icon:"QR",label:"Quick Ruling",desc:"Any Magistrate Court ruling instantly",color:"#4A9EE8"},
+    {id:"bail_decision",icon:"BD",label:"Bail Decision",desc:"Grant or refuse bail with full judicial reasoning",color:"#2ECC8A"},
+    {id:"warrant_drafter",icon:"WD",label:"Warrant Drafter",desc:"Arrest, search, bench â€” any warrant type",color:"#E67E22"},
+    {id:"sentencing_guide",icon:"SG",label:"Sentencing Guide",desc:"Options, factors, and draft pronouncement",color:"#9B59B6"},
+    {id:"statute",icon:"SE",label:"Statute Explainer",desc:"Any provision â€” meaning and judicial approach",color:"#E05252"},
+    {id:"nigeriancases",icon:"NC",label:"Nigerian Case Law",desc:"Research relevant precedents instantly",color:GOLD},
   ];
   return React.createElement("div",{className:"fade"},
     React.createElement("div",{style:{marginBottom:24}},
@@ -3552,7 +3552,7 @@ function BailDecisionPage({t,go}){
       l:React.createElement("div",null,
         React.createElement(Lbl,{t},"Decision"),
         React.createElement("div",{style:{display:"flex",gap:8,marginBottom:14}},
-          ["grant","refuse"].map(d=>React.createElement("button",{key:d,onClick:()=>setDecision(d),style:{flex:1,padding:"10px",borderRadius:8,border:"1px solid "+(decision===d?"rgba(200,164,94,0.5)":t.border),background:decision===d?"rgba(200,164,94,0.1)":"transparent",color:decision===d?GOLD:t.dim,fontFamily:"inherit",fontSize:13,fontWeight:decision===d?700:400,cursor:"pointer"}},d==="grant"?"âœ“  Grant Bail":"âœ—  Refuse Bail"))
+          ["grant","refuse"].map(d=>React.createElement("button",{key:d,onClick:()=>setDecision(d),style:{flex:1,padding:"10px",borderRadius:8,border:"1px solid "+(decision===d?"rgba(200,164,94,0.5)":t.border),background:decision===d?"rgba(200,164,94,0.1)":"transparent",color:decision===d?GOLD:t.dim,fontFamily:"inherit",fontSize:13,fontWeight:decision===d?700:400,cursor:"pointer"}},d==="grant"?"Grant Bail":"Refuse Bail"))
         ),
         React.createElement(Lbl,{t},"Case Details"),
         React.createElement(Inp,{val:inp,set:setInp,ph:"Charge, accused details, age, occupation, criminal record, strength of evidence, community ties...",rows:12,t}),
@@ -3603,10 +3603,10 @@ function SentencingGuidePage({t,go}){
 // â”€â”€ COURT CLERK DASHBOARD â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function ClerkDashboardPage({go,t,profile}){
   const tools=[
-    {id:"clerk_filing",icon:"ðŸ“‹",label:"Digital Filing",desc:"Upload documents â€” get complete filing checklist",color:"#2ECC8A"},
-    {id:"clerk_classify",icon:"ðŸ·ï¸",label:"Document Classifier",desc:"Classify any document â€” fees, rules, service",color:"#4A9EE8"},
-    {id:"vault",icon:"ðŸ—„ï¸",label:"Document Vault",desc:"All documents saved and searchable",color:GOLD},
-    {id:"nigeriancases",icon:"ðŸ“š",label:"Nigerian Case Law",desc:"Verified authorities grounded in our database",color:"#9B59B6"},
+    {id:"clerk_filing",icon:"DF",label:"Digital Filing",desc:"Upload documents â€” get complete filing checklist",color:"#2ECC8A"},
+    {id:"clerk_classify",icon:"DC",label:"Document Classifier",desc:"Classify any document â€” fees, rules, service",color:"#4A9EE8"},
+    {id:"vault",icon:"DV",label:"Document Vault",desc:"All documents saved and searchable",color:GOLD},
+    {id:"nigeriancases",icon:"NC",label:"Nigerian Case Law",desc:"Verified authorities grounded in our database",color:"#9B59B6"},
   ];
   return React.createElement("div",{className:"fade"},
     React.createElement("div",{style:{marginBottom:24}},
@@ -3665,12 +3665,12 @@ function ClerkClassifyPage({t,go}){
 // â”€â”€ LEGISLATOR DASHBOARD â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function LegislatorDashboard({go,t,profile}){
   const tools=[
-    {id:"bill_drafter",icon:"ðŸ“œ",label:"Bill Drafter",desc:"Complete, constitutionally-sound Nigerian bills",color:"#E67E22"},
-    {id:"law_comparison",icon:"âš–ï¸",label:"Law Comparison",desc:"Compare any area of law across jurisdictions",color:"#4A9EE8"},
-    {id:"law_simplifier",icon:"ðŸ’¬",label:"Plain English Summarizer",desc:"Any statute in citizen-friendly language",color:"#2ECC8A"},
-    {id:"impact_assessment",icon:"ðŸ“Š",label:"Impact Assessment",desc:"Constitutional, economic, and social effects",color:"#9B59B6"},
-    {id:"statute",icon:"ðŸ”¬",label:"Statute Explainer",desc:"Deep analysis of any Nigerian provision",color:"#E05252"},
-    {id:"nigeriancases",icon:"ðŸ“š",label:"Nigerian Case Law",desc:"Judicial interpretation of any law",color:GOLD},
+    {id:"bill_drafter",icon:"BD",label:"Bill Drafter",desc:"Complete, constitutionally-sound Nigerian bills",color:"#E67E22"},
+    {id:"law_comparison",icon:"LC",label:"Law Comparison",desc:"Compare any area of law across jurisdictions",color:"#4A9EE8"},
+    {id:"law_simplifier",icon:"PE",label:"Plain English Summarizer",desc:"Any statute in citizen-friendly language",color:"#2ECC8A"},
+    {id:"impact_assessment",icon:"IA",label:"Impact Assessment",desc:"Constitutional, economic, and social effects",color:"#9B59B6"},
+    {id:"statute",icon:"SE",label:"Statute Explainer",desc:"Deep analysis of any Nigerian provision",color:"#E05252"},
+    {id:"nigeriancases",icon:"NC",label:"Nigerian Case Law",desc:"Judicial interpretation of any law",color:GOLD},
   ];
   return React.createElement("div",{className:"fade"},
     React.createElement("div",{style:{marginBottom:24}},
@@ -3765,12 +3765,12 @@ function ImpactAssessmentPage({t,go}){
 // â”€â”€ PARALEGAL DASHBOARD â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function ParalegalDashboard({go,t,profile}){
   const tools=[
-    {id:"paralegal_research",icon:"ðŸ”¬",label:"Research Hub",desc:"Any legal question with steps, statutes, procedures",color:"#E05252"},
-    {id:"draft",icon:"âœï¸",label:"Draft Documents",desc:"80+ document types â€” ready to use",color:"#9B59B6"},
-    {id:"digest",icon:"ðŸ“–",label:"Case Digest Builder",desc:"Turn any judgment into a professional digest",color:GOLD},
-    {id:"legalmemo",icon:"ðŸ—’ï¸",label:"Legal Research Memo",desc:"Partner-quality research memoranda",color:"#4A9EE8"},
-    {id:"statute",icon:"ðŸ”¬",label:"Statute Explainer",desc:"Any provision â€” meaning, approach, traps",color:"#E67E22"},
-    {id:"deadlines",icon:"â°",label:"Deadline Intelligence",desc:"Every deadline in any document â€” flagged",color:"#2ECC8A"},
+    {id:"paralegal_research",icon:"RH",label:"Research Hub",desc:"Any legal question with steps, statutes, procedures",color:"#E05252"},
+    {id:"draft",icon:"DD",label:"Draft Documents",desc:"80+ document types â€” ready to use",color:"#9B59B6"},
+    {id:"digest",icon:"CD",label:"Case Digest Builder",desc:"Turn any judgment into a professional digest",color:GOLD},
+    {id:"legalmemo",icon:"LM",label:"Legal Research Memo",desc:"Partner-quality research memoranda",color:"#4A9EE8"},
+    {id:"statute",icon:"SE",label:"Statute Explainer",desc:"Any provision â€” meaning, approach, traps",color:"#E67E22"},
+    {id:"deadlines",icon:"DL",label:"Deadline Intelligence",desc:"Every deadline in any document â€” flagged",color:"#2ECC8A"},
   ];
   return React.createElement("div",{className:"fade"},
     React.createElement("div",{style:{marginBottom:24}},
@@ -3914,12 +3914,12 @@ function AppContent(){
 
   const getMobileTabs=()=>{
     switch(userRole){
-      case "judge":return [{id:"dashboard",icon:"âš–ï¸",label:"Bench"},{id:"judgment_composer",icon:"ðŸ“",label:"Compose"},{id:"court_order",icon:"ðŸ“œ",label:"Orders"},{id:"nigeriancases",icon:"ðŸ“š",label:"Research"},{id:"profile",icon:"ðŸ‘¤",label:"Profile"}];
-      case "magistrate":return [{id:"dashboard",icon:"ðŸ”¨",label:"Court"},{id:"quick_ruling",icon:"âš–ï¸",label:"Ruling"},{id:"bail_decision",icon:"ðŸ”“",label:"Bail"},{id:"nigeriancases",icon:"ðŸ“š",label:"Research"},{id:"profile",icon:"ðŸ‘¤",label:"Profile"}];
-      case "clerk":return [{id:"dashboard",icon:"ðŸ“‹",label:"Registry"},{id:"clerk_filing",icon:"ðŸ“„",label:"File"},{id:"clerk_classify",icon:"ðŸ·ï¸",label:"Classify"},{id:"vault",icon:"ðŸ—„ï¸",label:"Vault"},{id:"profile",icon:"ðŸ‘¤",label:"Profile"}];
-      case "legislator":return [{id:"dashboard",icon:"ðŸ“œ",label:"Bills"},{id:"bill_drafter",icon:"âœï¸",label:"Draft"},{id:"law_comparison",icon:"âš–ï¸",label:"Compare"},{id:"nigeriancases",icon:"ðŸ“š",label:"Research"},{id:"profile",icon:"ðŸ‘¤",label:"Profile"}];
-      case "paralegal":return [{id:"dashboard",icon:"ðŸ“š",label:"Home"},{id:"paralegal_research",icon:"ðŸ”¬",label:"Research"},{id:"draft",icon:"âœï¸",label:"Draft"},{id:"vault",icon:"ðŸ—„ï¸",label:"Vault"},{id:"profile",icon:"ðŸ‘¤",label:"Profile"}];
-      default:return [{id:"dashboard",icon:"ðŸ›ï¸",label:"Home"},{id:"reader",icon:"ðŸ“„",label:"Analyse"},{id:"draft",icon:"âœï¸",label:"Draft"},{id:"vault",icon:"ðŸ—„ï¸",label:"Vault"},{id:"profile",icon:"ðŸ‘¤",label:"Profile"}];
+      case "judge":return [{id:"dashboard",icon:"BN",label:"Bench"},{id:"judgment_composer",icon:"JC",label:"Compose"},{id:"court_order",icon:"CO",label:"Orders"},{id:"nigeriancases",icon:"NC",label:"Research"},{id:"profile",icon:"PF",label:"Profile"}];
+      case "magistrate":return [{id:"dashboard",icon:"CT",label:"Court"},{id:"quick_ruling",icon:"QR",label:"Ruling"},{id:"bail_decision",icon:"BD",label:"Bail"},{id:"nigeriancases",icon:"NC",label:"Research"},{id:"profile",icon:"PF",label:"Profile"}];
+      case "clerk":return [{id:"dashboard",icon:"RG",label:"Registry"},{id:"clerk_filing",icon:"FL",label:"File"},{id:"clerk_classify",icon:"CL",label:"Classify"},{id:"vault",icon:"VT",label:"Vault"},{id:"profile",icon:"PF",label:"Profile"}];
+      case "legislator":return [{id:"dashboard",icon:"BL",label:"Bills"},{id:"bill_drafter",icon:"BD",label:"Draft"},{id:"law_comparison",icon:"LC",label:"Compare"},{id:"nigeriancases",icon:"NC",label:"Research"},{id:"profile",icon:"PF",label:"Profile"}];
+      case "paralegal":return [{id:"dashboard",icon:"HM",label:"Home"},{id:"paralegal_research",icon:"RH",label:"Research"},{id:"draft",icon:"DD",label:"Draft"},{id:"vault",icon:"VT",label:"Vault"},{id:"profile",icon:"PF",label:"Profile"}];
+      default:return [{id:"dashboard",icon:"HM",label:"Home"},{id:"reader",icon:"DA",label:"Analyse"},{id:"draft",icon:"DD",label:"Draft"},{id:"vault",icon:"VT",label:"Vault"},{id:"profile",icon:"PF",label:"Profile"}];
     }
   };
   const mobileTabs=getMobileTabs();
@@ -3998,7 +3998,7 @@ function AppContent(){
             React.createElement("div",{style:{width:32,height:32,background:`linear-gradient(135deg,${GOLD},${GOLD2})`,borderRadius:9,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Playfair Display',serif",fontWeight:700,fontSize:16,color:"#0D1B2E"}},"V"),
             React.createElement("span",{style:{fontFamily:"'Playfair Display',serif",fontSize:18,fontWeight:700,color:t.text}},"Verdict",React.createElement("span",{style:{color:GOLD}},"AI"))
           ),
-          React.createElement("button",{onClick:()=>setSideOpen(false),style:{background:"none",border:"none",color:t.muted,cursor:"pointer",fontSize:22,padding:4,lineHeight:1}},"Ã—")
+          React.createElement("button",{onClick:()=>setSideOpen(false),style:{background:"none",border:"none",color:t.muted,cursor:"pointer",fontSize:22,padding:4,lineHeight:1}},"x")
         ),
         React.createElement("div",{style:{padding:"10px 14px 12px",borderBottom:`1px solid ${t.border}`,display:"flex",alignItems:"center",gap:10,cursor:"pointer"},onClick:()=>go("profile")},
           React.createElement("div",{style:{width:30,height:30,borderRadius:"50%",background:`linear-gradient(135deg,${roleConfig.color},${roleConfig.color}cc)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,color:"#fff",flexShrink:0}},(profile?.full_name||user.email||"U")[0].toUpperCase()),
@@ -4021,11 +4021,11 @@ function AppContent(){
         React.createElement("div",{style:{padding:"8px 6px",borderTop:`1px solid ${t.border}`}},
           tier==="free"&&React.createElement("button",{onClick:()=>go("upgrade"),style:{display:"flex",alignItems:"center",justifyContent:"center",width:"100%",padding:"8px",marginBottom:6,borderRadius:7,background:`linear-gradient(135deg,${GOLD},${GOLD2})`,border:"none",color:"#0D1B2E",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}},"Upgrade â€” from NGN 12,000"),
           React.createElement("div",{style:{display:"flex",alignItems:"center",gap:8,padding:"4px 8px"}},
-            React.createElement("span",null,"â˜€ï¸"),
+            React.createElement("span",null,"L"),
             React.createElement("div",{onClick:toggleDark,style:{width:40,height:22,background:dark?"rgba(200,164,94,0.18)":"rgba(0,0,0,0.1)",border:`1px solid ${dark?"rgba(200,164,94,0.3)":t.border}`,borderRadius:100,position:"relative",cursor:"pointer",transition:"all 0.3s"}},
               React.createElement("div",{style:{position:"absolute",top:2,left:dark?18:2,width:16,height:16,background:GOLD,borderRadius:"50%",transition:"left 0.3s"}})
             ),
-            React.createElement("span",null,"ðŸŒ™"),
+            React.createElement("span",null,"D"),
             React.createElement("span",{style:{fontSize:11,color:t.muted}},dark?"Dark":"Light")
           ),
           React.createElement("button",{
@@ -4042,7 +4042,7 @@ function AppContent(){
               React.createElement("h2",{style:{fontFamily:"'Playfair Display',serif",fontSize:"clamp(14px,3.5vw,17px)",fontWeight:700,margin:0,color:t.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},AI_CFGS[page]?.title||ALL_TITLES[page]||"Verdict AI")
             ),
             React.createElement("div",{style:{display:"flex",alignItems:"center",gap:8,flexShrink:0}},
-              React.createElement("button",{onClick:toggleDark,style:{background:"none",border:"none",cursor:"pointer",padding:6,borderRadius:8,color:t.muted,display:"flex",alignItems:"center"}},React.createElement("span",{style:{fontSize:16}},dark?"â˜€ï¸":"ðŸŒ™")),
+              React.createElement("button",{onClick:toggleDark,style:{background:"none",border:"none",cursor:"pointer",padding:6,borderRadius:8,color:t.muted,display:"flex",alignItems:"center"}},React.createElement("span",{style:{fontSize:12,fontWeight:700}},dark?"L":"D")),
               React.createElement("div",{onClick:()=>go("profile"),style:{width:30,height:30,borderRadius:"50%",background:`linear-gradient(135deg,${roleConfig.color},${roleConfig.color}cc)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,color:"#fff",cursor:"pointer",flexShrink:0}},(profile?.full_name||user?.email||"U")[0].toUpperCase())
             )
           ),
