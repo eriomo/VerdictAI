@@ -223,8 +223,37 @@ function Icon({name,size=18,color="currentColor",strokeWidth=1.5}){
     briefcase:React.createElement("svg",{...s},React.createElement("rect",{x:"2",y:"7",width:"20",height:"14",rx:"2",ry:"2"}),React.createElement("path",{d:"M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"})),
     shield:React.createElement("svg",{...s},React.createElement("path",{d:"M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"})),
     arrowRight:React.createElement("svg",{...s},React.createElement("line",{x1:"5",y1:"12",x2:"19",y2:"12"}),React.createElement("polyline",{points:"12,5 19,12 12,19"})),
+    sun:React.createElement("svg",{...s},React.createElement("circle",{cx:"12",cy:"12",r:"4"}),React.createElement("line",{x1:"12",y1:"2",x2:"12",y2:"4"}),React.createElement("line",{x1:"12",y1:"20",x2:"12",y2:"22"}),React.createElement("line",{x1:"4.93",y1:"4.93",x2:"6.34",y2:"6.34"}),React.createElement("line",{x1:"17.66",y1:"17.66",x2:"19.07",y2:"19.07"}),React.createElement("line",{x1:"2",y1:"12",x2:"4",y2:"12"}),React.createElement("line",{x1:"20",y1:"12",x2:"22",y2:"12"}),React.createElement("line",{x1:"4.93",y1:"19.07",x2:"6.34",y2:"17.66"}),React.createElement("line",{x1:"17.66",y1:"6.34",x2:"19.07",y2:"4.93"})),
+    moon:React.createElement("svg",{...s},React.createElement("path",{d:"M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"})),
   };
   return icons[name]||React.createElement("svg",s);
+}
+
+function getUiIconName(icon,id){
+  const byId={
+    dashboard:"grid",matterclock:"clock",reader:"document",qa:"chat",warroom:"gavel",opposing:"shield",strength:"scale",courtpredictor:"star",
+    draft:"pen",briefscore:"check",explainer:"chat",clientreport:"document",feenote:"briefcase",intakememo:"document",
+    clausedna:"dna",deadlines:"clock",jurisdiction:"scale",statute:"book",precedent:"book",correspondence:"chat",
+    digest:"book",legalmemo:"document",pleadingcheck:"check",compliancecal:"clock",witness:"user",evidence:"search",settlement:"shield",negotiation:"pen",whatsapp:"chat",seniorpartner:"star",
+    crossexam:"search",motionammo:"gavel",claimanalyser:"scale",clientprep:"user",nigeriancases:"book",vault:"vault",cases:"briefcase",profile:"user",
+    judgment_composer:"gavel",court_order:"document",case_summary_judge:"document",issue_spotter:"search",
+    quick_ruling:"scale",bail_decision:"shield",warrant_drafter:"document",sentencing_guide:"scale",
+    clerk_filing:"document",clerk_classify:"grid",bill_drafter:"pen",law_comparison:"scale",law_simplifier:"chat",impact_assessment:"grid",paralegal_research:"search"
+  };
+  const byCode={
+    LW:"briefcase",JG:"gavel",MG:"scale",CK:"document",LG:"book",PL:"search",
+    DB:"grid",MC:"clock",DA:"document",QA:"chat",WR:"gavel",OC:"shield",SA:"scale",CP:"star",
+    DR:"pen",BS:"check",CE:"chat",CR:"document",FN:"briefcase",IM:"document",
+    CD:"dna",DL:"clock",JT:"scale",ST:"book",SE:"book",PL:"search",CT:"chat",DG:"book",LM:"document",PC:"check",CC:"clock",WF:"user",EA:"search",SI:"shield",CN:"pen",WE:"chat",SP:"star",
+    CX:"search",MA:"gavel",CA:"scale",NC:"book",VT:"vault",CW:"briefcase",PF:"user",
+    JC:"gavel",CO:"document",CS:"document",IS:"search",QR:"scale",BD:"shield",WD:"document",SG:"scale",DF:"document",DC:"grid",LC:"scale",IA:"grid",RH:"search",
+    BN:"gavel",RG:"grid",BL:"book",HM:"home",FL:"document",CL:"grid"
+  };
+  return byId[id] || byCode[icon] || icon || "document";
+}
+
+function UiIcon({icon,id,color="currentColor",size=18,strokeWidth=1.7}){
+  return Icon({name:getUiIconName(icon,id),size,color,strokeWidth});
 }
 
 // â”€â”€ Zones â€” Dashboard navigation structure â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -981,7 +1010,7 @@ function UpgradeBanner({t,go}){
 
 function ChambersGate({t,go,featureName}){
   return React.createElement("div",{className:"fade",style:{textAlign:"center",padding:"60px 20px"}},
-    React.createElement("div",{style:{fontSize:52,marginBottom:16,fontWeight:700,color:GOLD}},"CH"),
+    React.createElement("div",{style:{marginBottom:16,display:"flex",justifyContent:"center"}},Icon({name:"gavel",size:40,color:GOLD})),
     React.createElement("div",{style:{display:"inline-flex",alignItems:"center",gap:8,background:"rgba(200,164,94,0.1)",border:"1px solid rgba(200,164,94,0.3)",borderRadius:100,padding:"5px 16px",fontSize:11,fontWeight:700,color:GOLD,letterSpacing:"1px",marginBottom:20}},"CHAMBERS EXCLUSIVE"),
     React.createElement("h2",{style:{fontFamily:"'Playfair Display',serif",fontSize:26,fontWeight:700,color:t.text,marginBottom:12}},featureName||"This Feature"),
     React.createElement("p",{style:{fontSize:14,color:t.dim,lineHeight:1.8,maxWidth:440,margin:"0 auto 28px"}},"This is a Chambers-only litigation weapon. Upgrade to unlock the full Trial Prep Suite plus AI Senior Partner, Witness Forge, Evidence Analyser, and Settlement Intelligence."),
@@ -994,7 +1023,7 @@ function ChambersGate({t,go,featureName}){
 
 function FreeGate({t,go,featureName}){
   return React.createElement("div",{className:"fade",style:{textAlign:"center",padding:"60px 20px"}},
-    React.createElement("div",{style:{fontSize:52,marginBottom:16,fontWeight:700,color:"#4A9EE8"}},"LK"),
+    React.createElement("div",{style:{marginBottom:16,display:"flex",justifyContent:"center"}},Icon({name:"vault",size:40,color:"#4A9EE8"})),
     React.createElement("div",{style:{display:"inline-flex",alignItems:"center",gap:8,background:"rgba(74,158,232,0.1)",border:"1px solid rgba(74,158,232,0.3)",borderRadius:100,padding:"5px 16px",fontSize:11,fontWeight:700,color:"#4A9EE8",letterSpacing:"1px",marginBottom:20}},"SOLO FEATURE"),
     React.createElement("h2",{style:{fontFamily:"'Playfair Display',serif",fontSize:26,fontWeight:700,color:t.text,marginBottom:12}},featureName||"This Feature"),
     React.createElement("p",{style:{fontSize:14,color:t.dim,lineHeight:1.8,maxWidth:440,margin:"0 auto 28px"}},"Upgrade to Solo for NGN 12,000/month and unlock every tool a working Nigerian lawyer needs."),
@@ -2224,11 +2253,11 @@ function VaultPage({docs,onDelete,onRefresh,t,go}){
     ),
     limitReached&&React.createElement(UpgradeBanner,{t,go}),
     out&&React.createElement("div",{style:{marginBottom:16}},React.createElement(Lbl,{t},"AI Search Results"),React.createElement(Out,{text:out,loading,t})),
-    !docs.length?React.createElement("div",{style:{textAlign:"center",padding:"60px 20px",color:t.muted}},React.createElement("div",{style:{fontSize:32,marginBottom:10,fontWeight:700}},"DV"),React.createElement("div",{style:{fontSize:13}},"Documents you analyze will be saved here.")):
+    !docs.length?React.createElement("div",{style:{textAlign:"center",padding:"60px 20px",color:t.muted}},React.createElement("div",{style:{marginBottom:10,display:"flex",justifyContent:"center"}},Icon({name:"vault",size:30,color:t.muted})),React.createElement("div",{style:{fontSize:13}},"Documents you analyze will be saved here.")):
     React.createElement("div",null,
       React.createElement("div",{style:{fontSize:12,color:t.muted,marginBottom:10}},`${filtered.length} of ${docs.length} documents`),
       filtered.map((d,i)=>React.createElement("div",{key:d.id||i,style:{background:t.card,border:`1px solid ${t.border}`,borderRadius:9,padding:"11px 14px",marginBottom:7,display:"flex",alignItems:"center",gap:12}},
-        React.createElement("span",{style:{fontSize:12,fontWeight:700}},"DOC"),
+        UiIcon({icon:"document",color:t.muted,size:16}),
         React.createElement("div",{style:{flex:1}},React.createElement("div",{style:{fontWeight:600,fontSize:13.5,color:t.text}},d.name),React.createElement("div",{style:{fontSize:11,color:t.muted,marginTop:2}},new Date(d.created_at).toLocaleDateString())),
         React.createElement(Btn,{variant:"ghost",sm:true,onClick:()=>setView(d)},"View"),
         React.createElement("button",{onClick:async()=>{if(confirm("Delete?"))await onDelete(d.id);},style:{background:"rgba(224,82,82,0.1)",border:"1px solid rgba(224,82,82,0.2)",borderRadius:6,color:"#E05252",cursor:"pointer",padding:"5px 10px",fontSize:12}},"Delete")
@@ -2249,7 +2278,7 @@ function CasesPage({cases,onAdd,onUpdate,onDelete,t}){
       React.createElement("div",{style:{marginBottom:14}},React.createElement(Lbl,{t},"Description"),React.createElement(Inp,{val:desc,set:setDesc,ph:"Brief description...",rows:2,t})),
       React.createElement("div",{style:{display:"flex",gap:8}},React.createElement(Btn,{onClick:add},"Create"),React.createElement(Btn,{variant:"ghost",onClick:()=>setShowNew(false)},"Cancel"))
     ),
-    !cases.length?React.createElement("div",{style:{textAlign:"center",padding:"60px 20px",color:t.muted}},React.createElement("div",{style:{fontSize:32,marginBottom:10,fontWeight:700}},"WS"),React.createElement("div",{style:{fontSize:13}},"Create a workspace to organise your matters.")):
+    !cases.length?React.createElement("div",{style:{textAlign:"center",padding:"60px 20px",color:t.muted}},React.createElement("div",{style:{marginBottom:10,display:"flex",justifyContent:"center"}},Icon({name:"briefcase",size:30,color:t.muted})),React.createElement("div",{style:{fontSize:13}},"Create a workspace to organise your matters.")):
     React.createElement("div",{className:"two-col",style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}},
       cases.map(c=>React.createElement("div",{key:c.id,style:{background:t.card,border:`1px solid ${t.border}`,borderRadius:10,padding:16}},
         React.createElement("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:7}},
@@ -3103,7 +3132,7 @@ function SeniorPartnerPage({t,go}){
       ),
       React.createElement("div",{style:{height:400,overflowY:"auto",padding:20,display:"flex",flexDirection:"column",gap:16}},
         messages.length===0&&React.createElement("div",{style:{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",textAlign:"center",color:t.muted}},
-          React.createElement("div",{style:{fontSize:36,marginBottom:12,fontWeight:700}},"AB"),
+          React.createElement("div",{style:{marginBottom:12,display:"flex",justifyContent:"center"}},Icon({name:"star",size:28,color:"#C8A45E"})),
           React.createElement("p",{style:{fontSize:13,lineHeight:1.7,maxWidth:400,marginBottom:16}},"Bring me a case, a clause, a strategy question, or a problem. I will give you my view first - then I will ask you the hard questions."),
           React.createElement("div",{style:{display:"flex",gap:8,flexWrap:"wrap",justifyContent:"center"}},STARTERS.map(q=>React.createElement("button",{key:q,onClick:()=>setInput(q),style:{background:t.input,border:"1px solid "+t.border,borderRadius:8,padding:"8px 12px",fontSize:12,color:t.dim,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",textAlign:"left",lineHeight:1.4},onMouseEnter:e=>e.target.style.borderColor="#C8A45E",onMouseLeave:e=>e.target.style.borderColor=t.border},q)))
         ),
@@ -3148,7 +3177,7 @@ function RoleSelectPage({onSelect,t}){
         roles.map(role=>React.createElement("div",{key:role.id,className:"role-card"+(selected===role.id?" selected":""),
           onClick:()=>setSelected(role.id),
           style:{borderColor:selected===role.id?role.color:"rgba(30,52,82,0.9)",background:selected===role.id?`${role.color}15`:"rgba(12,26,46,0.8)"}},
-          React.createElement("div",{className:"role-icon",style:{background:`${role.color}18`}},role.emoji),
+          React.createElement("div",{className:"role-icon",style:{background:`${role.color}18`,display:"flex",alignItems:"center",justifyContent:"center"}},UiIcon({icon:role.emoji,id:role.id,color:role.color,size:20})),
           React.createElement("div",{style:{fontFamily:"'Playfair Display',serif",fontSize:14,fontWeight:700,color:"#F0EDE6",marginBottom:4}},role.label),
           React.createElement("div",{style:{fontSize:10,color:role.color,fontWeight:600,marginBottom:6}},role.tagline),
           React.createElement("div",{style:{fontSize:11,color:"rgba(240,237,230,0.5)",lineHeight:1.5}},role.desc),
@@ -3181,7 +3210,7 @@ function JudgeDashboard({go,t,profile}){
     React.createElement("div",{style:{background:`linear-gradient(135deg,rgba(200,164,94,0.12),rgba(200,164,94,0.04))`,border:"1px solid rgba(200,164,94,0.25)",borderRadius:14,padding:"20px 24px",marginBottom:24,cursor:"pointer"},onClick:()=>go("judgment_composer"),
       onMouseEnter:e=>e.currentTarget.style.transform="translateY(-2px)",onMouseLeave:e=>e.currentTarget.style.transform="none"},
       React.createElement("div",{style:{display:"flex",alignItems:"center",gap:12,marginBottom:4}},
-        React.createElement("div",{style:{fontSize:16,fontWeight:700,color:GOLD}},"JC"),
+        React.createElement("div",{style:{display:"flex",alignItems:"center"}},UiIcon({icon:"gavel",color:GOLD,size:18})),
         React.createElement("div",null,
           React.createElement("div",{style:{fontFamily:"'Playfair Display',serif",fontSize:18,fontWeight:700,color:GOLD}},"Judgment Composer ",
             React.createElement("span",{style:{fontSize:9,padding:"3px 8px",borderRadius:100,background:"rgba(200,164,94,0.15)",color:GOLD,fontFamily:"'DM Sans',sans-serif",fontWeight:700}},"STAR FEATURE")),
@@ -3195,7 +3224,7 @@ function JudgeDashboard({go,t,profile}){
         onClick:()=>go(tool.id),
         onMouseEnter:e=>{e.currentTarget.style.borderColor=tool.color+"66";e.currentTarget.style.transform="translateY(-2px)";},
         onMouseLeave:e=>{e.currentTarget.style.borderColor=t.border;e.currentTarget.style.transform="none";}},
-        React.createElement("div",{style:{fontSize:22,marginBottom:10}},tool.icon),
+        React.createElement("div",{style:{marginBottom:10,display:"flex",alignItems:"center"}},UiIcon({icon:tool.icon,id:tool.id,color:tool.color,size:20})),
         React.createElement("div",{style:{fontFamily:"'Playfair Display',serif",fontSize:14,fontWeight:700,color:t.text,marginBottom:4}},tool.label),
         React.createElement("div",{style:{fontSize:12,color:t.dim,lineHeight:1.5}},tool.desc)
       ))
@@ -3509,7 +3538,7 @@ function MagistrateDashboard({go,t,profile}){
     React.createElement("div",{style:{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:12}},
       tools.map(tool=>React.createElement("div",{key:tool.id,style:{background:t.card,border:"1px solid "+t.border,borderRadius:12,padding:"18px 16px",cursor:"pointer",transition:"all 0.15s"},
         onClick:()=>go(tool.id),onMouseEnter:e=>{e.currentTarget.style.borderColor=tool.color+"66";e.currentTarget.style.transform="translateY(-2px)";},onMouseLeave:e=>{e.currentTarget.style.borderColor=t.border;e.currentTarget.style.transform="none";}},
-        React.createElement("div",{style:{fontSize:22,marginBottom:10}},tool.icon),
+        React.createElement("div",{style:{marginBottom:10,display:"flex",alignItems:"center"}},UiIcon({icon:tool.icon,id:tool.id,color:tool.color,size:20})),
         React.createElement("div",{style:{fontFamily:"'Playfair Display',serif",fontSize:14,fontWeight:700,color:t.text,marginBottom:4}},tool.label),
         React.createElement("div",{style:{fontSize:12,color:t.dim,lineHeight:1.5}},tool.desc)
       ))
@@ -3617,7 +3646,7 @@ function ClerkDashboardPage({go,t,profile}){
     React.createElement("div",{style:{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:12}},
       tools.map(tool=>React.createElement("div",{key:tool.id,style:{background:t.card,border:"1px solid "+t.border,borderRadius:12,padding:"18px 16px",cursor:"pointer",transition:"all 0.15s"},
         onClick:()=>go(tool.id),onMouseEnter:e=>{e.currentTarget.style.borderColor=tool.color+"66";e.currentTarget.style.transform="translateY(-2px)";},onMouseLeave:e=>{e.currentTarget.style.borderColor=t.border;e.currentTarget.style.transform="none";}},
-        React.createElement("div",{style:{fontSize:22,marginBottom:10}},tool.icon),
+        React.createElement("div",{style:{marginBottom:10,display:"flex",alignItems:"center"}},UiIcon({icon:tool.icon,id:tool.id,color:tool.color,size:20})),
         React.createElement("div",{style:{fontFamily:"'Playfair Display',serif",fontSize:14,fontWeight:700,color:t.text,marginBottom:4}},tool.label),
         React.createElement("div",{style:{fontSize:12,color:t.dim,lineHeight:1.5}},tool.desc)
       ))
@@ -3681,7 +3710,7 @@ function LegislatorDashboard({go,t,profile}){
     React.createElement("div",{style:{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:12}},
       tools.map(tool=>React.createElement("div",{key:tool.id,style:{background:t.card,border:"1px solid "+t.border,borderRadius:12,padding:"18px 16px",cursor:"pointer",transition:"all 0.15s"},
         onClick:()=>go(tool.id),onMouseEnter:e=>{e.currentTarget.style.borderColor=tool.color+"66";e.currentTarget.style.transform="translateY(-2px)";},onMouseLeave:e=>{e.currentTarget.style.borderColor=t.border;e.currentTarget.style.transform="none";}},
-        React.createElement("div",{style:{fontSize:22,marginBottom:10}},tool.icon),
+        React.createElement("div",{style:{marginBottom:10,display:"flex",alignItems:"center"}},UiIcon({icon:tool.icon,id:tool.id,color:tool.color,size:20})),
         React.createElement("div",{style:{fontFamily:"'Playfair Display',serif",fontSize:14,fontWeight:700,color:t.text,marginBottom:4}},tool.label),
         React.createElement("div",{style:{fontSize:12,color:t.dim,lineHeight:1.5}},tool.desc)
       ))
@@ -3781,7 +3810,7 @@ function ParalegalDashboard({go,t,profile}){
     React.createElement("div",{style:{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:12}},
       tools.map(tool=>React.createElement("div",{key:tool.id,style:{background:t.card,border:"1px solid "+t.border,borderRadius:12,padding:"18px 16px",cursor:"pointer",transition:"all 0.15s"},
         onClick:()=>go(tool.id),onMouseEnter:e=>{e.currentTarget.style.borderColor=tool.color+"66";e.currentTarget.style.transform="translateY(-2px)";},onMouseLeave:e=>{e.currentTarget.style.borderColor=t.border;e.currentTarget.style.transform="none";}},
-        React.createElement("div",{style:{fontSize:22,marginBottom:10}},tool.icon),
+        React.createElement("div",{style:{marginBottom:10,display:"flex",alignItems:"center"}},UiIcon({icon:tool.icon,id:tool.id,color:tool.color,size:20})),
         React.createElement("div",{style:{fontFamily:"'Playfair Display',serif",fontSize:14,fontWeight:700,color:t.text,marginBottom:4}},tool.label),
         React.createElement("div",{style:{fontSize:12,color:t.dim,lineHeight:1.5}},tool.desc)
       ))
@@ -4001,12 +4030,12 @@ function AppContent(){
           React.createElement("button",{onClick:()=>setSideOpen(false),style:{background:"none",border:"none",color:t.muted,cursor:"pointer",fontSize:22,padding:4,lineHeight:1}},"x")
         ),
         React.createElement("div",{style:{padding:"10px 14px 12px",borderBottom:`1px solid ${t.border}`,display:"flex",alignItems:"center",gap:10,cursor:"pointer"},onClick:()=>go("profile")},
-          React.createElement("div",{style:{width:30,height:30,borderRadius:"50%",background:`linear-gradient(135deg,${roleConfig.color},${roleConfig.color}cc)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,color:"#fff",flexShrink:0}},(profile?.full_name||user.email||"U")[0].toUpperCase()),
+          React.createElement("div",{style:{width:30,height:30,borderRadius:"50%",background:`linear-gradient(135deg,${roleConfig.color},${roleConfig.color}cc)`,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",flexShrink:0}},UiIcon({icon:roleConfig.emoji,id:userRole,color:"#fff",size:15})),
           React.createElement("div",{style:{minWidth:0,flex:1}},
             React.createElement("div",{style:{fontSize:13,fontWeight:600,color:t.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},profile?.full_name||"My Account"),
             React.createElement("div",{style:{display:"flex",gap:5,alignItems:"center",flexWrap:"wrap"}},
               React.createElement("span",{style:{fontSize:10,color:GOLD,fontWeight:700}},({"free":"FREE","solo":"SOLO","chambers":"CHAMBERS"}[tier]||"FREE")+" PLAN"),
-              React.createElement("span",{style:{fontSize:10,color:roleConfig.color,fontWeight:600,background:roleConfig.color+"18",padding:"1px 6px",borderRadius:100}},roleConfig.emoji+" "+roleConfig.label)
+              React.createElement("span",{style:{fontSize:10,color:roleConfig.color,fontWeight:600,background:roleConfig.color+"18",padding:"1px 6px",borderRadius:100,display:"inline-flex",alignItems:"center",gap:4}},UiIcon({icon:roleConfig.emoji,id:userRole,color:roleConfig.color,size:11}),roleConfig.label)
             )
           )
         ),
@@ -4014,24 +4043,24 @@ function AppContent(){
           activeNav.map(s=>React.createElement("div",{key:s.sec},
             React.createElement("div",{style:{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:"1.5px",color:t.muted,padding:"9px 8px 3px"}},s.sec),
             s.items.map(item=>React.createElement("button",{key:item.id,onClick:()=>go(item.id),style:{display:"flex",alignItems:"center",gap:8,width:"100%",padding:"8px 9px",borderRadius:7,border:page===item.id?`1px solid ${roleConfig.color}44`:"1px solid transparent",background:page===item.id?roleConfig.color+"14":"none",color:page===item.id?roleConfig.color:t.dim,fontSize:13,fontWeight:500,cursor:"pointer",fontFamily:"inherit",marginBottom:1,textAlign:"left",transition:"all 0.12s"}},
-              React.createElement("span",{style:{fontSize:14}},item.icon),item.label
+              UiIcon({icon:item.icon,id:item.id,color:page===item.id?roleConfig.color:t.dim,size:15}),item.label
             ))
           ))
         ),
         React.createElement("div",{style:{padding:"8px 6px",borderTop:`1px solid ${t.border}`}},
           tier==="free"&&React.createElement("button",{onClick:()=>go("upgrade"),style:{display:"flex",alignItems:"center",justifyContent:"center",width:"100%",padding:"8px",marginBottom:6,borderRadius:7,background:`linear-gradient(135deg,${GOLD},${GOLD2})`,border:"none",color:"#0D1B2E",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}},"Upgrade â€” from NGN 12,000"),
           React.createElement("div",{style:{display:"flex",alignItems:"center",gap:8,padding:"4px 8px"}},
-            React.createElement("span",null,"L"),
+            UiIcon({icon:"sun",color:t.muted,size:13}),
             React.createElement("div",{onClick:toggleDark,style:{width:40,height:22,background:dark?"rgba(200,164,94,0.18)":"rgba(0,0,0,0.1)",border:`1px solid ${dark?"rgba(200,164,94,0.3)":t.border}`,borderRadius:100,position:"relative",cursor:"pointer",transition:"all 0.3s"}},
               React.createElement("div",{style:{position:"absolute",top:2,left:dark?18:2,width:16,height:16,background:GOLD,borderRadius:"50%",transition:"left 0.3s"}})
             ),
-            React.createElement("span",null,"D"),
+            UiIcon({icon:"moon",color:t.muted,size:13}),
             React.createElement("span",{style:{fontSize:11,color:t.muted}},dark?"Dark":"Light")
           ),
           React.createElement("button",{
             onClick:()=>{if(window.confirm("Switch your role?"))updateProfile({role:""}).then(()=>setProfile(p=>({...p,role:""})));},
             style:{display:"flex",alignItems:"center",gap:6,width:"100%",padding:"5px 8px",marginTop:3,borderRadius:7,background:"transparent",border:"none",color:t.muted,fontSize:11,cursor:"pointer",fontFamily:"inherit"}
-          },React.createElement("span",null,roleConfig.emoji)," Switch Role")
+          },UiIcon({icon:roleConfig.emoji,id:userRole,color:t.muted,size:13})," Switch Role")
         )
       ),
       React.createElement("div",{className:"app-body"},
@@ -4042,7 +4071,7 @@ function AppContent(){
               React.createElement("h2",{style:{fontFamily:"'Playfair Display',serif",fontSize:"clamp(14px,3.5vw,17px)",fontWeight:700,margin:0,color:t.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},AI_CFGS[page]?.title||ALL_TITLES[page]||"Verdict AI")
             ),
             React.createElement("div",{style:{display:"flex",alignItems:"center",gap:8,flexShrink:0}},
-              React.createElement("button",{onClick:toggleDark,style:{background:"none",border:"none",cursor:"pointer",padding:6,borderRadius:8,color:t.muted,display:"flex",alignItems:"center"}},React.createElement("span",{style:{fontSize:12,fontWeight:700}},dark?"L":"D")),
+              React.createElement("button",{onClick:toggleDark,style:{background:"none",border:"none",cursor:"pointer",padding:6,borderRadius:8,color:t.muted,display:"flex",alignItems:"center"}},dark?UiIcon({icon:"sun",color:t.muted,size:15}):UiIcon({icon:"moon",color:t.muted,size:15})),
               React.createElement("div",{onClick:()=>go("profile"),style:{width:30,height:30,borderRadius:"50%",background:`linear-gradient(135deg,${roleConfig.color},${roleConfig.color}cc)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,color:"#fff",cursor:"pointer",flexShrink:0}},(profile?.full_name||user?.email||"U")[0].toUpperCase())
             )
           ),
@@ -4055,7 +4084,7 @@ function AppContent(){
       ),
       React.createElement("div",{className:"bottom-tabs"+(sideOpen?" drawer-hidden":""),style:{background:t.card,borderTop:`1px solid ${t.border}`}},
         mobileTabs.map(tab=>React.createElement("button",{key:tab.id,className:"bottom-tab",onClick:()=>go(tab.id),style:{color:page===tab.id?roleConfig.color:t.muted}},
-          React.createElement("span",{style:{fontSize:18,lineHeight:1}},tab.icon),
+          UiIcon({icon:tab.icon,id:tab.id,color:page===tab.id?roleConfig.color:t.muted,size:18}),
           React.createElement("span",null,tab.label)
         ))
       )
