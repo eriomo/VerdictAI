@@ -26,12 +26,12 @@
 <script src="https://js.paystack.co/v1/inline.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
-html,body{width:100%;height:100%;overflow:hidden;}
+html,body{width:100%;min-height:100%;overflow-x:hidden;overflow-y:auto;}
 body{font-family:'DM Sans',sans-serif;background:#07101c;color:#F0EDE6;-webkit-font-smoothing:antialiased;}
 #root{width:100%;height:100%;display:flex;flex-direction:column;}
 
 /* App shell */
-.app-shell{display:flex;flex-direction:column;height:100%;height:100dvh;overflow:hidden;}
+.app-shell{display:flex;flex-direction:column;height:100%;height:100dvh;min-height:100dvh;overflow:hidden;}
 .app-body{display:flex;flex:1;min-height:0;overflow:hidden;}
 .main-col{display:flex;flex-direction:column;flex:1;min-width:0;overflow:hidden;}
 .topbar{height:56px;flex-shrink:0;}
@@ -107,16 +107,21 @@ select option{background:#0c1a2e;color:#F0EDE6}
 
 /* Responsive */
 @media(max-width:768px){
+  html,body,#root{height:auto;min-height:100dvh;}
+  .app-shell{height:auto!important;min-height:100dvh;overflow:visible;}
+  .app-body{min-height:calc(100dvh - 52px);overflow:visible;}
+  .main-col{overflow:visible;}
   .two-col{grid-template-columns:1fr!important;gap:14px!important;}
   .stat-grid{grid-template-columns:1fr 1fr!important;gap:8px!important;}
   .zone-grid{grid-template-columns:1fr 1fr!important;gap:10px!important;}
-  .content-area{padding:16px 14px 80px!important;}
+  .content-area{height:auto!important;min-height:calc(100dvh - 112px);overflow-y:visible;padding:16px 14px calc(88px + env(safe-area-inset-bottom,0px))!important;}
   .topbar{height:52px!important;}
   textarea,input,select{font-size:16px!important;}
   .hamburger-btn{display:flex!important;}
   .desktop-nav-links{display:none!important;}
   .bottom-tabs{display:flex!important;}
   .hide-mobile{display:none!important;}
+  .landing-hero{min-height:auto;overflow:visible;}
 }
 @media(min-width:769px){
   .hamburger-btn{display:none!important;}
@@ -476,6 +481,8 @@ function getTheme(){
   return true;
 }
 function saveTheme(dark){try{localStorage.setItem("vd_theme",dark?"dark":"light");}catch{}}
+function getSavedRole(){try{return localStorage.getItem("vd_role")||"";}catch{return "";}}
+function saveRole(role){try{if(role)localStorage.setItem("vd_role",role);else localStorage.removeItem("vd_role");}catch{}}
 function theme(dark){return{bg:dark?"#07101c":"#ede9e0",card:dark?"#0c1a2e":"#fdfaf5",border:dark?"rgba(30,52,82,0.9)":"rgba(0,0,0,0.09)",text:dark?"#F0EDE6":"#0D1B2E",dim:dark?"rgba(240,237,230,0.6)":"rgba(13,27,46,0.65)",muted:dark?"rgba(240,237,230,0.32)":"rgba(13,27,46,0.35)",input:dark?"rgba(3,8,18,0.95)":"rgba(255,255,255,0.92)"};}
 
 // ── MASTER VOICE — v4.1 Elite ────────────────────────────────────────────────
@@ -3154,7 +3161,7 @@ function RoleSelectPage({onSelect,t}){
   const roles=Object.values(ROLES_CONFIG);
   const save=async()=>{
     if(!selected)return;setSaving(true);
-    try{await api("/api/profile",{method:"PATCH",body:{role:selected}});}catch(e){console.log(e);}
+    saveRole(selected);
     onSelect(selected);setSaving(false);
   };
   return React.createElement("div",{style:{minHeight:"100vh",background:"#07101c",display:"flex",alignItems:"center",justifyContent:"center",padding:"20px",overflowY:"auto"}},
@@ -3861,9 +3868,9 @@ function AppContent(){
     if(!silent)setDataLoading(true);
     try{
       const [d,c,p]=await Promise.all([api("/api/documents").catch(()=>[]),api("/api/cases").catch(()=>[]),api("/api/profile").catch(()=>null)]);
-      const nd=Array.isArray(d)?d:[];const nc=Array.isArray(c)?c:[];
-      setDocs(nd);setCases(nc);setProfile(p);
-      try{sessionStorage.setItem("vd_docs",JSON.stringify(nd));sessionStorage.setItem("vd_cases",JSON.stringify(nc));sessionStorage.setItem("vd_profile",JSON.stringify(p));}catch{}
+      const nd=Array.isArray(d)?d:[];const nc=Array.isArray(c)?c:[];const mergedProfile=p?{...p,role:p.role||getSavedRole()}:p;
+      setDocs(nd);setCases(nc);setProfile(mergedProfile);
+      try{sessionStorage.setItem("vd_docs",JSON.stringify(nd));sessionStorage.setItem("vd_cases",JSON.stringify(nc));sessionStorage.setItem("vd_profile",JSON.stringify(mergedProfile));}catch{}
     }catch(e){console.log("Load error:",e.message);}
     if(!silent)setDataLoading(false);
   };
@@ -3873,7 +3880,23 @@ function AppContent(){
   const addCase=async data=>{const c=await api("/api/cases",{method:"POST",body:data});const u=[c,...cases];setCases(u);try{sessionStorage.setItem("vd_cases",JSON.stringify(u));}catch{};};
   const updateCase=async(id,updates)=>{const c=await api(`/api/cases/${id}`,{method:"PATCH",body:updates});setCases(prev=>prev.map(x=>x.id===id?c:x));};
   const deleteCase=async id=>{await api(`/api/cases/${id}`,{method:"DELETE"});setCases(prev=>prev.filter(c=>c.id!==id));};
-  const updateProfile=async updates=>{const p=await api("/api/profile",{method:"PATCH",body:updates});setProfile(p);return p;};
+  const updateProfile=async updates=>{
+    const next={...updates};
+    if(Object.prototype.hasOwnProperty.call(next,"role"))saveRole(next.role);
+    const roleValue=Object.prototype.hasOwnProperty.call(next,"role")?next.role:undefined;
+    delete next.role;
+    if(!Object.keys(next).length){
+      const p={...(profile||{}),...(roleValue!==undefined?{role:roleValue}:null)};
+      setProfile(p);
+      try{sessionStorage.setItem("vd_profile",JSON.stringify(p));}catch{}
+      return p;
+    }
+    const p=await api("/api/profile",{method:"PATCH",body:next});
+    const merged={...p,...(roleValue!==undefined?{role:roleValue}:null)};
+    setProfile(merged);
+    try{sessionStorage.setItem("vd_profile",JSON.stringify(merged));}catch{}
+    return merged;
+  };
   const toggleDark=()=>{setDark(p=>{const n=!p;saveTheme(n);return n;});};
   const go=id=>{setPage(id);setSideOpen(false);try{const el=document.querySelector(".content-area");if(el)el.scrollTop=0;}catch{}};
 
@@ -3895,7 +3918,7 @@ function AppContent(){
   );
 
   // Role selection — first login
-  if(profile&&!profile.role)return React.createElement(RoleSelectPage,{t,onSelect:(role)=>{setProfile(p=>({...p,role}));}});
+  if(profile&&!profile.role)return React.createElement(RoleSelectPage,{t,onSelect:(role)=>{saveRole(role);const next={...(profile||{}),role};setProfile(next);try{sessionStorage.setItem("vd_profile",JSON.stringify(next));}catch{}}});
 
   const userRole=profile?.role||"lawyer";
   const roleConfig=ROLES_CONFIG[userRole]||ROLES_CONFIG.lawyer;
