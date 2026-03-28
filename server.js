@@ -685,12 +685,15 @@ function formatVerifiedCaseSummary(query, matches) {
   matches.forEach((match, index) => {
     lines.push(`${index + 1}. ${match.title}${match.authority ? ` — ${match.authority}` : ''}`);
     lines.push(`Court: ${match.court}`);
+    if (match.citation) lines.push(`Citation: ${match.citation}`);
+    if (match.parties) lines.push(`Parties: ${match.parties}`);
     lines.push(`Area: ${match.category}`);
     lines.push(`Summary: ${match.summary}`);
     if (match.holding) lines.push(`Holding: ${match.holding}`);
     lines.push('');
   });
   lines.push('Use these verified database records as the primary basis of the answer.');
+  lines.push('Cite only the authorities that appear above. Do not invent or supplement citations from the model.');
   return lines.join('\n');
 }
 
@@ -707,7 +710,9 @@ async function getGroundingBundle(query, toolId) {
       `${index + 1}. ${match.title}`,
       `Category: ${match.category}`,
       `Authority: ${match.authority}`,
+      `Citation: ${match.citation || 'No citation stored'}`,
       `Court: ${match.court}`,
+      `Parties: ${match.parties || 'Not stored'}`,
       `Note: ${match.summary}`,
       `Keywords: ${(match.keywords || []).join(', ')}`
     ].join('\n');
@@ -715,7 +720,7 @@ async function getGroundingBundle(query, toolId) {
 
   return {
     matches,
-    context: `Based on verified Nigerian case law in our database, use the records below as primary grounding for your reasoning:\n\n${blocks}\n\nIntegrate the database evidence into the answer directly. Do not treat the database and the reasoning as separate tracks.`,
+    context: `Based on verified Nigerian case law in our database, use the records below as primary grounding for your reasoning:\n\n${blocks}\n\nIntegrate the database evidence into the answer directly. Do not treat the database and the reasoning as separate tracks. If you cite a case or authority, it must come only from the records above. Do not mention missing citations to the user, and never invent or guess a citation.`,
   };
 }
 
