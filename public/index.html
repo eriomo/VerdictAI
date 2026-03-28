@@ -50,7 +50,7 @@ body{font-family:'DM Sans',sans-serif;background:#07101c;color:#F0EDE6;-webkit-f
 }
 
 /* Sidebar */
-.sidebar{width:245px;flex-shrink:0;overflow-y:auto;position:fixed;top:0;bottom:0;left:0;z-index:100;transition:transform 0.28s cubic-bezier(0.4,0,0.2,1);}
+.sidebar{width:245px;flex-shrink:0;display:flex;flex-direction:column;overflow:hidden;position:fixed;top:0;bottom:0;left:0;height:100dvh;z-index:100;transition:transform 0.28s cubic-bezier(0.4,0,0.2,1);touch-action:pan-y;}
 .sidebar-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:99;backdrop-filter:blur(2px);}
 
 /* Mobile bottom tab bar */
@@ -111,6 +111,8 @@ select option{background:#0c1a2e;color:#F0EDE6}
   .app-shell{height:auto!important;min-height:100dvh;overflow:visible;}
   .app-body{min-height:calc(100dvh - 52px);overflow:visible;}
   .main-col{overflow:visible;}
+  .sidebar{width:min(84vw,320px);max-width:320px;height:100dvh;max-height:100dvh;overscroll-behavior:contain;}
+  .sidebar nav{-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y;}
   .two-col{grid-template-columns:1fr!important;gap:14px!important;}
   .stat-grid{grid-template-columns:1fr 1fr!important;gap:8px!important;}
   .zone-grid{grid-template-columns:1fr 1fr!important;gap:10px!important;}
@@ -4031,7 +4033,7 @@ function AppContent(){
             )
           )
         ),
-        React.createElement("nav",{style:{flex:1,padding:"8px 6px",overflowY:"auto"}},
+        React.createElement("nav",{style:{flex:"1 1 auto",minHeight:0,padding:"8px 6px",overflowY:"auto",overflowX:"hidden",WebkitOverflowScrolling:"touch",overscrollBehavior:"contain"}},
           activeNav.map(s=>React.createElement("div",{key:s.sec},
             React.createElement("div",{style:{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:"1.5px",color:t.muted,padding:"9px 8px 3px"}},s.sec),
             s.items.map(item=>React.createElement("button",{key:item.id,onClick:()=>go(item.id),style:{display:"flex",alignItems:"center",gap:8,width:"100%",padding:"8px 9px",borderRadius:7,border:page===item.id?`1px solid ${roleConfig.color}44`:"1px solid transparent",background:page===item.id?roleConfig.color+"14":"none",color:page===item.id?roleConfig.color:t.dim,fontSize:13,fontWeight:500,cursor:"pointer",fontFamily:"inherit",marginBottom:1,textAlign:"left",transition:"all 0.12s"}},
