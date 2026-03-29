@@ -13,7 +13,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 app.set('trust proxy', 1);
 
-// â”€â”€ FIX #1: CORS must be FIRST â€” before rate limiter, before everything â”€â”€â”€â”€â”€â”€â”€â”€
+// â”€â”€ FIX #1: CORS must be FIRST  -  before rate limiter, before everything â”€â”€â”€â”€â”€â”€â”€â”€
 // Previously cors() was after the rate limiter. When the rate limiter fired a 429,
 // no CORS headers were attached, so the browser blocked the response entirely,
 // causing every subsequent request to return "Status 0" instead of 429.
@@ -35,7 +35,7 @@ app.use((req, res, next) => {
   res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
   res.setHeader(
     'Content-Security-Policy',
-    "default-src 'self'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://js.paystack.co; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://paystack.com; style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com https://paystack.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: https: blob:; manifest-src 'self'; connect-src 'self' https://api.groq.com https://openrouter.ai https://api.anthropic.com https://verdictai.com.ng https://api.paystack.co https://checkout.paystack.com https://*.supabase.co wss://*.supabase.co https://unpkg.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; frame-src 'self' https://js.paystack.co https://checkout.paystack.com https://africanlii.org https://primsol.lawpavilion.com; worker-src 'self' blob:;"
+    "default-src 'self'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://js.paystack.co; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://paystack.com; style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com https://paystack.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: https: blob:; manifest-src 'self'; connect-src 'self' https://api.groq.com https://openrouter.ai https://api.anthropic.com https://verdictai.com.ng https://api.paystack.co https://checkout.paystack.com https://*.supabase.co wss://*.supabase.co https://unpkg.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; frame-src 'self' https://js.paystack.co https://checkout.paystack.com; worker-src 'self' blob:;"
   );
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   if (req.path.startsWith('/api/')) res.setHeader('Cache-Control', 'no-store');
@@ -69,7 +69,7 @@ app.use('/api', (req, res, next) => {
   const { allowed, count, limit } = rateLimit(ipRequests, `ip:${ip}`, 240, 60_000);
   if (!allowed) {
     console.log(`[RATE] IP ${ip} exceeded ${limit} req/min (count: ${count})`);
-    // FIX #2: CORS header on 429 â€” without this, browser sees Status 0 not 429
+    // FIX #2: CORS header on 429  -  without this, browser sees Status 0 not 429
     res.setHeader('Retry-After', '60');
     res.setHeader('Access-Control-Allow-Origin', '*');
     return res.status(429).json({ error: 'Too many requests. Please wait and try again.' });
@@ -535,7 +535,7 @@ function normalizeVerdictCase(row) {
     category: stringOrEmpty(row.legal_subjects || row.category || row.area_of_law || 'Verified Nigerian Case Law'),
     summary,
     keywords,
-    authority: stringOrEmpty(row.citation || row.neutral_citation || 'Based on verified Nigerian case law in our database'),
+    authority: stringOrEmpty(row.citation || row.neutral_citation || (row.case_title ? `${row.case_title} (Verdict AI Database)` : 'Nigerian Case Law Database')),
     sourceType: 'supabase-case',
     court: stringOrEmpty(row.court || 'Nigerian Courts'),
     jurisdiction: 'Nigeria',
@@ -683,9 +683,10 @@ function formatVerifiedCaseSummary(query, matches) {
     'Verified database matches:'
   ];
   matches.forEach((match, index) => {
-    lines.push(`${index + 1}. ${match.title}${match.authority ? ` — ${match.authority}` : ''}`);
-    lines.push(`Court: ${match.court}`);
-    if (match.citation) lines.push(`Citation: ${match.citation}`);
+    const titleLine = match.citation
+      ? `${match.title} | ${match.citation} | ${match.court} | ${match.decisionDate || 'Date not stored'}`
+      : `${match.title} - ${match.court} ${match.decisionDate || ''}`.trim();
+    lines.push(`${index + 1}. ${titleLine}`);
     if (match.parties) lines.push(`Parties: ${match.parties}`);
     lines.push(`Area: ${match.category}`);
     lines.push(`Summary: ${match.summary}`);
@@ -706,11 +707,13 @@ async function getGroundingBundle(query, toolId) {
   if (!matches.length) return { context: '', matches: [] };
 
   const blocks = matches.map((match, index) => {
+    const titleLine = match.citation
+      ? `${match.title} | ${match.citation} | ${match.court} | ${match.decisionDate || 'Date not stored'}`
+      : `${match.title} - ${match.court} ${match.decisionDate || ''}`.trim();
     return [
-      `${index + 1}. ${match.title}`,
+      `${index + 1}. ${titleLine}`,
       `Category: ${match.category}`,
       `Authority: ${match.authority}`,
-      `Citation: ${match.citation || 'No citation stored'}`,
       `Court: ${match.court}`,
       `Parties: ${match.parties || 'Not stored'}`,
       `Note: ${match.summary}`,
@@ -796,9 +799,9 @@ async function requireAuth(req, res, next) {
 
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 //  AI ORCHESTRATION
-//  Heavy tools â†’ Groq preprocessing in parallel + GPT via OpenRouter
-//  Simple tools â†’ Groq only (fast, unlimited)
-//  Failover     â†’ GPT-120b â†’ retry â†’ GPT-20b â†’ retry â†’ Groq fallback
+//  Heavy tools  >  Groq preprocessing in parallel + GPT via OpenRouter
+//  Simple tools  >  Groq only (fast, unlimited)
+//  Failover      >  GPT-120b  >  retry  >  GPT-20b  >  retry  >  Groq fallback
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 const HEAVY_TOOLS = new Set([
@@ -870,14 +873,38 @@ async function callSelfHostedStream(system, user, maxTokens = 4500) {
 }
 
 async function groqPreprocess(groqKey, user) {
-  const preprocessPrompt = `You are a document parser. Extract the following from the input in plain text:
-1. DOCUMENT TYPE: (contract/brief/statute/correspondence/other)
-2. KEY PARTIES: (list names/entities)
-3. CORE SUBJECT: (one sentence)
-4. KEY CLAUSES OR ISSUES: (bullet list, max 8 items)
-5. MONETARY VALUES MENTIONED: (exact figures only)
-6. DATES MENTIONED: (all dates)
-Be concise. No analysis â€” extraction only.`;
+  const preprocessPrompt = `You are a Nigerian legal document parser. 
+First identify the EXACT document type from this list:
+- Statement of Claim
+- Statement of Defence  
+- Statement of Defense
+- Affidavit
+- Counter-Affidavit
+- Originating Summons
+- Motion on Notice
+- Motion Ex Parte
+- Writ of Summons
+- Petition
+- Charge Sheet
+- Contract / Agreement
+- Deed
+- Brief of Argument
+- Statute / Act
+- Judgment / Ruling
+- Correspondence / Letter
+- Other (specify)
+
+Then extract:
+1. DOCUMENT TYPE: (exact type from list above)
+2. KEY PARTIES: (list names/entities - who is Claimant/Plaintiff/Defendant/Applicant/Respondent)
+3. CORE SUBJECT: (one sentence — what is this document about)
+4. KEY LEGAL ISSUES: (bullet list, max 8 items)
+5. RELIEFS SOUGHT: (if any — list all reliefs)
+6. MONETARY VALUES: (exact figures only)
+7. DATES MENTIONED: (all dates)
+8. COURT/JURISDICTION: (which court, which state)
+
+Be precise. This extraction drives the entire analysis.`;
   try {
     const result = await Promise.race([
       callGroqSync(groqKey, preprocessPrompt, user.slice(0, 4000), 800),
@@ -937,7 +964,7 @@ async function callWithFailover(orKey, groqKey, system, user) {
   const aiRes = await callGroqStream(groqKey, system, user);
   return { aiRes, engine: 'groq-fallback' };
 }
-// â”€â”€ FIX #3: Function is named `orchestrate` â€” do NOT rename to routeAI â”€â”€â”€â”€â”€â”€â”€â”€
+// â”€â”€ FIX #3: Function is named `orchestrate`  -  do NOT rename to routeAI â”€â”€â”€â”€â”€â”€â”€â”€
 // routeAI does not exist. Calling routeAI() throws "routeAI is not defined"
 // which caused every /api/ai request to return 500 Internal Server Error.
 async function orchestrate(toolId, system, user, groqKey, orKey) {
@@ -952,6 +979,60 @@ async function orchestrate(toolId, system, user, groqKey, orKey) {
     aiLog(`Simple tool: Groq -> ${toolId}`);
     const aiRes = await callGroqStream(groqKey, system, user);
     return { aiRes, engine: 'groq' };
+  }
+
+  if (toolId === 'docanalysis') {
+    const preprocessResult = groqKey ? await groqPreprocess(groqKey, user) : '';
+    const docTypeLine = preprocessResult.match(/DOCUMENT TYPE:\s*(.+)/i)?.[1]?.trim() || '';
+    const isStatementOfClaim = /statement\s+of\s+claim/i.test(docTypeLine);
+    const isStatementOfDefence = /statement\s+of\s+de[fn]/i.test(docTypeLine);
+    const isAffidavit = /affidavit/i.test(docTypeLine);
+    const isMotion = /motion/i.test(docTypeLine);
+    const isPleading = isStatementOfClaim || isStatementOfDefence;
+
+    if (isStatementOfClaim) {
+      system = `You are a senior Nigerian litigation lawyer analyzing a STATEMENT OF CLAIM.
+This is a litigation document - NOT a contract. Do not apply contract analysis.
+
+Your task:
+1. DOCUMENT IDENTIFIED: Confirm this is a Statement of Claim. Identify the Claimant, Defendant, Court, and Relief sought.
+2. STRENGTH OF CLAIM: Rate each paragraph - strong, weak, or problematic. Give specific reasons.
+3. MISSING AVERMENTS: What facts must be pleaded but are absent? Be specific.
+4. RELIEF ANALYSIS: Are the reliefs properly claimed? Are they specific enough? Any missing reliefs?
+5. JURISDICTION: Is the correct court identified? Is jurisdiction properly invoked?
+6. POTENTIAL DEFENCES: What defences will the Defendant likely raise based on these facts?
+7. RECOMMENDED AMENDMENTS: Specific paragraph-by-paragraph rewrites where needed.
+8. OVERALL RATING: Excellent / Good / Needs significant amendment / Defective
+
+` + system;
+    }
+
+    if (isStatementOfDefence) {
+      system = `You are a senior Nigerian litigation lawyer analyzing a STATEMENT OF DEFENCE.
+This is a litigation document - NOT a contract. Do not apply contract analysis.
+
+Your task:
+1. DOCUMENT IDENTIFIED: Confirm this is a Statement of Defence. Identify parties, Court, and what claims are being defended.
+2. TRAVERSALS: Are each paragraph of the claim properly traversed - admitted, denied, or not admitted?
+3. POSITIVE DEFENCES: What positive defences are raised? Are they properly pleaded?
+4. MISSING DENIALS: Which paragraphs of the claim are not properly addressed?
+5. COUNTERCLAIM: Is a counterclaim appropriate? If so, what?
+6. WEAKNESS ANALYSIS: What are the weakest parts of this defence?
+7. RECOMMENDED AMENDMENTS: Specific paragraph-by-paragraph rewrites where needed.
+8. OVERALL RATING: Strong / Adequate / Needs amendment / Defective
+
+` + system;
+    }
+
+    if (!isPleading && !isAffidavit && !isMotion) {
+      system = `DOCUMENT TYPE IDENTIFIED: ${docTypeLine || 'Legal Document'}\n\n` + system;
+    }
+
+    const { aiRes, engine } = await callWithFailover(orKey, groqKey, system, user);
+    if (preprocessResult) {
+      aiLog(`Document analysis preprocess ready (${preprocessResult.length} chars)`);
+    }
+    return { aiRes, engine, extraction: preprocessResult };
   }
 
   aiLog(`Heavy tool: retrieval+model orchestration -> ${toolId}`);
@@ -1013,7 +1094,7 @@ app.post('/api/ai', requireAuth, async (req, res) => {
   // Per-user AI rate limit: 30 calls/hour
   const { allowed: aiAllowed } = rateLimit(userAiCalls, `user:${req.user.id}`, 30, 3_600_000);
   if (!aiAllowed) {
-    // FIX #2 applies here too â€” CORS header on 429
+    // FIX #2 applies here too  -  CORS header on 429
     res.setHeader('Access-Control-Allow-Origin', '*');
     return res.status(429).json({ error: 'AI rate limit reached. Max 30 requests per hour.' });
   }
@@ -1060,7 +1141,7 @@ app.post('/api/ai', requireAuth, async (req, res) => {
       writeSseResponse(res, dbOnlyText);
       return;
     }
-    // FIX #3: call orchestrate(), NOT routeAI() â€” routeAI does not exist
+    // FIX #3: call orchestrate(), NOT routeAI()  -  routeAI does not exist
     const { aiRes, engine } = await orchestrate(toolId, system, user, groqKey, orKey);
 
     if (aiRes.statusCode !== 200) {
@@ -1118,7 +1199,7 @@ app.post('/api/ai', requireAuth, async (req, res) => {
   }
 });
 
-// â”€â”€ PAYSTACK â€” Initialize â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// â”€â”€ PAYSTACK  -  Initialize â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app.post('/api/payments/initialize', requireAuth, async (req, res) => {
   const { plan } = req.body;
   if (!plan) return res.status(400).json({ error: 'Plan is required' });
@@ -1148,7 +1229,7 @@ app.post('/api/payments/initialize', requireAuth, async (req, res) => {
   }
 });
 
-// â”€â”€ PAYSTACK â€” Verify â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// â”€â”€ PAYSTACK  -  Verify â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app.get('/api/payments/verify/:reference', requireAuth, async (req, res) => {
   if (!PAYSTACK_SECRET) return res.status(500).json({ error: 'Payment not configured' });
   try {
@@ -1176,7 +1257,7 @@ app.get('/api/payments/verify/:reference', requireAuth, async (req, res) => {
   }
 });
 
-// â”€â”€ PAYSTACK â€” Webhook â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// â”€â”€ PAYSTACK  -  Webhook â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app.post('/api/payments/webhook', async (req, res) => {
   if (!PAYSTACK_SECRET) return res.status(200).send('OK');
   const hash = crypto.createHmac('sha512', PAYSTACK_SECRET).update(req.body).digest('hex');
@@ -1202,7 +1283,7 @@ app.post('/api/payments/webhook', async (req, res) => {
   } catch (err) { console.log('Webhook error:', err.message); }
 });
 
-// â”€â”€ PAYSTACK â€” Cancel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// â”€â”€ PAYSTACK  -  Cancel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app.post('/api/payments/cancel', requireAuth, async (req, res) => {
   if (!PAYSTACK_SECRET) return res.status(500).json({ error: 'Payment not configured' });
   try {
@@ -1221,7 +1302,7 @@ app.post('/api/payments/cancel', requireAuth, async (req, res) => {
   }
 });
 
-// â”€â”€ PAYSTACK â€” Reactivate â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// â”€â”€ PAYSTACK  -  Reactivate â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app.post('/api/payments/reactivate', requireAuth, async (req, res) => {
   if (!PAYSTACK_SECRET) return res.status(500).json({ error: 'Payment not configured' });
   try {
@@ -1275,7 +1356,7 @@ app.post('/api/documents', requireAuth, async (req, res) => {
 
 app.delete('/api/documents/:id', requireAuth, async (req, res) => {
   if (!isUuidLike(req.params.id)) return res.status(404).json({ error: 'Document not found' });
-  // FIX #4: Check ownership before delete â€” returns 404 so caller knows doc doesn't exist
+  // FIX #4: Check ownership before delete  -  returns 404 so caller knows doc doesn't exist
   const { data: existing } = await supabase.from('documents')
     .select('id').eq('id', req.params.id).eq('user_id', req.user.id).single();
   if (!existing) return res.status(404).json({ error: 'Document not found' });
@@ -1426,7 +1507,7 @@ app.get('/api/health', (req, res) => res.json({ status: 'ok', version: '4.6.1' }
 
 // â”€â”€ Bank Transfer Notification â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // FIX #5: Removed `const https = require('https')` that was duplicated inside
-// this handler â€” https is already required at the top of the file.
+// this handler  -  https is already required at the top of the file.
 app.post('/api/payments/bank-transfer', requireAuth, async (req, res) => {
   const { plan, amount, reference, email } = req.body;
   if (!plan || !amount || !reference) return res.status(400).json({ error: 'Missing required fields' });
@@ -1450,7 +1531,7 @@ app.post('/api/payments/bank-transfer', requireAuth, async (req, res) => {
       await transporter.sendMail({
         from: '"Verdict AI Payments" <trigxyfn@gmail.com>',
         to: 'trigxyfn@gmail.com',
-        subject: `ðŸ’° New Payment â€” ${plan} â€” NGN ${Number(amount).toLocaleString()}`,
+        subject: `ðŸ’° New Payment  -  ${plan}  -  NGN ${Number(amount).toLocaleString()}`,
         text: [
           'ðŸŽ‰ NEW BANK TRANSFER SUBMITTED',
           '',
@@ -1475,7 +1556,7 @@ app.post('/api/payments/bank-transfer', requireAuth, async (req, res) => {
   }
 });
 
-// â”€â”€ API 404 â€” before SPA catch-all â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// â”€â”€ API 404  -  before SPA catch-all â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app.use('/api', (req, res) => {
   res.status(404).json({ error: `API route not found: ${req.method} ${req.path}` });
 });
@@ -1493,6 +1574,8 @@ reloadDiskCorpus();
 exportTrainingCorpus();
 
 app.listen(PORT, () => console.log(`Verdict AI v4.6.1 running on port ${PORT}`));
+
+
 
 
 
