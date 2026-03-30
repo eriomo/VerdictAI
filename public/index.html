@@ -370,7 +370,7 @@ function AuthProvider({children}){
   },[]);
   const signUp=async(email,password,meta)=>(await sb.auth.signUp({email,password,options:{data:meta}})).error;
   const signIn=async(email,password)=>(await sb.auth.signInWithPassword({email,password})).error;
-  const signOut=()=>sb.auth.signOut();
+  const signOut=()=>{try{sessionStorage.removeItem("vd_page");}catch{}return sb.auth.signOut();};
   return React.createElement(AuthCtx.Provider,{value:{user,loading,signUp,signIn,signOut}},children);
 }
 const useAuth=()=>useContext(AuthCtx);
@@ -532,15 +532,6 @@ Always verify arithmetic before writing. Monthly salary x 12 = annual salary. An
 CONTENT  -  ABSOLUTE RULES:
 Never invent case names, statute names, section numbers, or authorities. Never invent clauses, arbitration provisions, or contract terms not in the user's input. Never reference juries  -  Nigerian civil proceedings have no juries, only judges. Never ask a witness to state a legal conclusion such as breach or negligence  -  those are for the judge. Never coach a client to concede negligence. Copy party names and proper nouns exactly as provided  -  never truncate or abbreviate them. Use only financial figures that appear in the user's input. If a dispute resolution mechanism is not mentioned in the user's input, the forum is the Nigerian High Court  -  never invent an arbitration clause. Only raise a counterclaim if there is an actual factual basis in the documents provided.
 
-PERSPECTIVE LOCK  -  MANDATORY:
-Identify exactly who is being protected before analyzing the document. If the prompt specifies CLIENT MODE, protect the client. If it specifies DEVELOPER MODE, protect the developer or drafting party. If it specifies NEUTRAL MODE, assess both sides evenly. Never mix perspectives. Every recommendation, risk score, negotiation point, and final verdict must stay consistent with the locked perspective throughout.
-
-DECISION INTELLIGENCE  -  MANDATORY:
-Do not stop at spotting risk. Rank what must be fixed first, what can be negotiated second, and what can be tolerated. State the single biggest dealbreaker early. If a document should not be signed as drafted, say so directly.
-
-BUSINESS IMPACT  -  MANDATORY:
-For every major risk, state the practical consequence in the real world. Explain what happens if payment is withheld, performance is delayed, liability is triggered, or litigation starts. Use the figures in the document where available. If no exact figure is provided, describe the concrete operational and legal consequence without inventing numbers.
-
 MARKET REALITY RULE  -  MANDATORY:
 For every legal risk, add what actually happens in practice. Nigerian courts frequently limit or refuse to enforce: non-compete clauses beyond 12 months, blanket liability clauses, forfeiture of salary clauses, unilateral variation clauses. State this directly. Example: "In practice, Nigerian courts have consistently refused to enforce non-compete clauses exceeding one year where the employer cannot demonstrate a legitimate proprietary interest. This clause, as drafted, would likely be struck down or significantly reduced." Always combine legal analysis with practical court reality.
 
@@ -549,12 +540,6 @@ Every document analysis must include suggested rewrites for every flagged clause
 
 NEGOTIATION INTELLIGENCE  -  MANDATORY:
 Every negotiation point must include: the opening demand, the fallback position if refused, and who holds leverage. Never say "ask for a notice period"  -  say "demand a minimum 3-month notice period. If they refuse, propose 30 days with a 3-month salary continuation clause as compensation. The employer holds leverage at offer stage but loses it once you have commenced employment."
-
-AUTHORITY DISCIPLINE  -  MANDATORY:
-Never write formulae such as "Nigerian courts have consistently held" unless a real verified authority from our database or an actual statute section is supplied to you in context. If no verified authority is supplied, give the legal reasoning without pretending to cite a case.
-
-CONSISTENCY CHECK  -  MANDATORY:
-Before finalizing, silently review your own answer for contradictions. The identified perspective, risk labels, clause analysis, practical consequences, and final verdict must all point in the same direction.
 
 FINAL VERDICT  -  MANDATORY FOR DOCUMENT ANALYSIS:
 Every document analysis must end with a FINAL VERDICT section. State clearly: sign, negotiate specific clauses before signing, or do not sign as drafted. Name every specific clause that must change before the document is acceptable. Give a single decisive recommendation the client can act on immediately.
@@ -2002,41 +1987,25 @@ function ReaderPage({onSave,t,go}){
   const [out,setOut]=usePersist("reader_out","");
   const [loading,setLoading]=useState(false);
   const [fileName,setFileName]=usePersist("reader_fn","");
-  const [perspective,setPerspective]=usePersist("reader_perspective","client");
   const [limitReached,setLimitReached]=useState(false);
   const {setLastAnalysis}=useSess();
-  const perspectiveLabel=perspective==="developer"?"DEVELOPER MODE":perspective==="neutral"?"NEUTRAL MODE":"CLIENT MODE";
-  const sys=`${perspectiveLabel}: Lock the analysis to this perspective and never drift from it.\n\nYou are a senior Nigerian lawyer. Before any analysis, identify the exact document type (Statement of Claim, Statement of Defence, Contract, Affidavit, Motion, etc.). Your entire analysis must be appropriate for that document type. If the document is a Statement of Claim or Statement of Defence or any litigation pleading, do NOT apply contract analysis. Instead analyze it as a litigation document - assess the pleadings, traversals, reliefs, jurisdiction, and procedural compliance under Nigerian civil procedure rules.\n\n
+  const sys=`You are a senior Nigerian lawyer. Before any analysis, identify the exact document type (Statement of Claim, Statement of Defence, Contract, Affidavit, Motion, etc.). Your entire analysis must be appropriate for that document type. If the document is a Statement of Claim or Statement of Defence or any litigation pleading, do NOT apply contract analysis. Instead analyze it as a litigation document - assess the pleadings, traversals, reliefs, jurisdiction, and procedural compliance under Nigerian civil procedure rules.\n\n
 
 DOCUMENT IDENTIFICATION: Document type, parties, governing law, date, and the single most important thing to know about this document in one sentence.
 
-PERSPECTIVE LOCK: State in one sentence who is being protected in this analysis and keep that perspective fixed throughout.
-
-EXECUTIVE RISK RATING: Rate the overall risk to the protected party as HIGH, MEDIUM, or LOW. State in one full paragraph what drives that rating.
-
-DECISION INTELLIGENCE: State the single issue that must be fixed first. Then state whether the protected party should sign, negotiate, file, oppose, amend, or reject at this stage.
+EXECUTIVE RISK RATING: Rate the overall risk to the client as HIGH, MEDIUM, or LOW. State in one full paragraph what drives that rating.
 
 CRITICAL CLAUSES: For each significant clause: what it says, what it actually means in practice, which party it favours, and the specific risk or benefit it creates. Flag every clause that is unusual, one-sided, or potentially unenforceable under Nigerian law.
 
-RISK FLAGS: For each risk: rate it CRITICAL, HIGH, or MEDIUM. State the exact clause or absence of clause. Explain what happens if the risk materialises  -  specifically and bluntly. State the financial or legal exposure in naira where figures exist. Then state in one sentence what the protected party must do about it immediately. Do not soften risk flags. If a clause is dangerous, say it is dangerous.
+RISK FLAGS: For each risk: rate it CRITICAL, HIGH, or MEDIUM. State the exact clause or absence of clause. Explain what happens if the risk materialises  -  specifically and bluntly. State the financial or legal exposure in naira. Then state in one sentence what the client must do about it before signing. Do not soften risk flags. If a clause is dangerous, say it is dangerous.
 
-HIDDEN RISKS: Clauses that appear standard but contain hidden traps. Undefined terms that will cause disputes. Gaps that leave the protected party exposed.
+HIDDEN RISKS: Clauses that appear standard but contain hidden traps. Undefined terms that will cause disputes. Gaps that leave the client exposed.
 
-OBLIGATIONS: Every obligation the protected party must perform, the deadline or trigger, the consequence of breach, and whether the obligation is reasonable.
+OBLIGATIONS: Every obligation the client must perform, the deadline or trigger, the consequence of breach, and whether the obligation is reasonable.
 
-PRIORITY ORDER: Rank the issues in the order they should be fixed. Separate dealbreakers from secondary points.
+NEGOTIATION POINTS: The specific changes the client must push for, ranked by importance. For each: what to ask for, what to accept as a compromise, and what is a dealbreaker.
 
-BUSINESS IMPACT: For each major issue, state the worst realistic outcome in practice. If the document concerns payment, performance, delay, termination, liability, or security, spell out exactly what the protected party loses or becomes exposed to.
-
-NEGOTIATION POINTS: The specific changes the protected party must push for, ranked by importance. For each: what to ask for, what to accept as a compromise, and what is a dealbreaker.
-
-SCENARIO TESTING: State what happens under three scenarios: best case, most likely case, and worst case.
-
-CLAUSE REWRITES: For every flagged clause or missing protection, provide the full improved clause language  -  not just a suggestion.
-
-PLAIN ENGLISH SUMMARY: What this document does, what it commits the protected party to, and the three most important things they must understand.
-
-CONSISTENCY CHECK: Before finalizing, check that the perspective, clause analysis, risks, negotiation advice, and final verdict do not contradict each other.
+PLAIN ENGLISH SUMMARY: What this document does, what it commits the client to, and the three most important things they must understand.
 
 NEXT STEPS: Numbered specific actions before signing. Every step is concrete - exactly what to do, not just to consider something. Do not say "seek legal advice" - this IS the legal advice. The final step must state clearly: sign, negotiate, or reject - and why.`+VOICE;
   const run=async()=>{
@@ -2045,15 +2014,12 @@ NEXT STEPS: Numbered specific actions before signing. Every step is concrete - e
     catch(e){if(e.message==="FREE_LIMIT_REACHED")setLimitReached(true);else setOut("Error: "+e.message);}
     setLoading(false);
   };
-  const doClear=()=>{setTxt("");setOut("");setFileName("");setPerspective("client");clearPersist("reader_txt","reader_out","reader_fn","reader_perspective");};
+  const doClear=()=>{setTxt("");setOut("");setFileName("");clearPersist("reader_txt","reader_out","reader_fn");};
   return React.createElement("div",{className:"fade"},
     React.createElement(Hdr,{title:"Document Analysis",desc:"Upload any legal document for complete AI analysis - risk rating, hidden traps, and killer negotiation points.",t,onClear:doClear,hasContent:!!(txt||out)}),
     limitReached&&React.createElement(UpgradeBanner,{t,go}),
     React.createElement(Two,{
       l:React.createElement("div",null,
-        React.createElement(Lbl,{t},"Perspective Lock"),
-        React.createElement(Sel,{val:perspective,set:setPerspective,opts:["client","developer","neutral"],ph:"Choose perspective",t}),
-        React.createElement("div",{style:{height:10}}),
         React.createElement(FileUpload,{t,onText:(text,name)=>{setTxt(text);setFileName(name||"Uploaded Document");}}),
         React.createElement("div",{style:{textAlign:"center",color:t.muted,fontSize:12,margin:"6px 0"}},"- or paste text directly -"),
         React.createElement(Lbl,{t},"Document Text"),
@@ -2405,6 +2371,9 @@ function ProfilePage({profile,onUpdate,t,go}){
 
 // â”€â”€ Upgrade â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
+let PAYSTACK_PUBLIC_KEY="";
+// Fetch public key from server so it's never hardcoded in client source
+(async()=>{try{const r=await fetch("/api/config");const d=await r.json();if(d.paystackPublicKey)PAYSTACK_PUBLIC_KEY=d.paystackPublicKey;}catch(e){console.error("Config fetch failed:",e);}})();
 
 // â”€â”€ Bank details â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const BANK_DETAILS={bank:"Moniepoint",account:"5559769177",name:"Toluwani Omolola Paul"};
@@ -2554,6 +2523,7 @@ function UpgradePage({t,go,userTier,userEmail,onUpgradeSuccess,profile,onUpdate}
     if(plan.id==="free"||!canUpgrade(plan.id))return;
     setPaying(plan.id);setError("");setSuccess("");
     try{
+      if(typeof PaystackPop==="undefined")throw new Error("Paystack script not loaded. Please refresh.");
       const {data:{session}}=await sb.auth.getSession();
       if(!session?.access_token)throw new Error("Not logged in. Please refresh.");
       const planKey=billing==="annual"?plan.planKey_annual:plan.planKey_monthly;
@@ -2566,9 +2536,20 @@ function UpgradePage({t,go,userTier,userEmail,onUpgradeSuccess,profile,onUpdate}
       if(!res.ok)throw new Error(data.error||"Server error: "+res.status);
       sessionStorage.setItem("vd_pay_ref",data.reference);
       sessionStorage.setItem("vd_pay_plan",planKey);
-      if(!data.authorization_url)throw new Error("Paystack authorization link was not returned.");
-      window.location.href=data.authorization_url;
-      return;
+      const handler=PaystackPop.setup({
+        key:PAYSTACK_PUBLIC_KEY,
+        email:userEmail,
+        amount:(billing==="annual"?plan.annual:plan.monthly)*100,
+        ref:data.reference,
+        currency:"NGN",
+        channels:["card","bank_transfer","ussd","bank"],
+        onSuccess:(transaction)=>{
+          const ref=transaction?.reference||transaction?.trxref||data.reference;
+          sb.auth.getSession().then(({data:{session}})=>{if(session?.access_token)verifyPayment(ref,session.access_token);});
+        },
+        onCancel:()=>{setPaying(null);setError("Payment cancelled.");},
+      });
+      handler.openIframe();
     }catch(err){
       setPaying(null);
       setError(err.message);
@@ -3859,7 +3840,7 @@ function ParalegalResearchPage({t,go}){
 
 function AppContent(){
   const {user,loading:authLoading}=useAuth();
-  const [page,setPage]=useState("dashboard");
+  const [page,setPage]=useState(()=>{try{return sessionStorage.getItem("vd_page")||"dashboard";}catch{return "dashboard";}});
   const [showAuth,setShowAuth]=useState(false);
   const [dark,setDark]=useState(getTheme);
   const [sideOpen,setSideOpen]=useState(false);
@@ -3920,7 +3901,7 @@ function AppContent(){
     return merged;
   };
   const toggleDark=()=>{setDark(p=>{const n=!p;saveTheme(n);return n;});};
-  const go=id=>{setPage(id);setSideOpen(false);try{const el=document.querySelector(".content-area");if(el)el.scrollTop=0;}catch{}};
+  const go=id=>{setPage(id);try{sessionStorage.setItem("vd_page",id);}catch{}setSideOpen(false);try{const el=document.querySelector(".content-area");if(el)el.scrollTop=0;}catch{}};
 
   if(authLoading)return React.createElement("div",{style:{display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",background:"#07101c",flexDirection:"column",gap:18}},
     React.createElement("div",{style:{width:58,height:58,background:`linear-gradient(135deg,${GOLD},${GOLD2})`,borderRadius:16,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Playfair Display',serif",fontWeight:700,fontSize:28,color:"#0D1B2E"}},"V"),
@@ -4124,12 +4105,3 @@ window.addEventListener('beforeinstallprompt', e => {
 </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
