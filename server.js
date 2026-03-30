@@ -143,17 +143,18 @@ function isUuidLike(value) {
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY;
+const PAYSTACK_PUBLIC_KEY = process.env.PAYSTACK_PUBLIC_KEY || '';
 
 const DISCLAIMER = '\n\nDISCLAIMER: This analysis is for informational purposes only and does not constitute legal advice. It is grounded in verified Nigerian case law in our database and should still be reviewed with professional judgment before reliance in proceedings.';
 
 const PLANS = {
-  solo_monthly:     { amount: 1200000,  name: 'Solo Monthly',     tier: 'solo',     planCode: 'PLN_hu4h4wc91ytd9pr', interval: 'monthly' },
-  solo_annual:      { amount: 12000000, name: 'Solo Annual',      tier: 'solo',     planCode: 'PLN_leetl92la6olnpi', interval: 'annually' },
-  chambers_monthly: { amount: 2000000,  name: 'Chambers Monthly', tier: 'chambers', planCode: 'PLN_4o67le1fhg5acpp', interval: 'monthly' },
-  chambers_annual:  { amount: 20000000, name: 'Chambers Annual',  tier: 'chambers', planCode: 'PLN_kigvazgutnu4bww', interval: 'annually' },
+  solo_monthly:     { amount: 1200000,  name: 'Solo Monthly',     tier: 'solo',     planCode: 'PLN_l7ult7t4qd7mn1u', interval: 'monthly' },
+  solo_annual:      { amount: 12000000, name: 'Solo Annual',      tier: 'solo',     planCode: 'PLN_ffqekbbt68cyp7r', interval: 'annually' },
+  chambers_monthly: { amount: 2000000,  name: 'Chambers Monthly', tier: 'chambers', planCode: 'PLN_45dm51knapwa3co', interval: 'monthly' },
+  chambers_annual:  { amount: 20000000, name: 'Chambers Annual',  tier: 'chambers', planCode: 'PLN_wjq8pwccb97xnqw', interval: 'annually' },
   // Legacy keys
-  solo:     { amount: 1200000,  name: 'Solo Monthly',     tier: 'solo',     planCode: 'PLN_hu4h4wc91ytd9pr', interval: 'monthly' },
-  chambers: { amount: 2000000,  name: 'Chambers Monthly', tier: 'chambers', planCode: 'PLN_4o67le1fhg5acpp', interval: 'monthly' },
+  solo:     { amount: 1200000,  name: 'Solo Monthly',     tier: 'solo',     planCode: 'PLN_l7ult7t4qd7mn1u', interval: 'monthly' },
+  chambers: { amount: 2000000,  name: 'Chambers Monthly', tier: 'chambers', planCode: 'PLN_45dm51knapwa3co', interval: 'monthly' },
 };
 
 const DATA_DIR = path.join(__dirname, 'data');
@@ -165,8 +166,14 @@ const SELF_HOSTED_MODEL_NAME = stringOrEmpty(process.env.SELF_HOSTED_MODEL_NAME 
 const SELF_HOSTED_MODEL_API_KEY = stringOrEmpty(process.env.SELF_HOSTED_MODEL_API_KEY);
 
 const KNOWLEDGE_TOOLS = new Set([
-  'qa', 'nigeriancases', 'statute', 'legalmemo',
-  'digest', 'paralegal_research', 'reader', 'precedent', 'compliancecal'
+  'qa', 'nigeriancases', 'statute', 'legalmemo', 'digest', 'paralegal_research',
+  'reader', 'precedent', 'compliancecal', 'warroom', 'crossexam', 'motionammo',
+  'claimanalyser', 'clientprep', 'seniorpartner', 'witness', 'evidence',
+  'settlement', 'draft', 'negotiation', 'whatsapp', 'judgment_composer',
+  'court_order', 'case_summary_judge', 'issue_spotter', 'quick_ruling',
+  'bail_decision', 'warrant_drafter', 'sentencing_guide', 'clerk_filing',
+  'clerk_classify', 'bill_drafter', 'law_comparison', 'law_simplifier',
+  'impact_assessment', 'opposing', 'pleadings', 'clausedna', 'matterclock'
 ]);
 
 const LEGAL_KNOWLEDGE_BANK = [
@@ -700,30 +707,30 @@ function formatVerifiedCaseSummary(query, matches) {
 
 async function getGroundingBundle(query, toolId) {
   if (!KNOWLEDGE_TOOLS.has(toolId)) return { context: '', matches: [] };
-  const verifiedCases = await searchVerifiedCaseDatabase(query, 6);
+  const verifiedCases = await searchVerifiedCaseDatabase(query, 8);
   const matches = [...verifiedCases, ...searchKnowledgeBank(query, 4)]
     .filter((item, index, arr) => arr.findIndex((x) => x.id === item.id) === index)
-    .slice(0, 6);
+    .slice(0, 10);
   if (!matches.length) return { context: '', matches: [] };
 
   const blocks = matches.map((match, index) => {
     const titleLine = match.citation
       ? `${match.title} | ${match.citation} | ${match.court} | ${match.decisionDate || 'Date not stored'}`
       : `${match.title} - ${match.court} ${match.decisionDate || ''}`.trim();
-    return [
-      `${index + 1}. ${titleLine}`,
-      `Category: ${match.category}`,
-      `Authority: ${match.authority}`,
-      `Court: ${match.court}`,
+    const parts = [
+      `[${index + 1}] ${titleLine}`,
       `Parties: ${match.parties || 'Not stored'}`,
-      `Note: ${match.summary}`,
-      `Keywords: ${(match.keywords || []).join(', ')}`
-    ].join('\n');
+      `Area: ${match.category}`,
+      `Summary: ${match.summary}`,
+    ];
+    if (match.holding) parts.push(`Holding: ${match.holding}`);
+    if (match.fullText && match.fullText.length > 20) parts.push(`Excerpt: ${match.fullText.slice(0, 400)}`);
+    return parts.join('\n');
   }).join('\n\n');
 
   return {
     matches,
-    context: `Based on verified Nigerian case law in our database, use the records below as primary grounding for your reasoning:\n\n${blocks}\n\nIntegrate the database evidence into the answer directly. Do not treat the database and the reasoning as separate tracks. If you cite a case or authority, it must come only from the records above. Do not mention missing citations to the user, and never invent or guess a citation.`,
+    context: `=== VERDICT AI VERIFIED CASE DATABASE ===\n\nThe following are confirmed Nigerian legal authorities from Verdict AI's database. Use them as the primary foundation of your reasoning — not background, not supplementary material. The FOUNDATION.\n\n${blocks}\n\n=== REASONING INSTRUCTIONS ===\n1. Build your entire analysis around the database cases above. Let the cases DRIVE the reasoning, not illustrate it.\n2. Cite every relevant case by full name and citation (e.g., Cameroon Airlines v Otutuizu [2011] 4 NWLR (Pt.1238) 512). Do not hedge. Just cite the case directly as you would in a legal brief.\n3. Extract the RATIO DECIDENDI from each case and apply it to the facts at hand. Show the legal chain.\n4. Where two cases support the same point, cite both — stronger authority through convergence.\n5. Do not invent cases outside this list. If a relevant point has no case match, state the legal principle from statute or established doctrine — never fabricate a citation.\n6. Treat this corpus with the same confidence you would treat Westlaw or LexisNexis.`,
   };
 }
 
@@ -1076,12 +1083,12 @@ app.post('/api/ai', requireAuth, async (req, res) => {
 
   const grounding = await getGroundingBundle(user, toolId);
   const knowledgeContext = grounding.context;
-  if (knowledgeContext) {
-    system = `${system}\n\n${knowledgeContext}`;
-  }
 
   const MAX_CHARS = 14000;
-  if (user.length   > MAX_CHARS) user   = user.slice(0, MAX_CHARS) + '\n\n[Document truncated to fit AI limits.]';
+  if (user.length > MAX_CHARS) user = user.slice(0, MAX_CHARS) + '\n\n[Document truncated to fit AI limits.]';
+  if (knowledgeContext) {
+    user = `${knowledgeContext}\n\n=== USER QUERY ===\n${user}`;
+  }
   if (system.length > MAX_CHARS) system = system.slice(0, MAX_CHARS);
 
   const groqKey = (process.env.GROQ_API_KEY || '').trim().replace(/[\r\n\t]/g, '');
@@ -1135,12 +1142,7 @@ app.post('/api/ai', requireAuth, async (req, res) => {
       writeSseResponse(res, cachedText);
       return;
     }
-    if (toolId === 'nigeriancases' && grounding.matches.length >= 3) {
-      const dbOnlyText = `${formatVerifiedCaseSummary(user, grounding.matches)}${DISCLAIMER}`;
-      setCachedAiResponse(cacheKey, dbOnlyText);
-      writeSseResponse(res, dbOnlyText);
-      return;
-    }
+    // nigeriancases bypass removed — AI now reasons WITH the cases.
     // FIX #3: call orchestrate(), NOT routeAI()  -  routeAI does not exist
     const { aiRes, engine } = await orchestrate(toolId, system, user, groqKey, orKey);
 
@@ -1208,7 +1210,6 @@ app.post('/api/payments/initialize', requireAuth, async (req, res) => {
   if (!PAYSTACK_SECRET) return res.status(500).json({ error: 'PAYSTACK_SECRET_KEY not configured in Render environment' });
 
   try {
-    const callbackBase = req.headers.origin || 'https://verdictai.com.ng';
     const paystackRes = await httpsPost(
       'api.paystack.co', '/transaction/initialize',
       { 'Content-Type': 'application/json', 'Authorization': `Bearer ${PAYSTACK_SECRET}` },
@@ -1217,7 +1218,6 @@ app.post('/api/payments/initialize', requireAuth, async (req, res) => {
         amount: planData.amount,
         currency: 'NGN',
         plan: planData.planCode,
-        callback_url: callbackBase,
         metadata: { user_id: req.user.id, plan, plan_name: planData.name, tier: planData.tier, email: req.user.email },
         channels: ['card', 'bank_transfer', 'ussd', 'bank'],
       }
@@ -1507,6 +1507,11 @@ app.post('/api/admin/knowledge/import', requireAdmin, async (req, res) => {
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', version: '4.6.1' }));
 
+// Serve public config to frontend — keeps live keys out of client-side source code
+app.get('/api/config', (req, res) => {
+  res.json({ paystackPublicKey: PAYSTACK_PUBLIC_KEY });
+});
+
 // â”€â”€ Bank Transfer Notification â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // FIX #5: Removed `const https = require('https')` that was duplicated inside
 // this handler  -  https is already required at the top of the file.
@@ -1576,11 +1581,3 @@ reloadDiskCorpus();
 exportTrainingCorpus();
 
 app.listen(PORT, () => console.log(`Verdict AI v4.6.1 running on port ${PORT}`));
-
-
-
-
-
-
-
-
