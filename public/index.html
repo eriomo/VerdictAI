@@ -370,7 +370,7 @@ function AuthProvider({children}){
   },[]);
   const signUp=async(email,password,meta)=>(await sb.auth.signUp({email,password,options:{data:meta}})).error;
   const signIn=async(email,password)=>(await sb.auth.signInWithPassword({email,password})).error;
-  const signOut=()=>sb.auth.signOut();
+  const signOut=()=>{try{sessionStorage.removeItem("vd_page");}catch{}return sb.auth.signOut();};
   return React.createElement(AuthCtx.Provider,{value:{user,loading,signUp,signIn,signOut}},children);
 }
 const useAuth=()=>useContext(AuthCtx);
@@ -1468,8 +1468,8 @@ function LandingPage({onGetStarted,t}){
 
   const plans=[
     {name:"Free",color:"#4A9EE8",price:"â‚¦0",period:"forever",features:["3 analyses/month","Document Analysis","Legal Q&A","Draft Documents","Nigerian Case Law","Document Vault"]},
-    {name:"Solo",color:GOLD,price:"â‚¦12,000",period:"/month",features:["Unlimited analyses","All 35+ tools — every role","Lawyers, Judges & Magistrates","Paralegals & Clerks","Matter Clock & Case War Room","Clause DNA & WhatsApp Evidence","Compliance Calendar & Pleadings Checker","Judgment Composer & Court Orders","Bail Decisions & Sentencing Guide"],popular:true},
-    {name:"Chambers",color:"#9B59B6",price:"â‚¦20,000",period:"/month",features:["Everything in Solo","Witness Cross-Examiner","Motion Ammunition & Claim Analyser","Client Prep Coach","AI Senior Partner","Witness Forge & Evidence Analyser","Settlement Intelligence","Up to 3 users"]},
+    {name:"Solo",color:GOLD,price:"â‚¦12,000",period:"/month",features:["Unlimited analyses","All 30+ features","Case War Room","Clause DNA","WhatsApp Evidence","Compliance Calendar","Pleadings Checker"],popular:true},
+    {name:"Chambers",color:"#9B59B6",price:"â‚¦20,000",period:"/month",features:["Everything in Solo","Trial Prep Suite","AI Senior Partner","Witness Forge","Evidence Analyser","Settlement Intelligence","Up to 3 users"]},
   ];
 
   const faqs=[
@@ -2371,7 +2371,9 @@ function ProfilePage({profile,onUpdate,t,go}){
 
 // â”€â”€ Upgrade â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-const PAYSTACK_PUBLIC_KEY="pk_live_9350625f99f53492513183dc686348d291b11617";
+let PAYSTACK_PUBLIC_KEY="";
+// Fetch public key from server so it's never hardcoded in client source
+(async()=>{try{const r=await fetch("/api/config");const d=await r.json();if(d.paystackPublicKey)PAYSTACK_PUBLIC_KEY=d.paystackPublicKey;}catch(e){console.error("Config fetch failed:",e);}})();
 
 // â”€â”€ Bank details â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const BANK_DETAILS={bank:"Moniepoint",account:"5559769177",name:"Toluwani Omolola Paul"};
@@ -2479,15 +2481,15 @@ function UpgradePage({t,go,userTier,userEmail,onUpgradeSuccess,profile,onUpdate}
   const plans=[
     {id:"free",name:"Free",color:"#4A9EE8",monthly:0,annual:0,
       features:["3 analyses/month","Document Analysis","Legal Q&A","Draft Documents","Nigerian Case Law","Document Vault"],
-      locked:["Matter Clock","All 35+ Role Tools","Trial Prep Suite","AI Senior Partner"]},
+      locked:["Matter Clock","All Power Tools","Trial Prep Suite","AI Senior Partner"]},
     {id:"solo",name:"Solo",color:GOLD,monthly:12000,annual:120000,
       planKey_monthly:"solo_monthly",planKey_annual:"solo_annual",
-      features:["Unlimited analyses","All 35+ tools across every role","Lawyers: Matter Clock, Case War Room, Clause DNA, WhatsApp Evidence, Pleadings Checker, Compliance Calendar","Judges & Magistrates: Judgment Composer, Court Order Generator, Bail Decision, Sentencing Guide, Quick Ruling","Clerks: Digital Filing, Document Classifier","Paralegals: Research Hub, Issue Spotter","Legislators: Bill Drafter, Law Comparison, Impact Assessment"],
+      features:["Unlimited analyses","All 30+ daily-use features","Matter Clock","Case War Room","Opposing Counsel","Clause DNA","WhatsApp Evidence","Compliance Calendar","Pleadings Checker"],
       locked:["Trial Prep Suite","AI Senior Partner","Witness Forge","Evidence Analyser"],
       tag:"MOST POPULAR",rec:true,saving:"Save NGN 24,000/yr"},
     {id:"chambers",name:"Chambers",color:"#9B59B6",monthly:20000,annual:200000,
       planKey_monthly:"chambers_monthly",planKey_annual:"chambers_annual",
-      features:["Everything in Solo","Witness Cross-Examiner","Motion Ammunition","Claim Analyser","Client Prep Coach","AI Senior Partner","Witness Forge","Evidence Analyser","Settlement Intelligence","Up to 3 users — share with your team"],
+      features:["Everything in Solo","Witness Cross-Examiner","Motion Ammunition","Claim Analyser","Client Prep Coach","AI Senior Partner","Witness Forge","Evidence Analyser","Settlement Intelligence","Up to 3 users"],
       locked:[],tag:"COMPLETE ARSENAL",saving:"Save NGN 40,000/yr"},
   ];
 
@@ -3838,7 +3840,7 @@ function ParalegalResearchPage({t,go}){
 
 function AppContent(){
   const {user,loading:authLoading}=useAuth();
-  const [page,setPage]=useState("dashboard");
+  const [page,setPage]=useState(()=>{try{return sessionStorage.getItem("vd_page")||"dashboard";}catch{return "dashboard";}});
   const [showAuth,setShowAuth]=useState(false);
   const [dark,setDark]=useState(getTheme);
   const [sideOpen,setSideOpen]=useState(false);
@@ -3899,7 +3901,7 @@ function AppContent(){
     return merged;
   };
   const toggleDark=()=>{setDark(p=>{const n=!p;saveTheme(n);return n;});};
-  const go=id=>{setPage(id);setSideOpen(false);try{const el=document.querySelector(".content-area");if(el)el.scrollTop=0;}catch{}};
+  const go=id=>{setPage(id);try{sessionStorage.setItem("vd_page",id);}catch{}setSideOpen(false);try{const el=document.querySelector(".content-area");if(el)el.scrollTop=0;}catch{}};
 
   if(authLoading)return React.createElement("div",{style:{display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",background:"#07101c",flexDirection:"column",gap:18}},
     React.createElement("div",{style:{width:58,height:58,background:`linear-gradient(135deg,${GOLD},${GOLD2})`,borderRadius:16,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Playfair Display',serif",fontWeight:700,fontSize:28,color:"#0D1B2E"}},"V"),
