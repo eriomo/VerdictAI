@@ -145,7 +145,7 @@ const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SER
 const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY;
 const PAYSTACK_PUBLIC_KEY = process.env.PAYSTACK_PUBLIC_KEY || '';
 
-const DISCLAIMER = '\n\nDISCLAIMER: This analysis is grounded in verified Nigerian case law and statute. It does not constitute a formal legal opinion and should be reviewed by counsel before reliance in proceedings.';
+const DISCLAIMER = '\n\nDISCLAIMER: This analysis is for informational purposes only and does not constitute legal advice. It is grounded in verified Nigerian case law in our database and should still be reviewed with professional judgment before reliance in proceedings.';
 
 const PLANS = {
   solo_monthly:     { amount: 1200000,  name: 'Solo Monthly',     tier: 'solo',     planCode: 'PLN_l7ult7t4qd7mn1u', interval: 'monthly' },
@@ -165,6 +165,7 @@ const SELF_HOSTED_MODEL_URL = stringOrEmpty(process.env.SELF_HOSTED_MODEL_URL);
 const SELF_HOSTED_MODEL_NAME = stringOrEmpty(process.env.SELF_HOSTED_MODEL_NAME || 'verdict-private-legal');
 const SELF_HOSTED_MODEL_API_KEY = stringOrEmpty(process.env.SELF_HOSTED_MODEL_API_KEY);
 
+// ALL tools now get database grounding — no tool should run blind
 const KNOWLEDGE_TOOLS = new Set([
   'qa', 'nigeriancases', 'statute', 'legalmemo', 'digest', 'paralegal_research',
   'reader', 'precedent', 'compliancecal', 'warroom', 'crossexam', 'motionammo',
@@ -173,7 +174,13 @@ const KNOWLEDGE_TOOLS = new Set([
   'court_order', 'case_summary_judge', 'issue_spotter', 'quick_ruling',
   'bail_decision', 'warrant_drafter', 'sentencing_guide', 'clerk_filing',
   'clerk_classify', 'bill_drafter', 'law_comparison', 'law_simplifier',
-  'impact_assessment', 'opposing', 'pleadings', 'clausedna', 'matterclock'
+  'impact_assessment', 'opposing', 'pleadings', 'clausedna', 'matterclock',
+  // Additional tools now grounded
+  'analysis', 'briefscore', 'explainer', 'clientreport', 'feenote', 'intakememo',
+  'deadlines', 'jurisdiction', 'correspondence', 'strength', 'courtpredictor',
+  'benchsummary', 'judgment', 'issues', 'courtorders', 'magistrateruling',
+  'bail', 'sentencing', 'warrant', 'filing', 'classify', 'registry',
+  'billdraft', 'whatsappevidence', 'negotiation', 'settlement', 'draft'
 ]);
 
 const LEGAL_KNOWLEDGE_BANK = [
@@ -529,8 +536,15 @@ function searchKnowledgeBank(query, limit = 5) {
 function normalizeVerdictCase(row) {
   if (!row || typeof row !== 'object') return null;
   const title = stringOrEmpty(row.case_title || row.case_name || row.title || row.name);
-  const summary = stringOrEmpty(row.outcome || row.summary || row.holding || row.headnote || row.snippet || row.chunk_text);
-  if (!title || !summary) return null;
+  // FIX: Accept raw_text, body, parties — Primsol/NigeriaLII data lives here
+  const summary = stringOrEmpty(
+    row.outcome || row.summary || row.holding || row.headnote ||
+    row.snippet || row.chunk_text || row.body || row.raw_text ||
+    row.judgment_text || row.parties
+  );
+  if (!title) return null;
+  // Use citation+court as fallback summary if nothing else available
+  const effectiveSummary = summary || `${title}${row.citation ? ' (' + row.citation + ')' : ''}${row.court ? ' — ' + row.court : ''}`;
 
   const keywords = Array.isArray(row.keywords)
     ? row.keywords.map(stringOrEmpty).filter(Boolean)
@@ -540,7 +554,7 @@ function normalizeVerdictCase(row) {
     id: `verdict-case-${stringOrEmpty(row.id) || slugify(title)}`,
     title,
     category: stringOrEmpty(row.legal_subjects || row.category || row.area_of_law || 'Verified Nigerian Case Law'),
-    summary,
+    summary: effectiveSummary,
     keywords,
     authority: stringOrEmpty(row.citation || row.neutral_citation || (row.case_title ? `${row.case_title} (Verdict AI Database)` : 'Nigerian Case Law Database')),
     sourceType: 'supabase-case',
@@ -570,9 +584,38 @@ async function searchVerifiedCaseDatabase(query, limit = 6) {
   if (!tokens.length) return [];
 
   try {
-    const { data: cases, error: caseError } = await supabase.from('verdict_cases').select('*').limit(1200);
-    if (caseError) throw caseError;
+    // Build a targeted query — search across title, citation, court, raw_text
+    // Use ilike on case_title + OR on citation for fast targeted retrieval
+    const searchTerms = tokens.slice(0, 4); // top 4 tokens for DB query
+    let dbQuery = supabase.from('verdict_cases').select('*').limit(300);
+    if (searchTerms.length) {
+      // Filter rows that contain at least one token in title or citation
+      const filters = searchTerms.map(t => `case_title.ilike.%${t}%,citation.ilike.%${t}%,court.ilike.%${t}%`).join(',');
+      dbQuery = dbQuery.or(filters);
+    }
+    const { data: cases, error: caseError } = await dbQuery;
+    if (caseError) {
+      // Fallback: load recent 400 cases if filter fails
+      const { data: fallback } = await supabase.from('verdict_cases').select('*').limit(400);
+      return _scoreCases(fallback || [], tokens, rawQuery, limit);
+    }
+    // If filtered results are too few, supplement with recent cases
+    let allCases = cases || [];
+    if (allCases.length < 20) {
+      const { data: extra } = await supabase.from('verdict_cases').select('*').limit(400);
+      const extraFiltered = (extra || []).filter(r => !allCases.find(c => c.id === r.id));
+      allCases = [...allCases, ...extraFiltered];
+    }
 
+    return _scoreCases(allCases, tokens, rawQuery, limit);
+  } catch (error) {
+    aiLog(`Verified case database search unavailable -> ${error.message}`);
+    return [];
+  }
+}
+
+function _scoreCases(cases, tokens, rawQuery, limit) {
+  try {
     const caseMap = new Map();
     for (const rawRow of cases || []) {
       const row = normalizeVerdictCase(rawRow);
@@ -675,7 +718,7 @@ async function searchVerifiedCaseDatabase(query, limit = 6) {
         source: entry.sourceName || 'Verdict AI Database',
       }));
   } catch (error) {
-    aiLog(`Verified case database search unavailable -> ${error.message}`);
+    aiLog(`Score error -> ${error.message}`);
     return [];
   }
 }
@@ -728,9 +771,25 @@ async function getGroundingBundle(query, toolId) {
     return parts.join('\n');
   }).join('\n\n');
 
+  const caseCount = matches.filter(m => m.sourceType === 'supabase-case').length;
   return {
     matches,
-    context: `=== VERDICT AI VERIFIED CASE DATABASE ===\n\nThe following are confirmed Nigerian legal authorities from Verdict AI's database. Use them as the primary foundation of your reasoning — not background, not supplementary material. The FOUNDATION.\n\n${blocks}\n\n=== REASONING INSTRUCTIONS ===\n1. Build your entire analysis around the database cases above. Let the cases DRIVE the reasoning — they are not decoration, they are the foundation of every conclusion.\n2. Cite every relevant case by full name and full citation exactly as it appears above (e.g., Cameroon Airlines v Otutuizu [2011] 4 NWLR (Pt.1238) 512). Do not hedge with phrases like "it appears" or "it seems that courts have held." Cite directly and decisively as a senior silk would in a written address to the Supreme Court.\n3. Extract the RATIO DECIDENDI from each case and apply it step by step to the facts at hand. Show the legal chain explicitly: "In [case], the court held that [principle]. Applying that principle here: [application to facts]. The consequence is [outcome]."\n4. Where two or more cases support the same point, cite all of them — convergent authority is stronger authority. Say so explicitly: "This position is consistently maintained: [case 1]; [case 2]; [case 3]."\n5. Where cases conflict, identify the conflict, explain which authority is higher or more recent, and state which prevails and why.\n6. Do not invent cases outside this verified list. If a relevant point has no case match in the database, ground it in a specific statute section or an established common law doctrine by its correct name. Never fabricate a citation or a case name.\n7. Treat this corpus exactly as you would treat a verified Westlaw or LexisNexis result — with full professional confidence. You are not guessing. You are applying confirmed Nigerian law.\n8. Perspective check: every case application must serve the party you are acting for. Apply cases to advance their position and distinguish cases that harm it.`,
+    context: `=== VERDICT AI VERIFIED NIGERIAN CASE DATABASE (${caseCount} matches) ===
+
+The following Nigerian legal authorities are drawn directly from Verdict AI's verified database of Nigerian court decisions. These are REAL cases. Treat them exactly as you would treat a Westlaw or LexisNexis result — with full confidence and direct citation.
+
+${blocks}
+
+=== MANDATORY REASONING PROTOCOL ===
+You have real Nigerian case law above. Your job is now to deploy it like a Senior Advocate, not describe it like a student.
+
+STEP 1 — IDENTIFY THE CONTROLLING AUTHORITY: Which case above most directly governs the issue? State it immediately by full name and citation.
+STEP 2 — EXTRACT THE RATIO: Pull the exact legal principle that decides this matter. State it in one sentence.
+STEP 3 — APPLY IT: Apply the ratio to the specific facts before you. Show the logical chain — "Since X was established in [case], and the present facts show Y, it follows that Z."
+STEP 4 — CONVERGING AUTHORITY: Where multiple cases support the same point, cite all of them. Convergence = strength.
+STEP 5 — GAPS: Where no database case covers a point, state the governing statute or established doctrine. NEVER invent a citation.
+
+CITATION FORMAT: Case Name v Case Name [Year] Volume NWLR (Part Number) Page Number. Use this format for every citation. No shortcuts.`,
   };
 }
 
@@ -998,37 +1057,35 @@ async function orchestrate(toolId, system, user, groqKey, orKey) {
     const isPleading = isStatementOfClaim || isStatementOfDefence;
 
     if (isStatementOfClaim) {
-      system = `You are a senior Nigerian litigation lawyer analyzing a STATEMENT OF CLAIM acting for the CLAIMANT. State "ACTING FOR: Claimant" as the first line.
+      system = `You are a senior Nigerian litigation lawyer analyzing a STATEMENT OF CLAIM.
 This is a litigation document - NOT a contract. Do not apply contract analysis.
 
 Your task:
 1. DOCUMENT IDENTIFIED: Confirm this is a Statement of Claim. Identify the Claimant, Defendant, Court, and Relief sought.
-2. STRENGTH OF CLAIM: Rate each paragraph STRONG, WEAK, or DEFECTIVE. Give specific legal reasons. For every WEAK or DEFECTIVE paragraph, write the corrected version in full.
-3. MISSING AVERMENTS: What facts must be pleaded but are absent. State the specific consequence of each omission — will the claim fail, be struck out, or be reduced.
-4. RELIEF ANALYSIS: Are the reliefs properly claimed. Are they specific enough. Any missing reliefs. Any relief that cannot succeed on these facts.
-5. JURISDICTION: Is the correct court identified. Is jurisdiction properly invoked. If not, state exactly what must be added.
-6. POTENTIAL DEFENCES: The three most dangerous defences the Defendant will raise. For each: the precise basis and how to pre-empt it in the pleadings.
-7. REWRITTEN PARAGRAPHS: Produce the complete rewritten text for every defective paragraph. Do not describe what to change — write it.
-8. PRIORITY ACTION LIST: Number the top 5 amendments in order of urgency. Item 1 is the change that, if not made, is most likely to cause the claim to fail.
-9. OVERALL RATING: Ready to file / Requires minor amendment / Requires substantial redraft / Defective and must be redrafted.
+2. STRENGTH OF CLAIM: Rate each paragraph - strong, weak, or problematic. Give specific reasons.
+3. MISSING AVERMENTS: What facts must be pleaded but are absent? Be specific.
+4. RELIEF ANALYSIS: Are the reliefs properly claimed? Are they specific enough? Any missing reliefs?
+5. JURISDICTION: Is the correct court identified? Is jurisdiction properly invoked?
+6. POTENTIAL DEFENCES: What defences will the Defendant likely raise based on these facts?
+7. RECOMMENDED AMENDMENTS: Specific paragraph-by-paragraph rewrites where needed.
+8. OVERALL RATING: Excellent / Good / Needs significant amendment / Defective
 
 ` + system;
     }
 
     if (isStatementOfDefence) {
-      system = `You are a senior Nigerian litigation lawyer analyzing a STATEMENT OF DEFENCE acting for the DEFENDANT. State "ACTING FOR: Defendant" as the first line.
+      system = `You are a senior Nigerian litigation lawyer analyzing a STATEMENT OF DEFENCE.
 This is a litigation document - NOT a contract. Do not apply contract analysis.
 
 Your task:
 1. DOCUMENT IDENTIFIED: Confirm this is a Statement of Defence. Identify parties, Court, and what claims are being defended.
-2. TRAVERSALS: For every paragraph of the claim, state whether it is properly traversed — admitted, denied, or not admitted. Flag every paragraph that is not properly traversed and state the consequence: an un-traversed allegation is deemed admitted.
-3. POSITIVE DEFENCES: What positive defences are raised. Are they properly pleaded. What additional positive defences should be raised that are not currently pleaded.
-4. MISSING DENIALS: Which paragraphs of the claim are not properly addressed. State what must be added and write the addition in full.
-5. COUNTERCLAIM: Is a counterclaim available on these facts. If yes, identify the cause of action, the relief to claim, and the approximate value.
-6. WORST CASE ANALYSIS: If this defence is filed as is, what is the defendant's litigation risk. State a probability percentage and a naira exposure figure.
-7. REWRITTEN PARAGRAPHS: Produce the complete rewritten text for every defective paragraph. Do not describe what to change — write it.
-8. PRIORITY ACTION LIST: Top 5 amendments numbered in order of urgency. Item 1 is the change that, if not made, most damages the defendant's position.
-9. OVERALL RATING: Strong / Adequate / Needs amendment / Defective.
+2. TRAVERSALS: Are each paragraph of the claim properly traversed - admitted, denied, or not admitted?
+3. POSITIVE DEFENCES: What positive defences are raised? Are they properly pleaded?
+4. MISSING DENIALS: Which paragraphs of the claim are not properly addressed?
+5. COUNTERCLAIM: Is a counterclaim appropriate? If so, what?
+6. WEAKNESS ANALYSIS: What are the weakest parts of this defence?
+7. RECOMMENDED AMENDMENTS: Specific paragraph-by-paragraph rewrites where needed.
+8. OVERALL RATING: Strong / Adequate / Needs amendment / Defective
 
 ` + system;
     }
