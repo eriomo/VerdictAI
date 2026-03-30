@@ -143,6 +143,7 @@ function isUuidLike(value) {
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY;
+const PAYSTACK_PUBLIC_KEY = process.env.PAYSTACK_PUBLIC_KEY || '';
 
 const DISCLAIMER = '\n\nDISCLAIMER: This analysis is for informational purposes only and does not constitute legal advice. It is grounded in verified Nigerian case law in our database and should still be reviewed with professional judgment before reliance in proceedings.';
 
@@ -1083,7 +1084,6 @@ app.post('/api/ai', requireAuth, async (req, res) => {
   const grounding = await getGroundingBundle(user, toolId);
   const knowledgeContext = grounding.context;
 
-  // Inject grounding into user message — never competes with system prompt char limit
   const MAX_CHARS = 14000;
   if (user.length > MAX_CHARS) user = user.slice(0, MAX_CHARS) + '\n\n[Document truncated to fit AI limits.]';
   if (knowledgeContext) {
@@ -1142,8 +1142,7 @@ app.post('/api/ai', requireAuth, async (req, res) => {
       writeSseResponse(res, cachedText);
       return;
     }
-    // nigeriancases bypass removed — AI now reasons WITH the cases rather than
-    // formatting them raw and skipping the model entirely.
+    // nigeriancases bypass removed — AI now reasons WITH the cases.
     // FIX #3: call orchestrate(), NOT routeAI()  -  routeAI does not exist
     const { aiRes, engine } = await orchestrate(toolId, system, user, groqKey, orKey);
 
@@ -1507,6 +1506,11 @@ app.post('/api/admin/knowledge/import', requireAdmin, async (req, res) => {
 });
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', version: '4.6.1' }));
+
+// Serve public config to frontend — keeps live keys out of client-side source code
+app.get('/api/config', (req, res) => {
+  res.json({ paystackPublicKey: PAYSTACK_PUBLIC_KEY });
+});
 
 // â”€â”€ Bank Transfer Notification â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // FIX #5: Removed `const https = require('https')` that was duplicated inside
