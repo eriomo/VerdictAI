@@ -1157,8 +1157,16 @@ function Out({text,loading,ph,t}){
   );
 }
 
-function Hdr({title,desc,isNew,t,onClear,hasContent}){
-  return React.createElement("div",{style:{marginBottom:20,display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:10,flexWrap:"wrap"}},
+function Hdr({title,desc,isNew,t,onClear,hasContent,onBack}){
+  return React.createElement("div",{style:{marginBottom:20}},
+    onBack&&React.createElement("button",{
+      onClick:onBack,
+      style:{display:"flex",alignItems:"center",gap:6,background:"transparent",border:"none",color:t.muted,cursor:"pointer",fontSize:12,fontWeight:500,fontFamily:"inherit",padding:"0 0 12px 0"}
+    },
+      Icon({name:"chevron",size:14,color:t.muted}),
+      React.createElement("span",null,"Dashboard")
+    ),
+    React.createElement("div",{style:{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:10,flexWrap:"wrap"}},
     React.createElement("div",{style:{flex:1,minWidth:0}},
       React.createElement("div",{style:{width:36,height:3,background:`linear-gradient(90deg,${GOLD},transparent)`,borderRadius:100,marginBottom:12}}),
       React.createElement("div",{style:{display:"flex",alignItems:"center",gap:8,marginBottom:5,flexWrap:"wrap"}},
@@ -1168,6 +1176,7 @@ function Hdr({title,desc,isNew,t,onClear,hasContent}){
       React.createElement("p",{style:{color:t.dim,fontSize:"clamp(12px,3vw,13.5px)",margin:0,lineHeight:1.6}},desc)
     ),
     hasContent&&onClear&&React.createElement("button",{onClick:onClear,style:{flexShrink:0,padding:"6px 10px",borderRadius:7,background:"rgba(224,82,82,0.08)",border:"1px solid rgba(224,82,82,0.2)",color:"#E05252",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:4,whiteSpace:"nowrap"}},"Clear")
+  )
   );
 }
 
@@ -1275,7 +1284,7 @@ function AIPage({cfg,t,go,pageId}){
   };
   const doClear=()=>{setInp("");setOut("");clearPersist(pk+"_inp",pk+"_out");};
   return React.createElement("div",{className:"fade"},
-    React.createElement(Hdr,{title:cfg.title,desc:cfg.desc,isNew:cfg.isNew,t,onClear:doClear,hasContent:!!(inp||out)}),
+    React.createElement(Hdr,{title:cfg.title,desc:cfg.desc,isNew:cfg.isNew,t,onClear:doClear,hasContent:!!(inp||out),onBack:go?()=>go("dashboard"):null}),
 
     // Onboarding banner  -  shows once until dismissed
     !onboardDismissed&&React.createElement("div",{className:"onboard-banner"},
