@@ -1478,7 +1478,7 @@ function LandingPage({onGetStarted,t}){
     {q:"Is this legal advice?",a:"No. Verdict AI is a legal intelligence tool that helps Nigerian lawyers work faster and smarter. Every output carries a disclaimer and is intended for use by qualified legal practitioners."},
     {q:"How is my data protected?",a:"All data is stored on Supabase with row-level security. Your documents and analyses are private to your account. We do not train on your data."},
     {q:"Can I use this on my phone?",a:"Yes. Verdict AI is fully mobile-responsive and works on any smartphone browser. No app download required."},
-    {q:"How does payment work?",a:"Payments are processed by Paystack  -  Nigeria's leading payment gateway. You can pay by card or bank transfer. Your account upgrades instantly after payment."},
+    {q:"How does payment work?",a:"Payments are processed by Paystack — Nigeria's leading payment gateway. Pay by card, bank transfer, or USSD. Your account upgrades immediately after payment."},
   ];
 
   return React.createElement("div",{style:{background:"#07101c",minHeight:"100vh",color:"#F0EDE6",fontFamily:"'DM Sans',sans-serif",overflowY:"auto",overflowX:"hidden"}},
@@ -2371,7 +2371,7 @@ function ProfilePage({profile,onUpdate,t,go}){
 
 // â”€â”€ Upgrade â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-const PAYSTACK_PUBLIC_KEY="pk_test_9350625f99f53492513183dc686348d291b11617";
+const PAYSTACK_PUBLIC_KEY="pk_live_9350625f99f53492513183dc686348d291b11617";
 
 // â”€â”€ Bank details â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const BANK_DETAILS={bank:"Moniepoint",account:"5559769177",name:"Toluwani Omolola Paul"};
@@ -2447,7 +2447,7 @@ function BankTransferModal({t,plan,billing,userEmail,onClose,onSuccess}){
         React.createElement("div",{style:{fontSize:12,color:"rgba(240,237,230,0.6)",lineHeight:1.7}}),
         React.createElement("div",{style:{display:"flex",alignItems:"flex-start",gap:8}},
           Icon({name:"check",size:14,color:"#2ECC8A"}),
-          React.createElement("span",{style:{fontSize:12,color:t.muted,lineHeight:1.6}},"Your account will be upgraded within 1 hour of payment confirmation. We verify every transfer manually.")
+          React.createElement("span",{style:{fontSize:12,color:t.muted,lineHeight:1.6}},"Your account will be upgraded within 1 hour of payment confirmation.")
         )
       ),
 
@@ -2558,7 +2558,7 @@ function UpgradePage({t,go,userTier,userEmail,onUpgradeSuccess,profile,onUpdate}
     React.createElement("div",{style:{width:64,height:64,background:"rgba(46,204,138,0.1)",border:"1px solid rgba(46,204,138,0.3)",borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 20px"}},
       Icon({name:"check",size:28,color:"#2ECC8A"})
     ),
-    React.createElement("h2",{style:{fontFamily:"'Playfair Display',serif",fontSize:24,fontWeight:700,color:t.text,marginBottom:10}},"Transfer Reference Received"),
+    React.createElement("h2",{style:{fontFamily:"'Playfair Display',serif",fontSize:24,fontWeight:700,color:t.text,marginBottom:10}},"Bank Transfer Submitted"),
     React.createElement("p",{style:{fontSize:14,color:t.muted,lineHeight:1.8,marginBottom:20}},"We've received your payment reference. Your account will be upgraded within 1 hour once we confirm your transfer."),
     React.createElement("div",{style:{background:"rgba(200,164,94,0.06)",border:"1px solid rgba(200,164,94,0.2)",borderRadius:12,padding:16,marginBottom:24}},
       React.createElement("div",{style:{fontSize:13,color:t.dim,lineHeight:1.7}},"If not upgraded within 1 hour, email "),
@@ -2577,13 +2577,8 @@ function UpgradePage({t,go,userTier,userEmail,onUpgradeSuccess,profile,onUpdate}
 
     React.createElement(Hdr,{title:"Upgrade Plan",desc:"Unlock the full power of Verdict AI.",t}),
 
-    // Paystack pending notice
-    React.createElement("div",{style:{background:"rgba(240,165,0,0.06)",border:"1px solid rgba(240,165,0,0.2)",borderRadius:10,padding:"12px 16px",marginBottom:20,display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}},
-      Icon({name:"alert",size:16,color:"#F0A500"}),
-      React.createElement("span",{style:{fontSize:13,color:t.dim,flex:1}},"Card payments launching soon. ",React.createElement("strong",{style:{color:"#F0EDE6"}},"Bank transfer available now"),"  -  upgrade instantly after confirming your transfer.")
-    ),
 
-    success&&React.createElement("div",{style:{background:"rgba(46,204,138,0.1)",border:"1px solid rgba(46,204,138,0.3)",borderRadius:10,padding:"12px 16px",marginBottom:14,fontSize:13,color:"#2ECC8A"}},success),
+        success&&React.createElement("div",{style:{background:"rgba(46,204,138,0.1)",border:"1px solid rgba(46,204,138,0.3)",borderRadius:10,padding:"12px 16px",marginBottom:14,fontSize:13,color:"#2ECC8A"}},success),
     error&&React.createElement("div",{style:{background:"rgba(224,82,82,0.1)",border:"1px solid rgba(224,82,82,0.3)",borderRadius:10,padding:"12px 16px",marginBottom:14,fontSize:13,color:"#E05252"}},error),
 
     // Billing toggle
@@ -2622,20 +2617,17 @@ function UpgradePage({t,go,userTier,userEmail,onUpgradeSuccess,profile,onUpdate}
           :!canUpgrade(plan.id)
           ?React.createElement("div",{style:{marginTop:16,textAlign:"center",fontSize:12,color:t.muted}},"Current plan")
           :React.createElement("div",{style:{marginTop:16,display:"flex",flexDirection:"column",gap:8}},
-            // Bank transfer button  -  PRIMARY
-            React.createElement("button",{
-              onClick:()=>setShowBankModal(plan),
-              style:{width:"100%",padding:"12px",borderRadius:9,background:`linear-gradient(135deg,${plan.color},${plan.color}cc)`,color:plan.id==="chambers"?"#fff":"#0D1B2E",fontWeight:700,fontSize:13,border:"none",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",display:"flex",alignItems:"center",justifyContent:"center",gap:8}
-            },
-              Icon({name:"briefcase",size:14,color:plan.id==="chambers"?"#fff":"#0D1B2E"}),
-              "Pay via Bank Transfer"
-            ),
-            // Card payment  -  secondary, greyed out
+            // Card payment — primary (Paystack live)
             React.createElement("button",{
               onClick:()=>pay(plan),
-              disabled:paying===plan.id,
-              style:{width:"100%",padding:"10px",borderRadius:9,background:"transparent",color:t.muted,fontWeight:600,fontSize:12,border:`1px solid ${t.border}`,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",opacity:0.6}
-            },paying===plan.id?"Processing...":"Pay by Card (Coming Soon)")
+              disabled:paying===plan.id||paying==="verifying",
+              style:{width:"100%",padding:"13px",borderRadius:9,background:`linear-gradient(135deg,${plan.color},${plan.color}cc)`,color:plan.id==="chambers"?"#fff":"#0D1B2E",fontWeight:700,fontSize:13,border:"none",cursor:paying===plan.id||paying==="verifying"?"not-allowed":"pointer",fontFamily:"'DM Sans',sans-serif",opacity:paying===plan.id||paying==="verifying"?0.7:1}
+            },paying===plan.id?"Processing...":paying==="verifying"?"Verifying payment...":"Pay Now"),
+            // Bank transfer — secondary option
+            React.createElement("button",{
+              onClick:()=>setShowBankModal(plan),
+              style:{width:"100%",padding:"9px",borderRadius:9,background:"transparent",color:t.muted,fontWeight:500,fontSize:12,border:`1px solid ${t.border}`,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}
+            },"Pay via Bank Transfer")
           )
       ))
     ),
@@ -2643,7 +2635,7 @@ function UpgradePage({t,go,userTier,userEmail,onUpgradeSuccess,profile,onUpdate}
     // Footer note
     React.createElement("div",{style:{textAlign:"center",padding:"16px 0"}},
       React.createElement("p",{style:{fontSize:13,color:t.muted,lineHeight:1.8}},
-        "Payments verified manually within 1 hour. Questions? Email ",
+        "Questions about payments? Email ",
         React.createElement("a",{href:"mailto:trigxyfn@gmail.com",style:{color:GOLD,fontWeight:600}},"trigxyfn@gmail.com"),
         " or WhatsApp directly."
       )
@@ -4111,10 +4103,3 @@ window.addEventListener('beforeinstallprompt', e => {
 </script>
 </body>
 </html>
-
-
-
-
-
-
-
