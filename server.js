@@ -147,13 +147,13 @@ const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY;
 const DISCLAIMER = '\n\nDISCLAIMER: This analysis is for informational purposes only and does not constitute legal advice. It is grounded in verified Nigerian case law in our database and should still be reviewed with professional judgment before reliance in proceedings.';
 
 const PLANS = {
-  solo_monthly:     { amount: 1200000,  name: 'Solo Monthly',     tier: 'solo',     planCode: 'PLN_hu4h4wc91ytd9pr', interval: 'monthly' },
-  solo_annual:      { amount: 12000000, name: 'Solo Annual',      tier: 'solo',     planCode: 'PLN_leetl92la6olnpi', interval: 'annually' },
-  chambers_monthly: { amount: 2000000,  name: 'Chambers Monthly', tier: 'chambers', planCode: 'PLN_4o67le1fhg5acpp', interval: 'monthly' },
-  chambers_annual:  { amount: 20000000, name: 'Chambers Annual',  tier: 'chambers', planCode: 'PLN_kigvazgutnu4bww', interval: 'annually' },
+  solo_monthly:     { amount: 1200000,  name: 'Solo Monthly',     tier: 'solo',     planCode: 'PLN_l7ult7t4qd7mn1u', interval: 'monthly' },
+  solo_annual:      { amount: 12000000, name: 'Solo Annual',      tier: 'solo',     planCode: 'PLN_ffqekbbt68cyp7r', interval: 'annually' },
+  chambers_monthly: { amount: 2000000,  name: 'Chambers Monthly', tier: 'chambers', planCode: 'PLN_45dm51knapwa3co', interval: 'monthly' },
+  chambers_annual:  { amount: 20000000, name: 'Chambers Annual',  tier: 'chambers', planCode: 'PLN_wjq8pwccb97xnqw', interval: 'annually' },
   // Legacy keys
-  solo:     { amount: 1200000,  name: 'Solo Monthly',     tier: 'solo',     planCode: 'PLN_hu4h4wc91ytd9pr', interval: 'monthly' },
-  chambers: { amount: 2000000,  name: 'Chambers Monthly', tier: 'chambers', planCode: 'PLN_4o67le1fhg5acpp', interval: 'monthly' },
+  solo:     { amount: 1200000,  name: 'Solo Monthly',     tier: 'solo',     planCode: 'PLN_l7ult7t4qd7mn1u', interval: 'monthly' },
+  chambers: { amount: 2000000,  name: 'Chambers Monthly', tier: 'chambers', planCode: 'PLN_45dm51knapwa3co', interval: 'monthly' },
 };
 
 const DATA_DIR = path.join(__dirname, 'data');
@@ -164,7 +164,6 @@ const SELF_HOSTED_MODEL_URL = stringOrEmpty(process.env.SELF_HOSTED_MODEL_URL);
 const SELF_HOSTED_MODEL_NAME = stringOrEmpty(process.env.SELF_HOSTED_MODEL_NAME || 'verdict-private-legal');
 const SELF_HOSTED_MODEL_API_KEY = stringOrEmpty(process.env.SELF_HOSTED_MODEL_API_KEY);
 
-// All tools get database grounding — the database is the backbone of every answer
 const KNOWLEDGE_TOOLS = new Set([
   'qa', 'nigeriancases', 'statute', 'legalmemo', 'digest', 'paralegal_research',
   'reader', 'precedent', 'compliancecal', 'warroom', 'crossexam', 'motionammo',
@@ -730,7 +729,7 @@ async function getGroundingBundle(query, toolId) {
 
   return {
     matches,
-    context: `=== VERDICT AI VERIFIED CASE DATABASE ===\n\nThe following are confirmed Nigerian legal authorities from Verdict AI's database. Use them as the primary foundation of your reasoning — not background context, not supplementary material. The FOUNDATION.\n\n${blocks}\n\n=== REASONING INSTRUCTIONS ===\n1. Build your entire analysis around the database cases above. Let the cases DRIVE the reasoning, not illustrate it.\n2. Cite every relevant case by full name and citation (e.g., Cameroon Airlines v Otutuizu [2011] 4 NWLR (Pt.1238) 512). Do not hedge. Do not say 'according to our database' — just cite the case directly as you would in a legal brief.\n3. Extract the RATIO DECIDENDI from each case and apply it to the facts at hand. Show the legal chain.\n4. Where two cases support the same point, cite both — stronger authority through convergence.\n5. Do not invent cases outside this list. If a relevant point has no case match, state the legal principle from statute or established doctrine — never fabricate a citation.\n6. This is a self-contained verified corpus. Treat it with the same confidence you would treat Westlaw or LexisNexis.`,
+    context: `=== VERDICT AI VERIFIED CASE DATABASE ===\n\nThe following are confirmed Nigerian legal authorities from Verdict AI's database. Use them as the primary foundation of your reasoning — not background, not supplementary material. The FOUNDATION.\n\n${blocks}\n\n=== REASONING INSTRUCTIONS ===\n1. Build your entire analysis around the database cases above. Let the cases DRIVE the reasoning, not illustrate it.\n2. Cite every relevant case by full name and citation (e.g., Cameroon Airlines v Otutuizu [2011] 4 NWLR (Pt.1238) 512). Do not hedge. Just cite the case directly as you would in a legal brief.\n3. Extract the RATIO DECIDENDI from each case and apply it to the facts at hand. Show the legal chain.\n4. Where two cases support the same point, cite both — stronger authority through convergence.\n5. Do not invent cases outside this list. If a relevant point has no case match, state the legal principle from statute or established doctrine — never fabricate a citation.\n6. Treat this corpus with the same confidence you would treat Westlaw or LexisNexis.`,
   };
 }
 
@@ -1084,10 +1083,7 @@ app.post('/api/ai', requireAuth, async (req, res) => {
   const grounding = await getGroundingBundle(user, toolId);
   const knowledgeContext = grounding.context;
 
-  // Grounding goes into the USER message — prepended before the query so it can never
-  // be truncated by the system prompt character limit. The model sees verified cases
-  // as the immediate context it must reason FROM, not an afterthought appended to a
-  // long system prompt that may get sliced off.
+  // Inject grounding into user message — never competes with system prompt char limit
   const MAX_CHARS = 14000;
   if (user.length > MAX_CHARS) user = user.slice(0, MAX_CHARS) + '\n\n[Document truncated to fit AI limits.]';
   if (knowledgeContext) {
@@ -1146,9 +1142,8 @@ app.post('/api/ai', requireAuth, async (req, res) => {
       writeSseResponse(res, cachedText);
       return;
     }
-    // nigeriancases bypass removed — AI now reasons WITH the cases instead of
-    // just formatting them raw. The grounding is already injected into the user
-    // message above, so the model gets verified cases + reasons over them properly.
+    // nigeriancases bypass removed — AI now reasons WITH the cases rather than
+    // formatting them raw and skipping the model entirely.
     // FIX #3: call orchestrate(), NOT routeAI()  -  routeAI does not exist
     const { aiRes, engine } = await orchestrate(toolId, system, user, groqKey, orKey);
 
