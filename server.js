@@ -107,7 +107,7 @@ async function getCachedProfile(userId) {
   const cached = profileCache.get(userId);
   if (cached && Date.now() < cached.expiresAt) return cached.profile;
   const { data } = await supabase
-    .from('profiles').select('tier, usage_count, usage_reset_date, tier_expiry')
+    .from('profiles').select('tier, usage_count, usage_reset_date, tier_expiry, role, full_name')
     .eq('id', userId).single();
   if (data) profileCache.set(userId, { profile: data, expiresAt: Date.now() + PROFILE_CACHE_TTL });
   return data;
@@ -626,72 +626,23 @@ function _scoreCases(cases, tokens, rawQuery, limit) {
         caseMap.set(key, {
           ...row,
           id: `verdict-case-${slugify(`${row.title}-${row.citation || row.court || row.decisionDate || rawRow.id}`)}`,
-          chunks: row.fullText ? [{
-            text: row.fullText,
-            summary: row.summary,
-            keywords: row.keywords,
-            chunkIndex: row.chunkIndex,
-          }] : [],
+          chunks: row.fullText ? [{ text: row.fullText, summary: row.summary, keywords: row.keywords, chunkIndex: row.chunkIndex }] : [],
         });
         continue;
       }
-
-      if (row.summary && !existing.summary.includes(row.summary)) {
-        existing.summary = `${existing.summary}\n${row.summary}`.trim();
-      }
-      if (row.holding && !existing.holding.includes(row.holding)) {
-        existing.holding = `${existing.holding}\n${row.holding}`.trim();
-      }
-      if (row.fullText) {
-        existing.chunks.push({
-          text: row.fullText,
-          summary: row.summary,
-          keywords: row.keywords,
-          chunkIndex: row.chunkIndex,
-        });
-      }
+      if (row.summary && !existing.summary.includes(row.summary)) existing.summary = `${existing.summary}\n${row.summary}`.trim();
+      if (row.holding && !existing.holding.includes(row.holding)) existing.holding = `${existing.holding}\n${row.holding}`.trim();
+      if (row.fullText) existing.chunks.push({ text: row.fullText, summary: row.summary, keywords: row.keywords, chunkIndex: row.chunkIndex });
       existing.keywords = [...new Set([...(existing.keywords || []), ...(row.keywords || [])])];
       if (!existing.parties && row.parties) existing.parties = row.parties;
       if (!existing.judges && row.judges) existing.judges = row.judges;
     }
 
-    try {
-      const { data: aliases } = await supabase.from('verdict_case_aliases').select('*').limit(5000);
-      for (const alias of aliases || []) {
-        const caseId = stringOrEmpty(alias.case_id);
-        for (const entry of caseMap.values()) {
-          if (stringOrEmpty(entry.id).replace('verdict-case-', '') !== caseId) continue;
-          const aliasText = stringOrEmpty(alias.alias_text);
-          if (aliasText) entry.aliases.push(aliasText);
-        }
-      }
-    } catch {}
-
-    try {
-      const { data: chunks } = await supabase.from('verdict_case_chunks').select('*').limit(8000);
-      for (const chunk of chunks || []) {
-        const caseId = stringOrEmpty(chunk.case_id);
-        for (const entry of caseMap.values()) {
-          if (stringOrEmpty(entry.id).replace('verdict-case-', '') !== caseId) continue;
-          const chunkText = stringOrEmpty(chunk.chunk_text);
-          if (chunkText) {
-            entry.chunks.push({
-              text: chunkText,
-              summary: stringOrEmpty(chunk.chunk_summary),
-              keywords: Array.isArray(chunk.keywords) ? chunk.keywords.map(stringOrEmpty).filter(Boolean) : [],
-            });
-          }
-        }
-      }
-    } catch {}
-
     return [...caseMap.values()]
       .map((entry) => {
-        const aliasBonus = entry.aliases.reduce((sum, aliasText) => sum + scoreKnowledgeEntry({ ...entry, title: aliasText }, tokens, rawQuery), 0);
         const chunkBonus = entry.chunks.reduce((sum, chunk) => {
           return sum + scoreKnowledgeEntry({
             ...entry,
-            title: entry.title,
             summary: `${chunk.summary || ''} ${chunk.text}`.trim(),
             keywords: [...(entry.keywords || []), ...(chunk.keywords || [])],
           }, tokens, rawQuery);
@@ -700,13 +651,9 @@ function _scoreCases(cases, tokens, rawQuery, limit) {
         const priorityBoost = Math.max(0, 6 - entry.sourcePriority) * 4;
         const baseScore = scoreKnowledgeEntry({
           ...entry,
-          keywords: [...(entry.keywords || []), ...entry.aliases],
           summary: `${entry.summary} ${entry.holding || ''}`.trim(),
         }, tokens, rawQuery);
-        return {
-          entry,
-          score: baseScore + Math.min(aliasBonus, 40) + Math.min(chunkBonus, 36) + verifiedBoost + priorityBoost,
-        };
+        return { entry, score: baseScore + Math.min(chunkBonus, 36) + verifiedBoost + priorityBoost };
       })
       .filter(({ score }) => score > 0)
       .sort((a, b) => b.score - a.score)
@@ -722,6 +669,7 @@ function _scoreCases(cases, tokens, rawQuery, limit) {
     return [];
   }
 }
+
 
 function formatVerifiedCaseSummary(query, matches) {
   if (!matches.length) return '';
