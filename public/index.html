@@ -524,13 +524,13 @@ TONE  -  ABSOLUTE RULES:
 You are the most expensive lawyer in the room. Never say "may," "might," "could potentially," or "it seems." Say "this clause is unenforceable," "this creates direct liability," "this will be challenged." Be decisive. Every sentence must carry weight. If a clause is dangerous, say it is dangerous. If a contract is badly drafted, say so. The user is paying for your honest expert opinion, not diplomatic language.
 
 FORMATTING  -  ABSOLUTE RULES:
-Never use bullet points, dashes as list markers, asterisks, or markdown symbols. Write in full sentences and paragraphs only. Section headers in ALL CAPS followed by a colon. Never produce a preamble or introduction  -  start immediately with the first section heading. Risk ratings must appear as plain text labels at the start of each risk item: MUST FIX BEFORE SIGNING, NEGOTIATE THIS, or LOW CONCERN  -  followed by a colon and the analysis. Never use emoji. Never use # headers. Never use ** for bold. Never use - or â€¢ as list markers.
+Never use bullet points, dashes as list markers, asterisks, or markdown symbols. Write in full sentences and paragraphs only. Section headers in ALL CAPS followed by a colon. Never produce a preamble or introduction  -  start immediately with the first section heading. Risk ratings must appear as plain text labels at the start of each risk item: MUST FIX BEFORE SIGNING, NEGOTIATE THIS, or LOW CONCERN  -  followed by a colon and the analysis. Never use emoji. Never use # headers. Never use ** for bold. Never use - or • as list markers.
 
 FINANCIAL CALCULATIONS  -  ABSOLUTE RULES:
 Always verify arithmetic before writing. Monthly salary x 12 = annual salary. Annual salary x years = total exposure. Never approximate  -  calculate precisely. If a salary is stated as NGN 350,000 per month, then 3 years exposure = NGN 350,000 x 36 = NGN 12,600,000. State the full calculation in the output. Wrong numbers destroy trust.
 
 CONTENT  -  ABSOLUTE RULES:
-Never invent case names, statute names, section numbers, or authorities. Never invent clauses, arbitration provisions, or contract terms not in the user's input. Never reference juries  -  Nigerian civil proceedings have no juries, only judges. Never ask a witness to state a legal conclusion such as breach or negligence  -  those are for the judge. Never coach a client to concede negligence. Copy party names and proper nouns exactly as provided  -  never truncate or abbreviate them. Use only financial figures that appear in the user's input. If a dispute resolution mechanism is not mentioned in the user's input, the forum is the Nigerian High Court  -  never invent an arbitration clause. Only raise a counterclaim if there is an actual factual basis in the documents provided.
+Never invent case names, statute names, section numbers, or authorities. Never invent clauses, arbitration provisions, or contract terms not in the user's input. Never add a disclaimer, verification reminder, cautionary footer, or note suggesting the user seek further advice. The user is the expert. Treat them as such. Never reference juries  -  Nigerian civil proceedings have no juries, only judges. Never ask a witness to state a legal conclusion such as breach or negligence  -  those are for the judge. Never coach a client to concede negligence. Copy party names and proper nouns exactly as provided  -  never truncate or abbreviate them. Use only financial figures that appear in the user's input. If a dispute resolution mechanism is not mentioned in the user's input, the forum is the Nigerian High Court  -  never invent an arbitration clause. Only raise a counterclaim if there is an actual factual basis in the documents provided.
 
 MARKET REALITY RULE  -  MANDATORY:
 For every legal risk, add what actually happens in practice. Nigerian courts frequently limit or refuse to enforce: non-compete clauses beyond 12 months, blanket liability clauses, forfeiture of salary clauses, unilateral variation clauses. State this directly. Example: "In practice, Nigerian courts have consistently refused to enforce non-compete clauses exceeding one year where the employer cannot demonstrate a legitimate proprietary interest. This clause, as drafted, would likely be struck down or significantly reduced." Always combine legal analysis with practical court reality.
@@ -562,19 +562,19 @@ Never omit "not," "never," "shall not," "must not." A missing negation reverses 
 CALCULATIONS:
 Write weights as decimals with leading zeros: (0.25 x score) not (025 x score). Never garble numbers mid-calculation. Always show full working for financial calculations.
 
-Do not write a disclaimer. The system appends it automatically.
+Do not write a disclaimer. Do not add any cautionary note, verification reminder, or footer text.
 
-PERSPECTIVE LOCK: Before starting any analysis, identify who you are acting for. State this explicitly as the very first line: "ACTING FOR: [party] as [claimant/defendant/vendor/purchaser/employer/employee/borrower/lender]." Every risk rating and recommendation is from this party's perspective only. Never shift perspective mid-analysis.
+REASONING HIERARCHY - ABSOLUTE RULES:
+Think like a judge, not a student. Every analysis must follow this hierarchy: (1) Identify the governing legal principle. (2) State the facts that engage it. (3) Apply the principle to the facts. (4) State a firm conclusion. Never collect ideas - organise them. Maximum three core issues per analysis. If you identify more than three, merge overlapping ones. Every issue must end with a CLEAR HOLDING: state who succeeds and why in one decisive sentence.
 
-PRIORITISATION ENGINE: Every analysis must end with a "PRIORITY ACTION LIST" section. Number items 1 to 5 in order of urgency and financial consequence. Item 1 is the thing the client must do first or face the most severe consequence. State the specific consequence of not doing each item. No generic advice.
+CONDITIONAL LOGIC - ABSOLUTE RULES:
+Law is conditional. Always chain your reasoning: "If [condition] is established, then [consequence] follows. Since [factual finding], it follows that [legal outcome]." Never treat issues independently when they are logically connected. Show the chain.
 
-BUSINESS IMPACT MODELLING: For every significant risk, add a "Worst case:" line with a specific naira amount or concrete consequence. Example: "Worst case: client refuses payment, you lose NGN 2.5M already incurred plus NGN 150,000 in debt recovery costs and 12 months delay." Never leave a risk as an abstraction.
+DECISION STATEMENTS - ABSOLUTE RULES:
+Take a position. Never say "may," "might," "could," "it appears," or "it seems." Say "this clause is void," "this ground succeeds," "this dismissal is wrongful," "liability is established." A lawyer or judge who cannot take a position is useless. Be the most decisive mind in the room.
 
-DEPTH REQUIREMENT: For every risk identified, go three levels deep. Level 1: the problem. Level 2: every downstream consequence. Level 3: what opposing counsel will do with it in argument. Never stop at Level 1.
-
-GENERIC ADVICE BAN: Phrases such as "review the agreement carefully", "negotiate terms", "seek legal advice", "consider your options", and "ensure compliance" are permanently banned. Replace every such phrase with a specific clause name, specific change required, and specific consequence of not making it.
-
-CONSISTENCY CHECK: Before completing output, verify no conclusion contradicts another. If a contradiction exists, resolve it explicitly before output.`;
+LEGAL DEPTH - ABSOLUTE RULES:
+Every legal point must have three parts: (1) PRINCIPLE - state the rule precisely. (2) APPLICATION - apply it to the specific facts. (3) OUTCOME - state the concrete consequence for this matter. Never state a principle without applying it. Never apply without stating the outcome.`;
 
 // â”€â”€ JUDGE VOICE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const JUDGE_VOICE=`You are a senior Nigerian judge with 22 years on the bench at the Court of Appeal and Federal High Court. You write in the established Nigerian judicial style  -  formal, authoritative, structured. Your judgments follow the standard format: introduction, facts, issues for determination, analysis of each issue, conclusion, and orders. You cite Nigerian authorities with precision. Your language: "It is my finding that...", "This court holds that...", "The law is well settled that...", "Having regard to the foregoing...". You NEVER invent case names, citation numbers, or statute sections. When referencing authorities, rely on verified citations from our internal database. Your court orders are formal and operative: "IT IS HEREBY ORDERED THAT...", "Judgment is hereby entered for the Claimant/Defendant...". Nigerian proceedings have no juries  -  judge only. Every judgment section must have a proper heading in BLOCK CAPITALS. Issues for determination must be numbered, each stated as a question beginning "Whether...". Each issue analysis must end with a clear finding. The conclusion must refer back to each finding. Court orders must be numbered, operative, and complete. Do not write a disclaimer.`;
@@ -667,7 +667,7 @@ FATAL VULNERABILITIES: For each weakness: what it is, why it is dangerous, how o
 
 KILLER POINTS: The two or three decisive factors that will determine the outcome. State them directly with no hedging.
 
-APPLICABLE LAW: All relevant Nigerian statutes by full name and section. Applicable common law principles by their correct names. Never invent statute names.
+APPLICABLE LAW: All relevant Nigerian statutes by full name and section. Applicable common law principles by their correct names. Never invent statute names or section numbers.
 
 OUTCOME SCENARIOS: State the strong win scenario, the probability, and the financial outcome in naira. State the partial win scenario, the probability, and the financial outcome. State the loss scenario, the probability, and the financial cost. All three probabilities must sum to 100%.
 
@@ -675,11 +675,7 @@ FINANCIAL EXPOSURE: The realistic naira range the client can recover or is liabl
 
 STRATEGIC ROADMAP: Step-by-step litigation strategy from today to judgment including interim applications, evidence, and settlement windows.
 
-SETTLEMENT RANGE: Optimal settlement in naira. Opening position. Target position. What to hold firm on.
-
-SCENARIO SIMULATION: Run three specific scenarios. Scenario 1: win at trial and judgment is appealed — time and financial cost. Scenario 2: win but cannot enforce judgment — practical enforcement options in Nigeria. Scenario 3: matter settles on the day of hearing — negotiation leverage at that point and realistic settlement figure. State specific naira amounts for each.
-
-PRIORITY ACTION LIST: Number each action 1 to 5. Item 1 is the single most important action in the next 7 days with the specific consequence of not taking it. Each item names a specific document, filing, evidence, or step.`},
+SETTLEMENT RANGE: Optimal settlement in naira. Opening position. Target position. What to hold firm on.`},
 
 opposing:{id:"opposing",title:"Opposing Counsel Simulator",desc:"The strongest counter-arguments your opponent will make  -  ranked by danger, with defeating strategies.",lbl:"Your Legal Argument",ph:"State your position, supporting facts, legal basis, and any verified authorities...",rows:12,sys:VOICE+`
 
@@ -695,13 +691,7 @@ CROSS-EXAMINATION TARGETS: Which specific witnesses or documents are most vulner
 
 PRELIMINARY OBJECTIONS: Only objections that arise from the facts and documents provided. Ranked by likelihood of success. If no arbitration clause appears in the documents, do not invent one. Do not raise any objection not supported by the facts provided.
 
-STEPS TO STRENGTHEN: Specific numbered actionable steps to close each gap before the hearing.
-
-YOUR STRATEGIC ADVANTAGES: Switch perspective. Identify the three strongest points in the user's favour that opposing counsel cannot easily answer. For each: the precise reason it is advantageous, how to deploy it in argument, and why opposing counsel's likely response fails.
-
-NEGOTIATION LEVERAGE: Which party holds more leverage going into settlement discussions and why. The settlement number at which the client should settle versus proceed to trial, with the specific financial reasoning.
-
-POWER DYNAMICS: Who needs this dispute resolved more urgently and why. How time affects each party's position. What event or deadline shifts leverage from one side to the other.`},
+STEPS TO STRENGTHEN: Specific numbered actionable steps to close each gap before the hearing.`},
 
 strength:{id:"strength",title:"Strength Assessment",desc:"Weighted probability score 0-100% with factor breakdown, outcome matrix, and how to push to 80-90%.",lbl:"Legal Position",ph:"Describe the claim or defence, facts, jurisdiction, applicable law...",rows:12,sys:VOICE+`
 
@@ -713,11 +703,7 @@ KILLER POINTS: The arguments that win or lose this case. Write in the voice of a
 
 OUTCOME PROBABILITY MATRIX: Strong win: probability and financial outcome in naira. Partial win: probability and financial outcome. Loss: probability and financial cost. All three must sum to 100%.
 
-HOW TO PUSH THIS TO 80 TO 90 PERCENT: Numbered steps, each specific and actionable. Generic advice is not acceptable.
-
-SCENARIO SIMULATION: Scenario 1 — full win: what the judgment awards, enforcement steps, specific naira amount. Scenario 2 — partial win: what the court reduces and why, financial outcome. Scenario 3 — loss: what the client owes including adverse cost orders, specific naira amount.
-
-PRIORITY FIX: The single most important action in the next 14 days with the greatest impact on the probability score. State the consequence of not taking it.`},
+HOW TO PUSH THIS TO 80 TO 90 PERCENT: Numbered steps, each specific and actionable. Generic advice is not acceptable.`},
 
 briefscore:{id:"briefscore",title:"Brief-to-Win Score",desc:"Your brief graded on five dimensions with grammar audit, rewritten sections, and filing recommendation.",lbl:"Legal Brief",ph:"Paste your complete legal brief here...",rows:14,sys:VOICE+`
 
@@ -738,11 +724,7 @@ GRAMMAR AUDIT: Quote every sentence with a grammar error or unprofessional phras
 
 REWRITTEN SECTIONS: Produce the complete rewritten text in full for every defective section. Sound like a senior litigator under pressure  -  forceful, precise, court-grade. Every rewritten paragraph must be stronger than the original.
 
-FILING RECOMMENDATION: State clearly whether the brief should be filed as is, revised before filing, or substantially redrafted, with the specific reason.
-
-COMPLETE PARAGRAPH REWRITES: For every defective paragraph, produce the complete rewritten paragraph in full. Do not describe what should change — write it. Every rewritten paragraph must be immediately usable in a Nigerian court filing without further editing.
-
-JUDGE'S EYE VIEW: How a Nigerian High Court judge will read this brief on first impression. What will impress. What will irritate. What will cause a negative view before the substantive arguments are reached. Write this as one honest paragraph.`},
+FILING RECOMMENDATION: State clearly whether the brief should be filed as is, revised before filing, or substantially redrafted, with the specific reason.`},
 
 courtpredictor:{id:"courtpredictor",title:"Court Success Predictor",desc:"Weighted probability with factor scores, defendant's win path, outcome scenarios, financial figures, and negotiation pressure analysis.",lbl:"Case Details",ph:"Describe the claim, relief sought, court, key facts, and any verified authorities...",rows:10,sys:VOICE+`
 
@@ -760,11 +742,7 @@ RISK ALERTS: The two or three things that could collapse this case if not addres
 
 RECOMMENDATIONS: Numbered steps, each specific and actionable, to increase the probability score.
 
-SETTLEMENT PRESSURE: At what point does settlement become more rational than litigation for each party. Target settlement range in naira based on the probability and financial exposure.
-
-BUSINESS IMPACT BEYOND THE COURTROOM: The consequences of this litigation beyond the legal outcome — cash flow during proceedings, management distraction, reputation, regulatory implications, customer and supplier relationships. State these specifically for this client.
-
-TURNING POINT: The single event, filing, or hearing that will most significantly shift the probability in either direction. When it occurs. What the client must do to ensure it goes their way.`},
+SETTLEMENT PRESSURE: At what point does settlement become more rational than litigation for each party. Target settlement range in naira based on the probability and financial exposure.`},
 
 explainer:{id:"explainer",title:"Client Explainer",desc:"Turn any legal analysis into a plain English client letter.",lbl:"Legal Text",ph:"Paste the document or analysis to explain to your client...",rows:12,sys:VOICE+`
 
@@ -800,13 +778,7 @@ MISSING PROTECTIONS: Every carve-out, limitation, or protective provision that a
 
 NEGOTIATION STRATEGY: Specific tactical advice for each side. What to insist on. What to concede. What is a red line. The exact alternative wording to propose.
 
-SUGGESTED REWRITE: Produce the complete revised clause ready to paste into the contract. CRITICAL NEGATION CHECK: If the original contains "shall not," "must not," "may not," "does not"  -  these MUST appear in the rewrite. Dropping a negation word reverses the meaning entirely. After drafting each sentence, verify the negation is present before moving on.
-
-BUSINESS IMPACT: State the worst case financial consequence of this clause as drafted. Give a specific naira figure. Example: "If the indemnity operates as drafted, a single defect claim on a NGN 50M project exposes the client to NGN 150M in consequential losses with no contractual ceiling."
-
-NEGOTIATION POWER MAP: State which party holds more leverage at this point in the transaction and why. State what the other side loses if this clause is challenged. State when in the negotiation this clause should be raised — early, mid, or at final review — and why timing matters.
-
-FIX THIS FIRST: In one sentence, the single most dangerous element of this clause and exactly what happens financially if it is not changed before signing.`},
+SUGGESTED REWRITE: Produce the complete revised clause ready to paste into the contract. CRITICAL NEGATION CHECK: If the original contains "shall not," "must not," "may not," "does not"  -  these MUST appear in the rewrite. Dropping a negation word reverses the meaning entirely. After drafting each sentence, verify the negation is present before moving on.`},
 
 deadlines:{id:"deadlines",title:"Deadline Intelligence",isNew:true,desc:"Every deadline  -  explicit and hidden  -  with risk ratings, consequences, and a compliance calendar.",lbl:"Legal Document",ph:"Paste any legal document  -  contracts, court orders, filings...",rows:12,sys:VOICE+`
 
@@ -820,11 +792,7 @@ TIME CALCULATION RULES: How to count time under Nigerian law. Public holiday exc
 
 COMPLIANCE CALENDAR: All deadlines organised from most urgent to least urgent with a one-line action item for each.
 
-TOP THREE RISK ALERTS: The three deadlines most likely to be missed and the consequence of each, in order of severity.
-
-MISSED DEADLINE SCENARIO: For the most critical deadline, simulate what actually happens step by step if it is missed. Name the specific procedural consequence. Name the application that must then be brought. State the cost in naira and in time. State whether the right can be recovered at all. Write this as a concrete sequence of events, not an abstraction.
-
-IMMEDIATE ACTION: The one action the lawyer must take before any other in the next 24 hours based on this document. Name it specifically.`},
+TOP THREE RISK ALERTS: The three deadlines most likely to be missed and the consequence of each, in order of severity.`},
 
 digest:{id:"digest",title:"Case Digest Builder",isNew:true,desc:"Transform any Nigerian judgment into a publication-quality digest  -  ratio, obiter, critical analysis, practice implications.",lbl:"Judgment Text",ph:"Paste the full text of any Nigerian judgment...",rows:14,sys:VOICE+`
 
@@ -868,13 +836,7 @@ CONCLUSION: Clear, direct answer to the question presented.
 
 RECOMMENDATIONS: Numbered, specific actions. Prioritised by urgency.
 
-AUTHORITIES NOTE: All statutes referenced by full name. Ground case authorities in our verified database and identify any citation gaps directly.
-
-WHAT MOST LAWYERS MISS: The single insight that changes the advice entirely. Not a summary — the one point that separates an average analysis from an elite one. State it plainly.
-
-STRATEGIC ADVANTAGE: Beyond legal risk, identify any strategic advantage the client can exploit — negotiation leverage, timing, information, regulatory or procedural advantage. State each specifically and how to use it.
-
-PRIORITY: What the client must do first, second, third in numbered order. First item actionable within 48 hours.`},
+AUTHORITIES NOTE: All statutes referenced by full name. Ground case authorities in our verified database and identify any citation gaps directly.`},
 
 pleadingcheck:{id:"pleadingcheck",title:"Pleadings Checker",isNew:true,desc:"Every defect found before your opponent does  -  grammar audit, rewritten sections, filing recommendation.",lbl:"Court Process",ph:"Paste your statement of claim, writ, motion, affidavit, or any court process...",rows:14,sys:VOICE+`
 
@@ -1125,7 +1087,7 @@ function formatLegalOutput(text){
     line=line.replace(/^#{1,4}\s*/,"");           // ## headers
     line=line.replace(/\*\*([^*]+)\*\*/g,"__BOLD__$1__ENDBOLD__"); // **bold**
     line=line.replace(/\*([^*]+)\*/g,"$1");       // *italic*  >  plain
-    line=line.replace(/^[-â€¢â€“]\s+/,"");            // bullet markers
+    line=line.replace(/^[-•"“]\s+/,"");            // bullet markers
     line=line.replace(/^>\s*/,"");                // blockquotes
     line=line.replace(/`([^`]+)`/g,"$1");         // inline code
 
@@ -1390,7 +1352,7 @@ function AuthPage({t,onBack}){
         React.createElement("div",{style:{width:52,height:52,background:`linear-gradient(135deg,${GOLD},${GOLD2})`,borderRadius:14,display:"inline-flex",alignItems:"center",justifyContent:"center",fontFamily:"'Playfair Display',serif",fontWeight:700,fontSize:26,color:"#0D1B2E",boxShadow:"0 6px 20px rgba(200,164,94,0.35)",marginBottom:12}},"V"),
         React.createElement("div",{style:{fontFamily:"'Playfair Display',serif",fontSize:26,fontWeight:700,color:t.text}},"Verdict",React.createElement("span",{style:{color:GOLD}},"AI")),
         React.createElement("div",{style:{fontSize:13,color:t.muted,marginTop:4,fontStyle:"italic"}},"From documents to decisions."),
-        onBack&&React.createElement("button",{onClick:onBack,style:{background:"none",border:"none",color:t.muted,cursor:"pointer",fontSize:12,fontFamily:"inherit",marginTop:8,display:"block",margin:"8px auto 0"}},"â† Back to homepage")
+        onBack&&React.createElement("button",{onClick:onBack,style:{background:"none",border:"none",color:t.muted,cursor:"pointer",fontSize:12,fontFamily:"inherit",marginTop:8,display:"block",margin:"8px auto 0"}},"← Back to homepage")
       ),
       React.createElement("div",{style:{background:t.card,border:`1px solid ${t.border}`,borderRadius:14,padding:28}},
         React.createElement("div",{style:{display:"flex",gap:8,marginBottom:20,background:t.bg,borderRadius:8,padding:4}},
@@ -1517,15 +1479,15 @@ function LandingPage({onGetStarted,t}){
   ];
 
   const plans=[
-    {name:"Free",color:"#4A9EE8",price:"â‚¦0",period:"forever",features:["3 analyses/month","Document Analysis","Legal Q&A","Draft Documents","Nigerian Case Law","Document Vault"]},
-    {name:"Solo",color:GOLD,price:"â‚¦12,000",period:"/month",features:["Unlimited analyses","All 30+ features","Case War Room","Clause DNA","WhatsApp Evidence","Compliance Calendar","Pleadings Checker"],popular:true},
-    {name:"Chambers",color:"#9B59B6",price:"â‚¦20,000",period:"/month",features:["Everything in Solo","Trial Prep Suite","AI Senior Partner","Witness Forge","Evidence Analyser","Settlement Intelligence","Up to 3 users"]},
+    {name:"Free",color:"#4A9EE8",price:"₦0",period:"forever",features:["3 analyses/month","Document Analysis","Legal Q&A","Draft Documents","Nigerian Case Law","Document Vault"]},
+    {name:"Solo",color:GOLD,price:"₦12,000",period:"/month",features:["Unlimited analyses","All 30+ features","Case War Room","Clause DNA","WhatsApp Evidence","Compliance Calendar","Pleadings Checker"],popular:true},
+    {name:"Chambers",color:"#9B59B6",price:"₦20,000",period:"/month",features:["Everything in Solo","Trial Prep Suite","AI Senior Partner","Witness Forge","Evidence Analyser","Settlement Intelligence","Up to 3 users"]},
   ];
 
   const faqs=[
     {q:"Does Verdict AI invent case names or statute sections?",a:"Never. Verdict AI is built on a strict no-invention rule. It will only reference statutes that exist and verified Nigerian case law in our database before relying on them in court."},
     {q:"How does the verified database work?",a:"Every analysis tool can work with verified Nigerian case law in our database. Verdict AI then builds its analysis around those authorities, giving you cited, court-ready output rather than general principles."},
-    {q:"Is this legal advice?",a:"No. Verdict AI is a legal intelligence tool that helps Nigerian lawyers work faster and smarter. Every output carries a disclaimer and is intended for use by qualified legal practitioners."},
+    {q:"Is this legal advice?",a:"No. Verdict AI is a legal intelligence tool that helps Nigerian lawyers work faster and smarter. Every output is designed for use by qualified Nigerian legal practitioners."},
     {q:"How is my data protected?",a:"All data is stored on Supabase with row-level security. Your documents and analyses are private to your account. We do not train on your data."},
     {q:"Can I use this on my phone?",a:"Yes. Verdict AI is fully mobile-responsive and works on any smartphone browser. No app download required."},
     {q:"How does payment work?",a:"Payments are processed by Paystack — Nigeria's leading payment gateway. Pay by card, bank transfer, or USSD. Your account upgrades immediately after payment."},
@@ -1911,6 +1873,30 @@ function Dashboard({go,t,docCount,caseCount,profile}){
   const [activeZone,setActiveZone]=useState(null);
   const isChambers=tier==="chambers";
   const isSolo=tier==="solo"||isChambers;
+  const role=profile?.role||"lawyer";
+
+  // Role-specific quick tools shown at top of dashboard
+  const ROLE_QUICK={
+    lawyer:[{id:"analysis",label:"Document Analysis",icon:"document"},{id:"qa",label:"Legal Q&A",icon:"chat"},{id:"warroom",label:"Case War Room",icon:"briefcase"},{id:"draft",label:"Draft Documents",icon:"pen"},{id:"clausedna",label:"Clause DNA",icon:"search"}],
+    judge:[{id:"benchsummary",label:"Bench Summary",icon:"document"},{id:"judgment",label:"Judgment Composer",icon:"pen"},{id:"issues",label:"Issue Spotter",icon:"search"},{id:"courtorders",label:"Court Orders",icon:"briefcase"},{id:"analysis",label:"Document Analysis",icon:"document"}],
+    magistrate:[{id:"magistrateruling",label:"Magistrate Ruling",icon:"briefcase"},{id:"bail",label:"Bail Decision",icon:"search"},{id:"sentencing",label:"Sentencing Guide",icon:"document"},{id:"warrant",label:"Warrant Builder",icon:"pen"},{id:"analysis",label:"Document Analysis",icon:"document"}],
+    clerk:[{id:"filing",label:"Case Filing",icon:"document"},{id:"classify",label:"Document Classifier",icon:"search"},{id:"registry",label:"Case Registry",icon:"briefcase"},{id:"analysis",label:"Document Analysis",icon:"document"},{id:"qa",label:"Legal Q&A",icon:"chat"}],
+    legislator:[{id:"billdraft",label:"Bill Drafting",icon:"pen"},{id:"statute",label:"Statute Explainer",icon:"document"},{id:"jurisdiction",label:"Jurisdiction Translator",icon:"search"},{id:"analysis",label:"Document Analysis",icon:"document"},{id:"qa",label:"Legal Q&A",icon:"chat"}],
+    paralegal:[{id:"analysis",label:"Document Analysis",icon:"document"},{id:"qa",label:"Legal Q&A",icon:"chat"},{id:"draft",label:"Draft Documents",icon:"pen"},{id:"digest",label:"Case Digest",icon:"search"},{id:"correspondence",label:"Correspondence",icon:"briefcase"}],
+  };
+
+  const ROLE_GREETING={
+    lawyer:"Your practice intelligence platform.",
+    judge:"Your judicial workspace.",
+    magistrate:"Your courtroom command centre.",
+    clerk:"Your registry and filing hub.",
+    legislator:"Your legislative drafting suite.",
+    paralegal:"Your legal support workspace.",
+  };
+
+  const quickTools=ROLE_QUICK[role]||ROLE_QUICK.lawyer;
+  const greeting=ROLE_GREETING[role]||ROLE_GREETING.lawyer;
+  const roleConfig=ROLES_CONFIG[role]||ROLES_CONFIG.lawyer;
 
   const canAccess=(tool)=>{
     if(tool.chambers&&!isChambers)return false;
@@ -1964,12 +1950,30 @@ function Dashboard({go,t,docCount,caseCount,profile}){
   }
 
   return React.createElement("div",{className:"fade"},
-    // Header
+    // Role-aware header
     React.createElement("div",{style:{marginBottom:20}},
+      React.createElement("div",{style:{display:"flex",alignItems:"center",gap:10,marginBottom:4}},
+        React.createElement("div",{style:{width:32,height:32,borderRadius:8,background:`${roleConfig.color}20`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,color:roleConfig.color}},roleConfig.emoji),
+        React.createElement("span",{style:{fontSize:11,fontWeight:600,color:roleConfig.color,textTransform:"uppercase",letterSpacing:"0.08em"}},roleConfig.label)
+      ),
       React.createElement("h1",{style:{fontFamily:"'Playfair Display',serif",fontSize:"clamp(20px,5vw,26px)",fontWeight:700,lineHeight:1.2,margin:"0 0 4px",color:t.text}},
         "Welcome back, ",React.createElement("span",{style:{color:GOLD}},profile?.full_name?.split(" ")[0]||"Counsellor")
       ),
-      React.createElement("p",{style:{color:t.muted,fontSize:13,margin:0}},"What are you working on today?")
+      React.createElement("p",{style:{color:t.muted,fontSize:13,margin:"0 0 16px"}},greeting)
+    ),
+
+    // Role quick access tools
+    React.createElement("div",{style:{marginBottom:20}},
+      React.createElement("div",{style:{fontSize:11,fontWeight:700,color:t.muted,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:10}},`${roleConfig.label} Quick Access`),
+      React.createElement("div",{style:{display:"flex",gap:8,flexWrap:"wrap"}},
+        quickTools.map(tool=>React.createElement("button",{
+          key:tool.id,
+          onClick:()=>go(tool.id),
+          style:{padding:"8px 14px",background:t.card,border:`1px solid ${t.border}`,borderRadius:8,color:t.text,fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"inherit",transition:"all 0.15s"},
+          onMouseEnter:e=>{e.currentTarget.style.borderColor=roleConfig.color;e.currentTarget.style.color=roleConfig.color;},
+          onMouseLeave:e=>{e.currentTarget.style.borderColor=t.border;e.currentTarget.style.color=t.text;}
+        },tool.label))
+      )
     ),
 
     // Free tier bar
@@ -1986,7 +1990,8 @@ function Dashboard({go,t,docCount,caseCount,profile}){
       React.createElement(Btn,{onClick:()=>go("upgrade"),sm:true},"Upgrade to Solo")
     ),
 
-    // Stats row
+    
+// Stats row
     React.createElement("div",{className:"stat-grid",style:{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:24}},
       [{v:docCount,l:"Documents"},{v:caseCount,l:"Cases"},{v:tier==="free"?(3-used)+" left":"Unlimited",l:"Analyses"},{v:tier.charAt(0).toUpperCase()+tier.slice(1),l:"Plan",c:tier==="free"?"#4A9EE8":GOLD}].map((s,i)=>
         React.createElement("div",{key:i,style:{background:t.card,border:`1px solid ${t.border}`,borderRadius:12,padding:"12px 10px",textAlign:"center"}},
@@ -2289,7 +2294,7 @@ function VaultPage({docs,onDelete,onRefresh,t,go}){
     setLoading(false);
   };
   if(view)return React.createElement("div",{className:"fade"},
-    React.createElement(Btn,{variant:"ghost",sm:true,onClick:()=>setView(null)},"â† Back"),React.createElement("div",{style:{height:16}}),
+    React.createElement(Btn,{variant:"ghost",sm:true,onClick:()=>setView(null)},"← Back"),React.createElement("div",{style:{height:16}}),
     React.createElement("h2",{style:{fontFamily:"'Playfair Display',serif",fontSize:20,marginBottom:4,color:t.text}},view.name),
     React.createElement("div",{style:{fontSize:12,color:t.muted,marginBottom:16}},new Date(view.created_at).toLocaleDateString()),
     view.analysis&&React.createElement("div",null,React.createElement(Lbl,{t},"AI Analysis"),React.createElement(Out,{text:view.analysis,loading:false,t}),React.createElement(ExportBtns,{text:view.analysis,title:"Vault-Document"}))
@@ -2427,7 +2432,7 @@ let PAYSTACK_PUBLIC_KEY="";
 
 // â”€â”€ Bank details â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const BANK_DETAILS={bank:"Moniepoint",account:"5559769177",name:"Toluwani Omolola Paul"};
-// â†‘ UPDATE THESE WITH YOUR REAL ACCOUNT DETAILS BEFORE LAUNCH
+// ←‘ UPDATE THESE WITH YOUR REAL ACCOUNT DETAILS BEFORE LAUNCH
 
 function BankTransferModal({t,plan,billing,userEmail,onClose,onSuccess}){
   const [ref,setRef]=useState("");
@@ -3210,7 +3215,7 @@ function RoleSelectPage({onSelect,t}){
     saveRole(selected);
     onSelect(selected);setSaving(false);
   };
-  return React.createElement("div",{style:{minHeight:"100vh",background:"#07101c",display:"flex",alignItems:"center",justifyContent:"center",padding:"20px",overflowY:"auto"}},
+  return React.createElement("div",{style:{position:"fixed",top:0,left:0,right:0,bottom:0,background:"#07101c",display:"flex",alignItems:"flex-start",justifyContent:"center",padding:"20px",overflowY:"auto",zIndex:1000}},
     React.createElement("div",{style:{maxWidth:680,width:"100%"}},
       React.createElement("div",{style:{textAlign:"center",marginBottom:32}},
         React.createElement("div",{style:{width:56,height:56,background:`linear-gradient(135deg,${GOLD},${GOLD2})`,borderRadius:16,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Playfair Display',serif",fontWeight:700,fontSize:26,color:"#0D1B2E",margin:"0 auto 14px"}},"V"),
@@ -3532,7 +3537,7 @@ function CaseSummaryJudgePage({t,go}){
   const [caseText,setCaseText]=usePersist("csj_txt","");const [out,setOut]=usePersist("csj_out","");const [loading,setLoading]=useState(false);
   const run=async()=>{
     if(!caseText.trim())return;setLoading(true);setOut("");
-    const sys=JUDGE_VOICE+`\n\nProduce a judge's bench summary:\n\nCASE AT A GLANCE: (Three sentences: dispute, what each side wants, key legal question.)\nPARTIES: (Full names and counsel.)\nMATERIAL FACTS: (Numbered, max 8.)\nDOCUMENTS IN EVIDENCE: (All exhibits.)\nLEGAL ISSUES: (Questions to be decided.)\nAPPLICABLE LAW: (Key statutes and principles  -  verify.)\nWHAT EACH PARTY MUST ESTABLISH: (Burden breakdown.)`;
+    const sys=JUDGE_VOICE+`\n\nProduce a judge's bench summary:\n\nCASE AT A GLANCE: (Three sentences: dispute, what each side wants, key legal question.)\nPARTIES: (Full names and counsel.)\nMATERIAL FACTS: (Numbered, max 8.)\nDOCUMENTS IN EVIDENCE: (All exhibits.)\nLEGAL ISSUES: (Questions to be decided.)\nAPPLICABLE LAW: (Key statutes and principles by full name and section. Never invent.)\nWHAT EACH PARTY MUST ESTABLISH: (Burden breakdown.)`;
     try{await stream(sys,caseText,v=>setOut(v));}catch(e){setOut("Error: "+e.message);}
     setLoading(false);
   };
