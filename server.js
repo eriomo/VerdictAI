@@ -164,9 +164,16 @@ const SELF_HOSTED_MODEL_URL = stringOrEmpty(process.env.SELF_HOSTED_MODEL_URL);
 const SELF_HOSTED_MODEL_NAME = stringOrEmpty(process.env.SELF_HOSTED_MODEL_NAME || 'verdict-private-legal');
 const SELF_HOSTED_MODEL_API_KEY = stringOrEmpty(process.env.SELF_HOSTED_MODEL_API_KEY);
 
+// All tools get database grounding — the database is the backbone of every answer
 const KNOWLEDGE_TOOLS = new Set([
-  'qa', 'nigeriancases', 'statute', 'legalmemo',
-  'digest', 'paralegal_research', 'reader', 'precedent', 'compliancecal'
+  'qa', 'nigeriancases', 'statute', 'legalmemo', 'digest', 'paralegal_research',
+  'reader', 'precedent', 'compliancecal', 'warroom', 'crossexam', 'motionammo',
+  'claimanalyser', 'clientprep', 'seniorpartner', 'witness', 'evidence',
+  'settlement', 'draft', 'negotiation', 'whatsapp', 'judgment_composer',
+  'court_order', 'case_summary_judge', 'issue_spotter', 'quick_ruling',
+  'bail_decision', 'warrant_drafter', 'sentencing_guide', 'clerk_filing',
+  'clerk_classify', 'bill_drafter', 'law_comparison', 'law_simplifier',
+  'impact_assessment', 'opposing', 'pleadings', 'clausedna', 'matterclock'
 ]);
 
 const LEGAL_KNOWLEDGE_BANK = [
@@ -700,30 +707,30 @@ function formatVerifiedCaseSummary(query, matches) {
 
 async function getGroundingBundle(query, toolId) {
   if (!KNOWLEDGE_TOOLS.has(toolId)) return { context: '', matches: [] };
-  const verifiedCases = await searchVerifiedCaseDatabase(query, 6);
+  const verifiedCases = await searchVerifiedCaseDatabase(query, 8);
   const matches = [...verifiedCases, ...searchKnowledgeBank(query, 4)]
     .filter((item, index, arr) => arr.findIndex((x) => x.id === item.id) === index)
-    .slice(0, 6);
+    .slice(0, 10);
   if (!matches.length) return { context: '', matches: [] };
 
   const blocks = matches.map((match, index) => {
     const titleLine = match.citation
       ? `${match.title} | ${match.citation} | ${match.court} | ${match.decisionDate || 'Date not stored'}`
       : `${match.title} - ${match.court} ${match.decisionDate || ''}`.trim();
-    return [
-      `${index + 1}. ${titleLine}`,
-      `Category: ${match.category}`,
-      `Authority: ${match.authority}`,
-      `Court: ${match.court}`,
+    const parts = [
+      `[${index + 1}] ${titleLine}`,
       `Parties: ${match.parties || 'Not stored'}`,
-      `Note: ${match.summary}`,
-      `Keywords: ${(match.keywords || []).join(', ')}`
-    ].join('\n');
+      `Area: ${match.category}`,
+      `Summary: ${match.summary}`,
+    ];
+    if (match.holding) parts.push(`Holding: ${match.holding}`);
+    if (match.fullText && match.fullText.length > 20) parts.push(`Excerpt: ${match.fullText.slice(0, 400)}`);
+    return parts.join('\n');
   }).join('\n\n');
 
   return {
     matches,
-    context: `Based on verified Nigerian case law in our database, use the records below as primary grounding for your reasoning:\n\n${blocks}\n\nIntegrate the database evidence into the answer directly. Do not treat the database and the reasoning as separate tracks. If you cite a case or authority, it must come only from the records above. Do not mention missing citations to the user, and never invent or guess a citation.`,
+    context: `=== VERDICT AI VERIFIED CASE DATABASE ===\n\nThe following are confirmed Nigerian legal authorities from Verdict AI's database. Use them as the primary foundation of your reasoning — not background context, not supplementary material. The FOUNDATION.\n\n${blocks}\n\n=== REASONING INSTRUCTIONS ===\n1. Build your entire analysis around the database cases above. Let the cases DRIVE the reasoning, not illustrate it.\n2. Cite every relevant case by full name and citation (e.g., Cameroon Airlines v Otutuizu [2011] 4 NWLR (Pt.1238) 512). Do not hedge. Do not say 'according to our database' — just cite the case directly as you would in a legal brief.\n3. Extract the RATIO DECIDENDI from each case and apply it to the facts at hand. Show the legal chain.\n4. Where two cases support the same point, cite both — stronger authority through convergence.\n5. Do not invent cases outside this list. If a relevant point has no case match, state the legal principle from statute or established doctrine — never fabricate a citation.\n6. This is a self-contained verified corpus. Treat it with the same confidence you would treat Westlaw or LexisNexis.`,
   };
 }
 
@@ -1076,12 +1083,16 @@ app.post('/api/ai', requireAuth, async (req, res) => {
 
   const grounding = await getGroundingBundle(user, toolId);
   const knowledgeContext = grounding.context;
-  if (knowledgeContext) {
-    system = `${system}\n\n${knowledgeContext}`;
-  }
 
+  // Grounding goes into the USER message — prepended before the query so it can never
+  // be truncated by the system prompt character limit. The model sees verified cases
+  // as the immediate context it must reason FROM, not an afterthought appended to a
+  // long system prompt that may get sliced off.
   const MAX_CHARS = 14000;
-  if (user.length   > MAX_CHARS) user   = user.slice(0, MAX_CHARS) + '\n\n[Document truncated to fit AI limits.]';
+  if (user.length > MAX_CHARS) user = user.slice(0, MAX_CHARS) + '\n\n[Document truncated to fit AI limits.]';
+  if (knowledgeContext) {
+    user = `${knowledgeContext}\n\n=== USER QUERY ===\n${user}`;
+  }
   if (system.length > MAX_CHARS) system = system.slice(0, MAX_CHARS);
 
   const groqKey = (process.env.GROQ_API_KEY || '').trim().replace(/[\r\n\t]/g, '');
@@ -1135,12 +1146,9 @@ app.post('/api/ai', requireAuth, async (req, res) => {
       writeSseResponse(res, cachedText);
       return;
     }
-    if (toolId === 'nigeriancases' && grounding.matches.length >= 3) {
-      const dbOnlyText = `${formatVerifiedCaseSummary(user, grounding.matches)}${DISCLAIMER}`;
-      setCachedAiResponse(cacheKey, dbOnlyText);
-      writeSseResponse(res, dbOnlyText);
-      return;
-    }
+    // nigeriancases bypass removed — AI now reasons WITH the cases instead of
+    // just formatting them raw. The grounding is already injected into the user
+    // message above, so the model gets verified cases + reasons over them properly.
     // FIX #3: call orchestrate(), NOT routeAI()  -  routeAI does not exist
     const { aiRes, engine } = await orchestrate(toolId, system, user, groqKey, orKey);
 
