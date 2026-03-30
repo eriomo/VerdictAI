@@ -145,7 +145,7 @@ const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SER
 const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY;
 const PAYSTACK_PUBLIC_KEY = process.env.PAYSTACK_PUBLIC_KEY || '';
 
-const DISCLAIMER = '\n\nDISCLAIMER: This analysis is for informational purposes only and does not constitute legal advice. It is grounded in verified Nigerian case law in our database and should still be reviewed with professional judgment before reliance in proceedings.';
+const DISCLAIMER = '\n\nDISCLAIMER: This analysis is grounded in verified Nigerian case law and statute. It does not constitute a formal legal opinion and should be reviewed by counsel before reliance in proceedings.';
 
 const PLANS = {
   solo_monthly:     { amount: 1200000,  name: 'Solo Monthly',     tier: 'solo',     planCode: 'PLN_l7ult7t4qd7mn1u', interval: 'monthly' },
@@ -730,7 +730,7 @@ async function getGroundingBundle(query, toolId) {
 
   return {
     matches,
-    context: `=== VERDICT AI VERIFIED CASE DATABASE ===\n\nThe following are confirmed Nigerian legal authorities from Verdict AI's database. Use them as the primary foundation of your reasoning — not background, not supplementary material. The FOUNDATION.\n\n${blocks}\n\n=== REASONING INSTRUCTIONS ===\n1. Build your entire analysis around the database cases above. Let the cases DRIVE the reasoning, not illustrate it.\n2. Cite every relevant case by full name and citation (e.g., Cameroon Airlines v Otutuizu [2011] 4 NWLR (Pt.1238) 512). Do not hedge. Just cite the case directly as you would in a legal brief.\n3. Extract the RATIO DECIDENDI from each case and apply it to the facts at hand. Show the legal chain.\n4. Where two cases support the same point, cite both — stronger authority through convergence.\n5. Do not invent cases outside this list. If a relevant point has no case match, state the legal principle from statute or established doctrine — never fabricate a citation.\n6. Treat this corpus with the same confidence you would treat Westlaw or LexisNexis.`,
+    context: `=== VERDICT AI VERIFIED CASE DATABASE ===\n\nThe following are confirmed Nigerian legal authorities from Verdict AI's database. Use them as the primary foundation of your reasoning — not background, not supplementary material. The FOUNDATION.\n\n${blocks}\n\n=== REASONING INSTRUCTIONS ===\n1. Build your entire analysis around the database cases above. Let the cases DRIVE the reasoning — they are not decoration, they are the foundation of every conclusion.\n2. Cite every relevant case by full name and full citation exactly as it appears above (e.g., Cameroon Airlines v Otutuizu [2011] 4 NWLR (Pt.1238) 512). Do not hedge with phrases like "it appears" or "it seems that courts have held." Cite directly and decisively as a senior silk would in a written address to the Supreme Court.\n3. Extract the RATIO DECIDENDI from each case and apply it step by step to the facts at hand. Show the legal chain explicitly: "In [case], the court held that [principle]. Applying that principle here: [application to facts]. The consequence is [outcome]."\n4. Where two or more cases support the same point, cite all of them — convergent authority is stronger authority. Say so explicitly: "This position is consistently maintained: [case 1]; [case 2]; [case 3]."\n5. Where cases conflict, identify the conflict, explain which authority is higher or more recent, and state which prevails and why.\n6. Do not invent cases outside this verified list. If a relevant point has no case match in the database, ground it in a specific statute section or an established common law doctrine by its correct name. Never fabricate a citation or a case name.\n7. Treat this corpus exactly as you would treat a verified Westlaw or LexisNexis result — with full professional confidence. You are not guessing. You are applying confirmed Nigerian law.\n8. Perspective check: every case application must serve the party you are acting for. Apply cases to advance their position and distinguish cases that harm it.`,
   };
 }
 
@@ -998,35 +998,37 @@ async function orchestrate(toolId, system, user, groqKey, orKey) {
     const isPleading = isStatementOfClaim || isStatementOfDefence;
 
     if (isStatementOfClaim) {
-      system = `You are a senior Nigerian litigation lawyer analyzing a STATEMENT OF CLAIM.
+      system = `You are a senior Nigerian litigation lawyer analyzing a STATEMENT OF CLAIM acting for the CLAIMANT. State "ACTING FOR: Claimant" as the first line.
 This is a litigation document - NOT a contract. Do not apply contract analysis.
 
 Your task:
 1. DOCUMENT IDENTIFIED: Confirm this is a Statement of Claim. Identify the Claimant, Defendant, Court, and Relief sought.
-2. STRENGTH OF CLAIM: Rate each paragraph - strong, weak, or problematic. Give specific reasons.
-3. MISSING AVERMENTS: What facts must be pleaded but are absent? Be specific.
-4. RELIEF ANALYSIS: Are the reliefs properly claimed? Are they specific enough? Any missing reliefs?
-5. JURISDICTION: Is the correct court identified? Is jurisdiction properly invoked?
-6. POTENTIAL DEFENCES: What defences will the Defendant likely raise based on these facts?
-7. RECOMMENDED AMENDMENTS: Specific paragraph-by-paragraph rewrites where needed.
-8. OVERALL RATING: Excellent / Good / Needs significant amendment / Defective
+2. STRENGTH OF CLAIM: Rate each paragraph STRONG, WEAK, or DEFECTIVE. Give specific legal reasons. For every WEAK or DEFECTIVE paragraph, write the corrected version in full.
+3. MISSING AVERMENTS: What facts must be pleaded but are absent. State the specific consequence of each omission — will the claim fail, be struck out, or be reduced.
+4. RELIEF ANALYSIS: Are the reliefs properly claimed. Are they specific enough. Any missing reliefs. Any relief that cannot succeed on these facts.
+5. JURISDICTION: Is the correct court identified. Is jurisdiction properly invoked. If not, state exactly what must be added.
+6. POTENTIAL DEFENCES: The three most dangerous defences the Defendant will raise. For each: the precise basis and how to pre-empt it in the pleadings.
+7. REWRITTEN PARAGRAPHS: Produce the complete rewritten text for every defective paragraph. Do not describe what to change — write it.
+8. PRIORITY ACTION LIST: Number the top 5 amendments in order of urgency. Item 1 is the change that, if not made, is most likely to cause the claim to fail.
+9. OVERALL RATING: Ready to file / Requires minor amendment / Requires substantial redraft / Defective and must be redrafted.
 
 ` + system;
     }
 
     if (isStatementOfDefence) {
-      system = `You are a senior Nigerian litigation lawyer analyzing a STATEMENT OF DEFENCE.
+      system = `You are a senior Nigerian litigation lawyer analyzing a STATEMENT OF DEFENCE acting for the DEFENDANT. State "ACTING FOR: Defendant" as the first line.
 This is a litigation document - NOT a contract. Do not apply contract analysis.
 
 Your task:
 1. DOCUMENT IDENTIFIED: Confirm this is a Statement of Defence. Identify parties, Court, and what claims are being defended.
-2. TRAVERSALS: Are each paragraph of the claim properly traversed - admitted, denied, or not admitted?
-3. POSITIVE DEFENCES: What positive defences are raised? Are they properly pleaded?
-4. MISSING DENIALS: Which paragraphs of the claim are not properly addressed?
-5. COUNTERCLAIM: Is a counterclaim appropriate? If so, what?
-6. WEAKNESS ANALYSIS: What are the weakest parts of this defence?
-7. RECOMMENDED AMENDMENTS: Specific paragraph-by-paragraph rewrites where needed.
-8. OVERALL RATING: Strong / Adequate / Needs amendment / Defective
+2. TRAVERSALS: For every paragraph of the claim, state whether it is properly traversed — admitted, denied, or not admitted. Flag every paragraph that is not properly traversed and state the consequence: an un-traversed allegation is deemed admitted.
+3. POSITIVE DEFENCES: What positive defences are raised. Are they properly pleaded. What additional positive defences should be raised that are not currently pleaded.
+4. MISSING DENIALS: Which paragraphs of the claim are not properly addressed. State what must be added and write the addition in full.
+5. COUNTERCLAIM: Is a counterclaim available on these facts. If yes, identify the cause of action, the relief to claim, and the approximate value.
+6. WORST CASE ANALYSIS: If this defence is filed as is, what is the defendant's litigation risk. State a probability percentage and a naira exposure figure.
+7. REWRITTEN PARAGRAPHS: Produce the complete rewritten text for every defective paragraph. Do not describe what to change — write it.
+8. PRIORITY ACTION LIST: Top 5 amendments numbered in order of urgency. Item 1 is the change that, if not made, most damages the defendant's position.
+9. OVERALL RATING: Strong / Adequate / Needs amendment / Defective.
 
 ` + system;
     }
