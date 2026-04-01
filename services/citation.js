@@ -6,7 +6,7 @@
  * services/citation.js
  */
 
-const { groqSync } = require('./ai-models');
+const { groqSync } = require('./groq');
 const { CITATION_VERIFY_SYSTEM } = require('../prompts');
 
 async function verifyCitations(responseText, groundingContext) {

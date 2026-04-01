@@ -9,7 +9,9 @@
 const express = require('express');
 const router = express.Router();
 
-const { requireAuth, checkUserAiLimit, stringOrEmpty } = require('../middleware');
+const { requireAuth } = require('../middleware/auth');
+const { checkUserAiLimit } = require('../middleware/rateLimit');
+const { stringOrEmpty } = require('../middleware/security');
 const { buildSystemPrompt } = require('../prompts');
 const { getGroundingBundle } = require('../services/grounding');
 const { orchestrate } = require('../services/orchestrator');

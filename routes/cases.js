@@ -8,7 +8,8 @@
 
 const express = require('express');
 const router = express.Router();
-const { requireAuth, isUuid, stringOrEmpty } = require('../middleware');
+const { requireAuth } = require('../middleware/auth');
+const { isUuid, stringOrEmpty } = require('../middleware/security');
 const { supabase } = require('../services/supabase');
 const { getMatterContext, updateMatterIntelligence } = require('../services/matter');
 const { searchVerifiedCases } = require('../services/grounding');
