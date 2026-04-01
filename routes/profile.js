@@ -53,4 +53,40 @@ router.patch('/', requireAuth, async (req, res) => {
   return res.json(data);
 });
 
+router.post('/update', async (req, res) => {
+  const token = (req.body?.token || '').trim();
+  if (!token) return res.status(401).json({ error: 'Missing token' });
+
+  const { data: authData, error: authError } = await supabase.auth.getUser(token);
+  if (authError || !authData?.user) return res.status(401).json({ error: 'Invalid session' });
+
+  const firstName = (req.body?.firstName || '').trim();
+  const lastName = (req.body?.lastName || '').trim();
+  const role = req.body?.role;
+  const updateFields = {};
+
+  const fullName = `${firstName} ${lastName}`.trim();
+  if (fullName) updateFields.full_name = fullName;
+  if (role !== undefined && role !== null && String(role).trim()) updateFields.role = String(role).trim();
+
+  if (!Object.keys(updateFields).length) {
+    const { data, error } = await supabase.from('profiles').select('*').eq('id', authData.user.id).single();
+    if (error) return res.status(500).json({ error: error.message });
+    return res.json(data);
+  }
+
+  let { data, error } = await supabase.from('profiles').update(updateFields).eq('id', authData.user.id).select().single();
+
+  if (error && updateFields.role && /Could not find the 'role' column/i.test(error.message || '')) {
+    delete updateFields.role;
+    const retry = await supabase.from('profiles').update(updateFields).eq('id', authData.user.id).select().single();
+    data = retry.data;
+    error = retry.error;
+  }
+
+  if (error) return res.status(500).json({ error: error.message });
+  invalidateProfileCache(authData.user.id);
+  return res.json(data);
+});
+
 module.exports = router;
