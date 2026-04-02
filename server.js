@@ -12,6 +12,7 @@ const { ensureDataDir, reloadDiskCorpus, exportTrainingCorpus } = require('./ser
 const { supabase, invalidateProfileCache } = require('./services/supabase');
 
 const aiRoute = require('./routes/ai');
+const authRouter = require('./routes/auth');
 const documentsRoute = require('./routes/documents');
 const casesRoute = require('./routes/cases');
 const profileRouter = require('./routes/profile');
@@ -80,6 +81,7 @@ app.use((err, req, res, next) => {
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/api/ai', aiRoute);
+app.use('/api/auth', authRouter);
 app.use('/api/documents', documentsRoute);
 app.use('/api/cases', casesRoute);
 app.use('/api/profile', profileRouter);
