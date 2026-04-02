@@ -87,7 +87,7 @@ function normalizeCase(row) {
     decisionDate: (row.date || row.decision_date || row.date_delivered || '').trim(),
     holding: (row.outcome || row.holding || row.headnote || '').trim(),
     // Increased from 400 to 1500 characters — the ratio is usually in the middle
-    fullText: (row.chunk_text || row.full_text || row.judgment_text || '').trim().slice(0, 1500),
+    fullText: (row.chunk_text || row.full_text || row.judgment_text || '').trim().slice(0, 300),
     parties: (row.parties || '').trim(),
     judges: (row.judges || '').trim(),
     sourcePriority: Number.isFinite(Number(row.source_priority)) ? Number(row.source_priority) : 1,
@@ -189,7 +189,7 @@ async function getGroundingBundle(query, toolId) {
   if (!KNOWLEDGE_TOOLS.has(toolId)) return { context: '', matches: [] };
 
   const [dbCases, kbEntries] = await Promise.all([
-    searchVerifiedCases(query, 10),
+    searchVerifiedCases(query, 6),
     Promise.resolve(searchKnowledgeBank(query, 5)),
   ]);
 
@@ -199,7 +199,7 @@ async function getGroundingBundle(query, toolId) {
     if (seen.has(item.id)) return false;
     seen.add(item.id);
     return true;
-  }).slice(0, 12);
+  }).slice(0, 8);
 
   if (!matches.length) return { context: '', matches: [] };
 
@@ -214,10 +214,10 @@ async function getGroundingBundle(query, toolId) {
       `[${i + 1}] ${titleLine}`,
       m.parties ? `Parties: ${m.parties}` : null,
       `Area: ${m.category}`,
-      `Summary: ${m.summary}`,
+      `Summary: ${m.summary.slice(0, 200)}`,
       m.holding ? `Holding: ${m.holding}` : null,
       // Full text excerpt — 1500 chars for rich grounding
-      (m.fullText && m.fullText.length > 30) ? `Excerpt from judgment: ${m.fullText.slice(0, 1500)}` : null,
+      (m.fullText && m.fullText.length > 30) ? `Key excerpt: ${m.fullText.slice(0, 300)}` : null,
     ].filter(Boolean).join('\n');
 
     return parts;

@@ -18,7 +18,7 @@ const { checkAndIncrementUsage } = require('../services/supabase');
 const { verifyCitations, buildCitationNote } = require('../services/citation');
 const { getMatterContext } = require('../services/matter');
 
-const MAX_INPUT_CHARS = 14000;
+const MAX_INPUT_CHARS = 6000;
 
 function writeSse(res, text) {
   res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: text } }] })}\n\n`);
@@ -75,7 +75,7 @@ router.post('/', requireAuth, async (req, res) => {
   // ── Truncate user input ────────────────────────────────────────────────────
   let processedUser = user;
   if (processedUser.length > MAX_INPUT_CHARS) {
-    processedUser = processedUser.slice(0, MAX_INPUT_CHARS) + '\n\n[Document truncated to fit context limits.]';
+    processedUser = processedUser.slice(0, MAX_INPUT_CHARS) + '\n\n[Truncated. Analyse what is provided.]';
   }
 
   // ── Cache check ────────────────────────────────────────────────────────────

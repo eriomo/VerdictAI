@@ -79,7 +79,7 @@ function getGroqKey() {
   return (process.env.GROQ_API_KEY || '').trim().replace(/[\r\n\t]/g, '');
 }
 
-async function groqSync(system, user, maxTokens = 1500) {
+async function groqSync(system, user, maxTokens = 800) {
   const key = getGroqKey();
   if (!key) return '';
   const res = await httpsPost(
@@ -98,7 +98,7 @@ async function groqSync(system, user, maxTokens = 1500) {
   });
 }
 
-async function groqStream(system, user, maxTokens = 8000) {
+async function groqStream(system, user, maxTokens = 4000) {
   const key = getGroqKey();
   return httpsPost(
     'api.groq.com', '/openai/v1/chat/completions',

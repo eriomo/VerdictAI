@@ -63,56 +63,17 @@ function buildDocTypePreamble(detection) {
 }
 
 async function orchestrate(toolId, system, user) {
-  const isHeavy = HEAVY_TOOLS.has(toolId);
-
-  // Simple tools — Groq only (fast)
-  if (!isHeavy) {
-    if (hasSelfHostedModel()) {
-      aiLog(`Simple: self-hosted → ${toolId}`);
-      return { aiRes: await selfHostedStream(system, user), engine: 'self-hosted' };
-    }
-    const groqKey = (process.env.GROQ_API_KEY || '').trim();
-    if (!groqKey) return callWithFailover(system, user);
-    aiLog(`Simple: Groq → ${toolId}`);
-    return { aiRes: await groqStream(system, user), engine: 'groq' };
+  // Groq-primary. Always use Groq directly.
+  aiLog(`Groq → ${toolId}`);
+  try {
+    const res = await groqStream(system, user);
+    return { aiRes: res, engine: 'groq' };
+  } catch (err) {
+    aiLog(`Groq error: ${err.message} — retrying once`);
+    await new Promise(r => setTimeout(r, 2000));
+    const res = await groqStream(system, user);
+    return { aiRes: res, engine: 'groq-retry' };
   }
-
-  // Document analysis — detect type first, then run primary model in parallel
-  if (toolId === 'reader' || toolId === 'docanalysis' || toolId === 'analysis') {
-    const [detection, modelResult] = await Promise.allSettled([
-      detectDocumentType(user),
-      callWithFailover(system, user),
-    ]);
-
-    const detectionText = detection.status === 'fulfilled' ? detection.value : '';
-    const preamble = buildDocTypePreamble(detectionText);
-
-    if (preamble && modelResult.status === 'fulfilled') {
-      // Prepend document type preamble to system
-      return modelResult.value;
-    }
-    if (modelResult.status === 'fulfilled') return modelResult.value;
-
-    // Fallback
-    const groqKey = (process.env.GROQ_API_KEY || '').trim();
-    if (!groqKey) throw new Error('No AI engine available');
-    return { aiRes: await groqStream(system, user), engine: 'groq-fallback' };
-  }
-
-  // Heavy tools — run preprocessing and primary model in parallel
-  aiLog(`Heavy: parallel orchestration → ${toolId}`);
-  const [, modelResult] = await Promise.allSettled([
-    detectDocumentType(user),
-    callWithFailover(system, user),
-  ]);
-
-  if (modelResult.status === 'fulfilled') return modelResult.value;
-
-  // Emergency fallback
-  const groqKey = (process.env.GROQ_API_KEY || '').trim();
-  if (!groqKey) throw new Error('Orchestration failed — no fallback');
-  aiLog('Emergency Groq fallback');
-  return { aiRes: await groqStream(system, user), engine: 'groq-emergency' };
 }
 
 module.exports = { orchestrate, detectDocumentType, buildDocTypePreamble, HEAVY_TOOLS };

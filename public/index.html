@@ -718,23 +718,74 @@ function UpgradePage({t,go,userTier,userEmail,onUpgradeSuccess}){
 
 // ── Landing ───────────────────────────────────────────────────────────────────
 function Landing({onStart}){
-  return React.createElement("div",{style:{minHeight:"100vh",background:"#07101c",display:"flex",alignItems:"center",justifyContent:"center",padding:20}},
-    React.createElement("div",{style:{textAlign:"center",maxWidth:600}},
-      React.createElement("div",{style:{width:72,height:72,background:`linear-gradient(135deg,${GOLD},${GOLD2})`,borderRadius:20,display:"inline-flex",alignItems:"center",justifyContent:"center",fontFamily:"'Playfair Display',serif",fontWeight:700,fontSize:36,color:"#0D1B2E",marginBottom:24}},"V"),
-      React.createElement("h1",{style:{fontFamily:"'Playfair Display',serif",fontSize:"clamp(32px,6vw,52px)",fontWeight:900,color:"#F0EDE6",marginBottom:8}},"Verdict",React.createElement("span",{style:{color:GOLD}},"AI")),
-      React.createElement("p",{style:{fontSize:"clamp(16px,2.5vw,18px)",color:"rgba(240,237,230,.6)",lineHeight:1.7,marginBottom:40}},"Nigeria's legal intelligence platform. 50+ AI tools for every Nigerian legal professional."),
-      React.createElement("div",{style:{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap",marginBottom:48}},
-        React.createElement("button",{onClick:onStart,style:{padding:"16px 40px",borderRadius:12,background:`linear-gradient(135deg,${GOLD},${GOLD2})`,color:"#0D1B2E",fontWeight:700,fontSize:16,border:"none",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}},"Start Free"),
-        React.createElement("button",{onClick:onStart,style:{padding:"16px 28px",borderRadius:12,background:"rgba(255,255,255,.05)",color:"rgba(240,237,230,.8)",fontWeight:600,fontSize:15,border:"1px solid rgba(255,255,255,.12)",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}},"Sign In")
+  const features=[
+    {icon:"doc",label:"Document Analysis",desc:"Full forensic analysis with risk ratings, power map, and complete rewrites"},
+    {icon:"gavel",label:"Case War Room",desc:"Weighted probability, battleground analysis, outcome scenarios in naira"},
+    {icon:"layers",label:"Contradiction Detector",desc:"Find every inconsistency across documents and turn them into cross-exam weapons"},
+    {icon:"book",label:"8,000+ Nigerian Cases",desc:"Every analysis grounded in verified Nigerian court decisions — never invented"},
+    {icon:"target",label:"Legal Health Check",desc:"Score your business across five legal dimensions with an action plan"},
+    {icon:"dna",label:"Clause DNA",desc:"Forensic clause breakdown — hidden traps, enforceability, complete rewrite"},
+  ];
+  const roles=["Lawyers","Judges","Magistrates","Law Students","Business Owners","Corporate Counsel","Legislators","Paralegals","Court Clerks"];
+  return React.createElement("div",{style:{minHeight:"100vh",background:"#07101c",overflowY:"auto"}},
+    // Navbar
+    React.createElement("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"18px 32px",borderBottom:"1px solid rgba(30,52,82,0.8)",position:"sticky",top:0,background:"rgba(7,16,28,0.95)",backdropFilter:"blur(12px)",zIndex:10}},
+      React.createElement("div",{style:{display:"flex",alignItems:"center",gap:10}},
+        React.createElement("div",{style:{width:36,height:36,background:`linear-gradient(135deg,${GOLD},${GOLD2})`,borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Playfair Display',serif",fontWeight:700,fontSize:18,color:"#0D1B2E"}},"V"),
+        React.createElement("span",{style:{fontFamily:"'Playfair Display',serif",fontSize:20,fontWeight:700,color:"#F0EDE6"}},"Verdict",React.createElement("span",{style:{color:GOLD}},"AI"))
       ),
-      React.createElement("div",{style:{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:10}},
-        [["50+ Tools","For Nigerian law"],["8,000+ Cases","Verified database"],["9 Roles","Every professional"],["AI Grounding","Real case law"]].map(([ti,d])=>
-          React.createElement("div",{key:ti,style:{background:"rgba(12,26,46,.8)",border:"1px solid rgba(30,52,82,.8)",borderRadius:12,padding:"14px 12px"}},
-            React.createElement("div",{style:{fontFamily:"'Playfair Display',serif",fontSize:15,fontWeight:700,color:GOLD,marginBottom:3}},ti),
-            React.createElement("div",{style:{fontSize:11,color:"rgba(240,237,230,.5)"}},d)
+      React.createElement("div",{style:{display:"flex",gap:10}},
+        React.createElement("button",{onClick:onStart,style:{padding:"9px 20px",borderRadius:8,background:"transparent",border:"1px solid rgba(200,164,94,0.4)",color:GOLD,fontWeight:600,fontSize:13,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}},"Log In"),
+        React.createElement("button",{onClick:onStart,style:{padding:"9px 20px",borderRadius:8,background:`linear-gradient(135deg,${GOLD},${GOLD2})`,border:"none",color:"#0D1B2E",fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}},"Start Free")
+      )
+    ),
+    // Hero
+    React.createElement("div",{style:{textAlign:"center",padding:"80px 20px 60px",maxWidth:760,margin:"0 auto"}},
+      React.createElement("div",{style:{display:"inline-flex",alignItems:"center",gap:8,background:"rgba(200,164,94,0.1)",border:"1px solid rgba(200,164,94,0.25)",borderRadius:100,padding:"6px 16px",fontSize:11,fontWeight:700,color:GOLD,letterSpacing:"0.08em",marginBottom:28}},"NIGERIA'S LEGAL INTELLIGENCE PLATFORM"),
+      React.createElement("h1",{style:{fontFamily:"'Playfair Display',serif",fontSize:"clamp(36px,6vw,64px)",fontWeight:900,color:"#F0EDE6",lineHeight:1.1,marginBottom:20,letterSpacing:"-0.02em"}},
+        "From Documents",React.createElement("br",null),React.createElement("span",{style:{color:GOLD}},"to Decisions.")
+      ),
+      React.createElement("p",{style:{fontSize:"clamp(15px,2.5vw,18px)",color:"rgba(240,237,230,0.65)",lineHeight:1.8,marginBottom:40,maxWidth:560,margin:"0 auto 40px"}},"50+ AI tools built for every Nigerian legal professional. Powered by a verified database of 8,000+ Nigerian court decisions."),
+      React.createElement("div",{style:{display:"flex",gap:14,justifyContent:"center",flexWrap:"wrap",marginBottom:20}},
+        React.createElement("button",{onClick:onStart,style:{padding:"16px 44px",borderRadius:12,background:`linear-gradient(135deg,${GOLD},${GOLD2})`,color:"#0D1B2E",fontWeight:700,fontSize:16,border:"none",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",boxShadow:"0 4px 24px rgba(200,164,94,0.35)",letterSpacing:"-0.01em"}},"Start for Free"),
+        React.createElement("button",{onClick:onStart,style:{padding:"16px 32px",borderRadius:12,background:"rgba(255,255,255,0.05)",color:"rgba(240,237,230,0.85)",fontWeight:600,fontSize:15,border:"1px solid rgba(255,255,255,0.12)",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}},"Sign In →")
+      ),
+      React.createElement("div",{style:{fontSize:12,color:"rgba(240,237,230,0.35)",marginTop:16}},"Free tier available · No credit card required")
+    ),
+    // Roles strip
+    React.createElement("div",{style:{background:"rgba(12,26,46,0.6)",borderTop:"1px solid rgba(30,52,82,0.8)",borderBottom:"1px solid rgba(30,52,82,0.8)",padding:"14px 20px",display:"flex",alignItems:"center",justifyContent:"center",gap:6,flexWrap:"wrap"}},
+      React.createElement("span",{style:{fontSize:11,color:"rgba(240,237,230,0.4)",marginRight:8,fontWeight:600}},"BUILT FOR:"),
+      roles.map(r=>React.createElement("span",{key:r,style:{fontSize:11,color:"rgba(240,237,230,0.6)",background:"rgba(30,52,82,0.8)",padding:"4px 10px",borderRadius:100,fontWeight:500}},r))
+    ),
+    // Features grid
+    React.createElement("div",{style:{maxWidth:960,margin:"64px auto",padding:"0 20px"}},
+      React.createElement("h2",{style:{fontFamily:"'Playfair Display',serif",fontSize:"clamp(24px,4vw,36px)",fontWeight:700,color:"#F0EDE6",textAlign:"center",marginBottom:8}},"Every tool a Nigerian legal professional needs."),
+      React.createElement("p",{style:{textAlign:"center",color:"rgba(240,237,230,0.5)",fontSize:14,marginBottom:40}},"All grounded in real Nigerian case law. No invented citations. Ever."),
+      React.createElement("div",{style:{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:16}},
+        features.map(f=>React.createElement("div",{key:f.label,style:{background:"rgba(12,26,46,0.7)",border:"1px solid rgba(30,52,82,0.9)",borderRadius:14,padding:"22px 20px",transition:"all 0.2s"},onMouseEnter:e=>{e.currentTarget.style.borderColor="rgba(200,164,94,0.3)";e.currentTarget.style.transform="translateY(-2px)";},onMouseLeave:e=>{e.currentTarget.style.borderColor="rgba(30,52,82,0.9)";e.currentTarget.style.transform="none";}},
+          React.createElement("div",{style:{width:38,height:38,borderRadius:10,background:"rgba(200,164,94,0.1)",display:"flex",alignItems:"center",justifyContent:"center",marginBottom:14}},Ic({n:f.icon,sz:18,c:GOLD})),
+          React.createElement("div",{style:{fontFamily:"'Playfair Display',serif",fontSize:15,fontWeight:700,color:"#F0EDE6",marginBottom:6}},f.label),
+          React.createElement("div",{style:{fontSize:12.5,color:"rgba(240,237,230,0.55)",lineHeight:1.6}},f.desc)
+        ))
+      )
+    ),
+    // Stats
+    React.createElement("div",{style:{background:"rgba(200,164,94,0.05)",borderTop:"1px solid rgba(200,164,94,0.15)",borderBottom:"1px solid rgba(200,164,94,0.15)",padding:"40px 20px"}},
+      React.createElement("div",{style:{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))",gap:20,maxWidth:760,margin:"0 auto",textAlign:"center"}},
+        [["50+","AI legal tools"],["8,000+","Verified Nigerian cases"],["9","Professional roles"],["5","Output layers"],["18","Non-negotiable rules"]].map(([n,l])=>
+          React.createElement("div",{key:l},
+            React.createElement("div",{style:{fontFamily:"'Playfair Display',serif",fontSize:"clamp(28px,5vw,40px)",fontWeight:700,color:GOLD}},n),
+            React.createElement("div",{style:{fontSize:12,color:"rgba(240,237,230,0.5)",marginTop:4}},l)
           )
         )
       )
+    ),
+    // CTA
+    React.createElement("div",{style:{textAlign:"center",padding:"80px 20px"}},
+      React.createElement("h2",{style:{fontFamily:"'Playfair Display',serif",fontSize:"clamp(24px,4vw,36px)",fontWeight:700,color:"#F0EDE6",marginBottom:16}}),"Ready to upgrade your practice?",
+      React.createElement("p",{style:{color:"rgba(240,237,230,0.5)",fontSize:14,marginBottom:32}},"Start with 3 free analyses. No credit card required."),
+      React.createElement("button",{onClick:onStart,style:{padding:"16px 44px",borderRadius:12,background:`linear-gradient(135deg,${GOLD},${GOLD2})`,color:"#0D1B2E",fontWeight:700,fontSize:16,border:"none",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}},"Get Started Free"),
+      React.createElement("div",{style:{marginTop:24,fontSize:12,color:"rgba(240,237,230,0.3)"}},"© 2026 Verdict AI · Nigeria's Legal Intelligence Platform")
     )
   );
 }

@@ -145,7 +145,22 @@ function buildSystemPrompt(role = 'lawyer', toolId = '', groundingContext = '', 
     groundingContext && groundingContext.trim() ? groundingContext.trim() : null,
   ].filter(Boolean);
 
-  return layers.join('\n\n');
+  const full = layers.join('\n\n');
+  // Groq TPM guard: cap system prompt at 3000 chars to leave room for user input + output
+  // Identity (600) + Role (500) + Cognitive (400) + Structure (400) + Grounding (1100) = ~3000
+  if (full.length > 3000) {
+    // Keep identity, role voice (truncated), and grounding context
+    const groundingBlock = groundingContext ? groundingContext.trim() : '';
+    const identityBlock = IDENTITY_CORE.trim().slice(0, 600);
+    const roleBlock = roleVoice.trim().slice(0, 500);
+    const cogBlock = cognitiveTask.trim().slice(0, 400);
+    const structBlock = outputStructure.trim().slice(0, 400);
+    const matterBlock2 = matterBlock ? matterBlock.slice(0, 200) : '';
+    const courtBlock2 = courtBlock ? courtBlock.slice(0, 150) : '';
+    const parts = [identityBlock, roleBlock, matterBlock2 || null, courtBlock2 || null, cogBlock, structBlock, groundingBlock || null].filter(Boolean);
+    return parts.join('\n\n');
+  }
+  return full;
 }
 
 module.exports = { buildSystemPrompt, resolveCognitiveTask, resolveOutputStructure };
