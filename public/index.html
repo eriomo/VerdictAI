@@ -80,7 +80,7 @@ select option{background:#0c1a2e;color:#F0EDE6}
 const {useState,useRef,useEffect,useContext,createContext,useCallback}=React;
 const GOLD="#C8A45E",GOLD2="#D4B474";
 
-// â”€â”€ Icons â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Icons ─────────────────────────────────────────────────────────────────────
 function Ic({n,sz=18,c="currentColor",sw=1.6}){
   const s={width:sz,height:sz,viewBox:"0 0 24 24",fill:"none",stroke:c,strokeWidth:sw,strokeLinecap:"round",strokeLinejoin:"round",display:"block",flexShrink:0};
   const e=React.createElement;
@@ -122,10 +122,10 @@ function Ic({n,sz=18,c="currentColor",sw=1.6}){
 const ICON_MAP={dashboard:"grid",matterclock:"clock",reader:"doc",qa:"chat",warroom:"gavel",opposing:"shield",strength:"scale",courtpredictor:"star",draft:"pen",briefscore:"check",explainer:"chat",clientreport:"doc",feenote:"brief",intakememo:"doc",clausedna:"dna",deadlines:"clock",jurisdiction:"scale",statute:"book",precedent:"book",correspondence:"chat",digest:"book",legalmemo:"doc",pleadingcheck:"check",compliancecal:"clock",witness:"user",evidence:"search",settlement:"shield",negotiation:"pen",whatsapp:"chat",seniorpartner:"star",crossexam:"search",motionammo:"gavel",claimanalyser:"scale",clientprep:"user",nigeriancases:"book",vault:"lock",cases:"brief",profile:"user",judgment_composer:"gavel",court_order:"doc",case_summary_judge:"doc",issue_spotter:"search",quick_ruling:"scale",bail_decision:"shield",warrant_drafter:"doc",sentencing_guide:"scale",clerk_filing:"doc",clerk_classify:"grid",bill_drafter:"pen",law_comparison:"scale",law_simplifier:"chat",impact_assessment:"grid",paralegal_research:"search",contradiction_detector:"layers",timeline_extractor:"clock",obligation_extractor:"check",risk_delta:"activity",letter_chain:"chat",brief_builder:"pen",precedent_matcher:"search",problem_analyzer:"search",case_explainer:"book",moot_prep:"scale",assignment_reviewer:"check",doctrine_tracker:"book",legal_health_check:"target",contract_plain:"doc",contract_playbook:"brief",regulatory_radar:"zap",board_paper_reviewer:"check",upgrade:"star"};
 const UIIc=({id,c="currentColor",sz=18})=>Ic({n:ICON_MAP[id]||"doc",sz,c,sw:1.7});
 
-// â”€â”€ Supabase â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Supabase ──────────────────────────────────────────────────────────────────
 const sb=supabase.createClient("https://xlykbkfwgqhldxrwhwbp.supabase.co","sb_publishable__xQGhfqxD0qjoduO8JSkcg_YOrrSNBs");
 
-// â”€â”€ Auth context â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Auth context ──────────────────────────────────────────────────────────────
 const AuthCtx=createContext(null);
 function AuthProvider({children}){
   const [user,setUser]=useState(null);const [loading,setLoading]=useState(true);
@@ -137,7 +137,7 @@ function AuthProvider({children}){
 }
 const useAuth=()=>useContext(AuthCtx);
 
-// â”€â”€ Persist â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Persist ───────────────────────────────────────────────────────────────────
 function usePersist(key,init){
   const [v,setV]=useState(()=>{try{const s=localStorage.getItem("vd_"+key);if(s!==null)return JSON.parse(s);}catch{}return init;});
   const ref=useRef(v);ref.current=v;
@@ -146,7 +146,7 @@ function usePersist(key,init){
 }
 function clearAllPageStates(){try{Object.keys(localStorage).filter(k=>k.startsWith("vd_")).forEach(k=>localStorage.removeItem(k));}catch{}}
 
-// â”€â”€ API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── API ───────────────────────────────────────────────────────────────────────
 async function api(path,opts={}){
   const{data:{session}}=await sb.auth.getSession();
   const res=await fetch(path,{...opts,headers:{"Content-Type":"application/json","Authorization":`Bearer ${session?.access_token||""}`,...(opts.headers||{})},body:opts.body?JSON.stringify(opts.body):undefined});
@@ -154,7 +154,7 @@ async function api(path,opts={}){
   return res.json();
 }
 
-// â”€â”€ Stream (v5.0 - server builds system prompt) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Stream (v5.0 - server builds system prompt) ───────────────────────────────
 async function stream(toolId,userText,cb,retries=0,role="lawyer",courtId="",matterContext=null,matterId=null){
   try{
     const{data:{session}}=await sb.auth.getSession();
@@ -168,7 +168,7 @@ async function stream(toolId,userText,cb,retries=0,role="lawyer",courtId="",matt
   }catch(err){if(retries<2&&err.message.includes("fetch")){await new Promise(r=>setTimeout(r,3000));return stream(toolId,userText,cb,retries+1,role,courtId,matterContext,matterId);}throw err;}
 }
 
-// â”€â”€ File extraction â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── File extraction ───────────────────────────────────────────────────────────
 async function extractFile(file){
   const ext=file.name.split(".").pop().toLowerCase();
   if(ext==="pdf")return new Promise((res,rej)=>{const r=new FileReader();r.onload=async e=>{try{pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";const pdf=await pdfjsLib.getDocument({data:e.target.result}).promise;let t="";for(let i=1;i<=Math.min(pdf.numPages,50);i++){const pg=await pdf.getPage(i);const ct=await pg.getTextContent();t+=ct.items.map(x=>x.str).join(" ")+"\n\n";}res(t.trim());}catch(e){rej(e);}};r.readAsArrayBuffer(file);});
@@ -176,7 +176,7 @@ async function extractFile(file){
   return new Promise((res,rej)=>{const r=new FileReader();r.onload=e=>res(e.target.result);r.onerror=rej;r.readAsText(file,"UTF-8");});
 }
 
-// â”€â”€ Export â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Export ────────────────────────────────────────────────────────────────────
 function exportPDF(text,filename="verdict-ai"){
   const{jsPDF}=window.jspdf;const doc=new jsPDF({orientation:"portrait",unit:"mm",format:"a4"});
   const m=20,pw=doc.internal.pageSize.getWidth()-m*2;
@@ -184,7 +184,7 @@ function exportPDF(text,filename="verdict-ai"){
   doc.setTextColor(200,164,94);doc.setFontSize(14);doc.setFont("helvetica","bold");doc.text("VERDICT AI",m,13);
   let y=30;doc.setTextColor(30,30,30);doc.setFontSize(10);
   doc.splitTextToSize(text,pw).forEach(line=>{if(y>doc.internal.pageSize.getHeight()-m){doc.addPage();y=m;}/^[A-Z][A-Z\s]{3,}:/.test(line.trim())?(doc.setFont("helvetica","bold"),doc.setTextColor(12,26,46)):(doc.setFont("helvetica","normal"),doc.setTextColor(30,30,30));doc.text(line,m,y);y+=7;});
-  const pg=doc.internal.getNumberOfPages();for(let i=1;i<=pg;i++){doc.setPage(i);doc.setFontSize(8);doc.setTextColor(150);doc.text(`Verdict AI â€” Page ${i} of ${pg}`,m,doc.internal.pageSize.getHeight()-10);}
+  const pg=doc.internal.getNumberOfPages();for(let i=1;i<=pg;i++){doc.setPage(i);doc.setFontSize(8);doc.setTextColor(150);doc.text(`Verdict AI — Page ${i} of ${pg}`,m,doc.internal.pageSize.getHeight()-10);}
   doc.save(`${filename}.pdf`);
 }
 async function exportDOCX(text,filename="verdict-ai"){
@@ -197,18 +197,18 @@ async function exportDOCX(text,filename="verdict-ai"){
   }catch{const b=new Blob([text],{type:"application/msword"});const url=URL.createObjectURL(b);const a=document.createElement("a");a.href=url;a.download=filename+".doc";a.click();}
 }
 
-// â”€â”€ Theme â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Theme ─────────────────────────────────────────────────────────────────────
 function getTheme(){try{const s=localStorage.getItem("vd_theme");if(s)return s==="dark";}catch{}return true;}
 function saveTheme(d){try{localStorage.setItem("vd_theme",d?"dark":"light");}catch{}}
 function getSavedRole(){try{return localStorage.getItem("vd_role")||"";}catch{return "";}}
 function saveRole(r){try{if(r)localStorage.setItem("vd_role",r);else localStorage.removeItem("vd_role");}catch{}}
 const T=(dark)=>({bg:dark?"#07101c":"#ede9e0",card:dark?"#0c1a2e":"#fdfaf5",border:dark?"rgba(30,52,82,0.9)":"rgba(0,0,0,0.09)",text:dark?"#F0EDE6":"#0D1B2E",dim:dark?"rgba(240,237,230,0.6)":"rgba(13,27,46,0.65)",muted:dark?"rgba(240,237,230,0.32)":"rgba(13,27,46,0.35)",input:dark?"rgba(3,8,18,0.95)":"rgba(255,255,255,0.92)"});
 
-// â”€â”€ Roles â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Roles ─────────────────────────────────────────────────────────────────────
 const ROLES={
   lawyer:{id:"lawyer",label:"Lawyer / Counsel",color:"#9B59B6",tagline:"Barrister & Solicitor of the Supreme Court",desc:"50+ AI tools for research, drafting, strategy, and trial prep."},
   judge:{id:"judge",label:"Judge",color:GOLD,tagline:"Court of Appeal / Federal / State High Court",desc:"Judgment composer, issue spotting, court orders, case summaries."},
-  magistrate:{id:"magistrate",label:"Magistrate",color:"#4A9EE8",tagline:"Magistrate Court â€” Criminal, Civil & Family",desc:"Quick rulings, bail decisions, sentencing guides, warrants."},
+  magistrate:{id:"magistrate",label:"Magistrate",color:"#4A9EE8",tagline:"Magistrate Court — Criminal, Civil & Family",desc:"Quick rulings, bail decisions, sentencing guides, warrants."},
   clerk:{id:"clerk",label:"Court Clerk",color:"#2ECC8A",tagline:"Case Filing, Registry & Administration",desc:"Digital filing, document classification, case registry tools."},
   legislator:{id:"legislator",label:"Legislator",color:"#E67E22",tagline:"National / State House of Assembly",desc:"Bill drafting, law comparison, plain-English summaries, impact analysis."},
   paralegal:{id:"paralegal",label:"Paralegal",color:"#E05252",tagline:"Legal Research & Document Preparation",desc:"Research automation, document templates, citation checking."},
@@ -217,18 +217,18 @@ const ROLES={
   corporate_counsel:{id:"corporate_counsel",label:"Corporate Counsel",color:"#2ECC8A",tagline:"In-House Legal Department",desc:"Contract playbooks, regulatory radar, board paper review, compliance tools."},
 };
 
-// â”€â”€ Tool titles & descriptions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Tool titles & descriptions ────────────────────────────────────────────────
 const TITLES={dashboard:"Dashboard",matterclock:"Matter Clock",reader:"Document Analysis",qa:"Legal Q&A",warroom:"Case War Room",opposing:"Opposing Counsel Simulator",strength:"Strength Assessment",courtpredictor:"Court Success Predictor",draft:"Draft Documents",briefscore:"Brief-to-Win Score",explainer:"Client Explainer",clientreport:"Client Report",feenote:"Fee Note Builder",intakememo:"Client Intake Memo",clausedna:"Clause DNA",deadlines:"Deadline Intelligence",jurisdiction:"Jurisdiction Translator",statute:"Statute Explainer",precedent:"Precedent Clause Library",correspondence:"Correspondence Tracker",digest:"Case Digest Builder",legalmemo:"Legal Research Memo",pleadingcheck:"Pleadings Checker",compliancecal:"Compliance Calendar",witness:"Witness Forge",evidence:"Evidence Analyser",settlement:"Settlement Intelligence",negotiation:"Contract Negotiation",whatsapp:"WhatsApp Evidence",seniorpartner:"AI Senior Partner",crossexam:"Witness Cross-Examiner",motionammo:"Motion Ammunition",claimanalyser:"Claim Analyser",clientprep:"Client Prep Coach",nigeriancases:"Nigerian Case Law",vault:"Document Vault",cases:"Case Workspaces",profile:"My Profile",upgrade:"Upgrade Plan",judgment_composer:"Judgment Composer",court_order:"Court Order Generator",case_summary_judge:"Case Summary",issue_spotter:"Issue Spotter",quick_ruling:"Quick Ruling",bail_decision:"Bail Decision",warrant_drafter:"Warrant Drafter",sentencing_guide:"Sentencing Guide",clerk_filing:"Digital Filing",clerk_classify:"Document Classifier",bill_drafter:"Bill Drafter",law_comparison:"Law Comparison",law_simplifier:"Plain English Summarizer",impact_assessment:"Impact Assessment",paralegal_research:"Research Hub",contradiction_detector:"Contradiction Detector",timeline_extractor:"Timeline Extractor",obligation_extractor:"Obligation Extractor",risk_delta:"Risk Delta",letter_chain:"Letter Chain Analyser",brief_builder:"Brief Builder",precedent_matcher:"Precedent Matcher",problem_analyzer:"Problem Question Analyser",case_explainer:"Case Explainer",moot_prep:"Moot Prep",assignment_reviewer:"Assignment Reviewer",doctrine_tracker:"Doctrine Tracker",legal_health_check:"Legal Health Check",contract_plain:"Contract in Plain English",contract_playbook:"Contract Playbook Builder",regulatory_radar:"Regulatory Radar",board_paper_reviewer:"Board Paper Reviewer"};
 
-const DESCS={reader:"Complete forensic analysis â€” risk ratings, power map, clause interactions, worst-case scenario, full rewrites.",warroom:"Litigation intelligence brief â€” weighted probability, battleground analysis, killer arguments, outcome scenarios, settlement range.",clausedna:"Forensic clause breakdown â€” risk scores, party bias, hidden traps, compound interactions, enforceability, complete rewrite.",opposing:"The strongest counter-arguments your opponent will make â€” ranked by danger, with precise defeating strategies.",strength:"Weighted probability 0-100% with factor breakdown, decision implication, and steps to push higher.",courtpredictor:"Weighted probability with factor scores, defendant win path, outcome scenarios, financial figures.",crossexam:"20 leading questions only. Killer Sequence. Contradiction mapping. Document-anchored fallbacks.",motionammo:"Full Nigerian Written Address â€” issues, arguments, killer points, formal reliefs. Ready to file.",claimanalyser:"Claim strength score, element-by-element audit, 15 leading cross-exam questions, draft Statement of Defence.",briefscore:"Brief graded on five dimensions â€” grammar audit, defect identification, complete rewritten sections, filing recommendation.",digest:"Transform any Nigerian judgment into a publication-quality digest â€” ratio, obiter, critical analysis, practice implications.",legalmemo:"Partner-quality research memorandum â€” brief answer first, full analysis, killer insight, risk matrix.",pleadingcheck:"Every defect found before your opponent does â€” rule-by-rule audit, objection simulation, complete rewrites.",statute:"Any Nigerian statutory provision â€” judicial interpretation, killer insight, traps, practical implications.",deadlines:"Every deadline â€” explicit and hidden â€” with risk ratings, cascading consequences, and compliance calendar.",nigeriancases:"AI research grounded in verified Nigerian case law. Database-first. Never invented.",qa:"Any Nigerian legal question answered at senior lawyer level â€” with law, practice reality, and killer insight.",draft:"80+ legal document types â€” professionally drafted, ready for review.",contradiction_detector:"Paste two documents from the same party â€” every inconsistency found and mapped to a cross-examination weapon.",timeline_extractor:"Extract every date and event â€” with legal significance ratings, limitation analysis, and gap identification.",obligation_extractor:"Every obligation in any document â€” who owes it, what must be done, by when, consequence of breach.",risk_delta:"Compare two contract versions â€” before and after risk scores, every change rated, concealed changes identified.",letter_chain:"Paste an entire correspondence chain â€” track position evolution, find admissions, assess without-prejudice risk.",brief_builder:"Assemble a complete Brief of Argument from your research and arguments â€” proper Nigerian court format.",precedent_matcher:"Paste any clause or legal issue â€” AI searches the verified case database for judicial treatment.",problem_analyzer:"Paste a law school problem question â€” AI spots every issue, maps the law, and shows you how to structure your answer.",case_explainer:"Any Nigerian case explained at student level â€” facts, issues, decision, ratio, significance, exam relevance.",moot_prep:"Both sides of any moot problem â€” strongest arguments, hardest bench questions, and best answers for each.",assignment_reviewer:"Paste your draft answer â€” structure assessment, legal accuracy check, and specific improvement guidance.",doctrine_tracker:"Trace any legal doctrine through Nigerian law â€” origins, evolution, current state, unsettled questions.",legal_health_check:"Score your business across five legal dimensions â€” contractual exposure, employment, regulatory, IP, dispute readiness.",contract_plain:"Paste any contract â€” every clause explained in plain business English with dangers prominently flagged.",contract_playbook:"Build a repeatable negotiation playbook for any standard contract type â€” ideal positions, fallbacks, red lines.",regulatory_radar:"Describe any business activity â€” get every applicable Nigerian regulatory obligation, licence, and compliance calendar.",board_paper_reviewer:"Review board papers before they go to the board â€” authority check, accuracy check, risk identification."};
+const DESCS={reader:"Complete forensic analysis — risk ratings, power map, clause interactions, worst-case scenario, full rewrites.",warroom:"Litigation intelligence brief — weighted probability, battleground analysis, killer arguments, outcome scenarios, settlement range.",clausedna:"Forensic clause breakdown — risk scores, party bias, hidden traps, compound interactions, enforceability, complete rewrite.",opposing:"The strongest counter-arguments your opponent will make — ranked by danger, with precise defeating strategies.",strength:"Weighted probability 0-100% with factor breakdown, decision implication, and steps to push higher.",courtpredictor:"Weighted probability with factor scores, defendant win path, outcome scenarios, financial figures.",crossexam:"20 leading questions only. Killer Sequence. Contradiction mapping. Document-anchored fallbacks.",motionammo:"Full Nigerian Written Address — issues, arguments, killer points, formal reliefs. Ready to file.",claimanalyser:"Claim strength score, element-by-element audit, 15 leading cross-exam questions, draft Statement of Defence.",briefscore:"Brief graded on five dimensions — grammar audit, defect identification, complete rewritten sections, filing recommendation.",digest:"Transform any Nigerian judgment into a publication-quality digest — ratio, obiter, critical analysis, practice implications.",legalmemo:"Partner-quality research memorandum — brief answer first, full analysis, killer insight, risk matrix.",pleadingcheck:"Every defect found before your opponent does — rule-by-rule audit, objection simulation, complete rewrites.",statute:"Any Nigerian statutory provision — judicial interpretation, killer insight, traps, practical implications.",deadlines:"Every deadline — explicit and hidden — with risk ratings, cascading consequences, and compliance calendar.",nigeriancases:"AI research grounded in verified Nigerian case law. Database-first. Never invented.",qa:"Any Nigerian legal question answered at senior lawyer level — with law, practice reality, and killer insight.",draft:"80+ legal document types — professionally drafted, ready for review.",contradiction_detector:"Paste two documents from the same party — every inconsistency found and mapped to a cross-examination weapon.",timeline_extractor:"Extract every date and event — with legal significance ratings, limitation analysis, and gap identification.",obligation_extractor:"Every obligation in any document — who owes it, what must be done, by when, consequence of breach.",risk_delta:"Compare two contract versions — before and after risk scores, every change rated, concealed changes identified.",letter_chain:"Paste an entire correspondence chain — track position evolution, find admissions, assess without-prejudice risk.",brief_builder:"Assemble a complete Brief of Argument from your research and arguments — proper Nigerian court format.",precedent_matcher:"Paste any clause or legal issue — AI searches the verified case database for judicial treatment.",problem_analyzer:"Paste a law school problem question — AI spots every issue, maps the law, and shows you how to structure your answer.",case_explainer:"Any Nigerian case explained at student level — facts, issues, decision, ratio, significance, exam relevance.",moot_prep:"Both sides of any moot problem — strongest arguments, hardest bench questions, and best answers for each.",assignment_reviewer:"Paste your draft answer — structure assessment, legal accuracy check, and specific improvement guidance.",doctrine_tracker:"Trace any legal doctrine through Nigerian law — origins, evolution, current state, unsettled questions.",legal_health_check:"Score your business across five legal dimensions — contractual exposure, employment, regulatory, IP, dispute readiness.",contract_plain:"Paste any contract — every clause explained in plain business English with dangers prominently flagged.",contract_playbook:"Build a repeatable negotiation playbook for any standard contract type — ideal positions, fallbacks, red lines.",regulatory_radar:"Describe any business activity — get every applicable Nigerian regulatory obligation, licence, and compliance calendar.",board_paper_reviewer:"Review board papers before they go to the board — authority check, accuracy check, risk identification."};
 
-const INPUTS={reader:{ph:"Paste your legal document here or upload above...",rows:10},warroom:{ph:"Describe the case: parties, facts, legal issues, jurisdiction, desired outcome...",rows:12},clausedna:{ph:"Paste any single contract clause here...",rows:8},opposing:{ph:"State your position, supporting facts, legal basis...",rows:12},strength:{ph:"Describe the claim or defence, facts, jurisdiction, applicable law...",rows:12},courtpredictor:{ph:"Describe the claim, relief sought, court, key facts...",rows:10},crossexam:{ph:"Paste the full witness statement here...",rows:10},motionammo:{ph:"Describe the case, motion type, grounds, relief sought...",rows:10},claimanalyser:{ph:"Paste the full statement of claim or opposing pleading...",rows:10},briefscore:{ph:"Paste your complete legal brief here...",rows:14},digest:{ph:"Paste the full text of any Nigerian judgment...",rows:14},legalmemo:{ph:"State the question, client situation, facts, jurisdiction...",rows:12},pleadingcheck:{ph:"Paste your statement of claim, writ, motion, affidavit, or any court process...",rows:14},statute:{ph:"e.g. Section 84 Evidence Act 2011, or paste the full text...",rows:7},deadlines:{ph:"Paste any legal document â€” contracts, court orders, filings...",rows:12},nigeriancases:{ph:"Describe the legal issue â€” breach of contract, Land Use Act, CAMA 2020...",rows:5},qa:{ph:"Ask any Nigerian legal question...",rows:4},draft:{ph:"Parties, jurisdiction, key terms, dates, special requirements...",rows:9},clientprep:{ph:"Describe the case, the client's personality, weaknesses, what they will be asked about...",rows:10},witness:{ph:"Paste the full witness statement...",rows:8},evidence:{ph:"Paste the document or describe the evidence in detail...",rows:8},settlement:{ph:"Describe the dispute, claims, reliefs sought, stage of proceedings...",rows:8},negotiation:{ph:"Paste Version 1 then --- VERSION 2 --- then Version 2...",rows:12},correspondence:{ph:"Paste the full text of any letter, demand notice, or legal correspondence...",rows:12},whatsapp:{ph:"Paste the exported WhatsApp chat here...",rows:10},feenote:{ph:"Describe the legal work: matter type, court appearances, documents drafted, time spent...",rows:9},intakememo:{ph:"Describe the client situation in rough notes...",rows:10},clientreport:{ph:"Describe what happened at the hearing, what was filed, what was said...",rows:9},explainer:{ph:"Paste the document or analysis to explain to your client...",rows:12},jurisdiction:{ph:"Paste legal text or describe the concept...",rows:9},compliancecal:{ph:"Describe the company: type, industry, size, states of operation, licences held, financial year end...",rows:8},precedent:{ph:"Describe the clause you need and the contract context...",rows:8},seniorpartner:{ph:"Describe your case or situation...",rows:5},contradiction_detector:{ph:"Paste Document A, then --- DOCUMENT B --- separator, then Document B...",rows:14},timeline_extractor:{ph:"Paste any legal document or describe the facts...",rows:12},obligation_extractor:{ph:"Paste any contract or legal document...",rows:12},risk_delta:{ph:"Paste Version 1 then --- VERSION 2 --- then Version 2...",rows:14},letter_chain:{ph:"Paste the full sequence of letters separated by --- LETTER [DATE] --- markers...",rows:14},brief_builder:{ph:"Paste your issues, arguments, and authorities...",rows:14},precedent_matcher:{ph:"Paste the clause or describe the legal issue...",rows:8},problem_analyzer:{ph:"Paste your law school problem question here...",rows:10},case_explainer:{ph:"Name the case or paste the judgment text...",rows:6},moot_prep:{ph:"Paste the moot problem and any additional instructions...",rows:10},assignment_reviewer:{ph:"Paste your draft assignment answer here...",rows:12},doctrine_tracker:{ph:"Name the doctrine or legal principle you want to trace...",rows:5},legal_health_check:{ph:"Describe your business â€” type, industry, size, employees, contracts, disputes, licences...",rows:10},contract_plain:{ph:"Paste the contract you want explained...",rows:12},contract_playbook:{ph:"Describe the contract type, your company's typical position, key commercial terms...",rows:10},regulatory_radar:{ph:"Describe the business activity or proposed transaction...",rows:10},board_paper_reviewer:{ph:"Paste the board papers or resolutions for review...",rows:12},judgment_composer:{ph:"Paste the full case file, pleadings, grounds of appeal...",rows:12},court_order:{ph:"Suit number, parties, court, key findings, amounts, special terms...",rows:10},case_summary_judge:{ph:"Paste the full case file, pleadings, or briefs...",rows:12},issue_spotter:{ph:"Paste briefs, statement of claim, grounds of appeal...",rows:12},quick_ruling:{ph:"Suit number, parties, charge or claim, brief facts, what happened today...",rows:10},bail_decision:{ph:"Charge, accused details, age, occupation, criminal record, strength of evidence, community ties...",rows:12},warrant_drafter:{ph:"Name of accused, address, offence, court name, suit number, date...",rows:10},sentencing_guide:{ph:"Offence convicted of, statute, accused background, plea, remorse, antecedents...",rows:14},clerk_filing:{ph:"Paste the court document here...",rows:12},clerk_classify:{ph:"Describe the document or paste its content...",rows:12},paralegal_research:{ph:"Ask any Nigerian legal question â€” procedures, statutes, documents, time limits...",rows:5},bill_drafter:{ph:"Describe what problem this bill solves, who it applies to, key provisions, offences, regulatory bodies...",rows:12},law_comparison:{ph:"Describe the legal topic and the jurisdictions to compare...",rows:8},law_simplifier:{ph:"Paste any statute section, bill clause, or complex legal text...",rows:12},impact_assessment:{ph:"Paste the bill text, description, or key provisions...",rows:14}};
+const INPUTS={reader:{ph:"Paste your legal document here or upload above...",rows:10},warroom:{ph:"Describe the case: parties, facts, legal issues, jurisdiction, desired outcome...",rows:12},clausedna:{ph:"Paste any single contract clause here...",rows:8},opposing:{ph:"State your position, supporting facts, legal basis...",rows:12},strength:{ph:"Describe the claim or defence, facts, jurisdiction, applicable law...",rows:12},courtpredictor:{ph:"Describe the claim, relief sought, court, key facts...",rows:10},crossexam:{ph:"Paste the full witness statement here...",rows:10},motionammo:{ph:"Describe the case, motion type, grounds, relief sought...",rows:10},claimanalyser:{ph:"Paste the full statement of claim or opposing pleading...",rows:10},briefscore:{ph:"Paste your complete legal brief here...",rows:14},digest:{ph:"Paste the full text of any Nigerian judgment...",rows:14},legalmemo:{ph:"State the question, client situation, facts, jurisdiction...",rows:12},pleadingcheck:{ph:"Paste your statement of claim, writ, motion, affidavit, or any court process...",rows:14},statute:{ph:"e.g. Section 84 Evidence Act 2011, or paste the full text...",rows:7},deadlines:{ph:"Paste any legal document — contracts, court orders, filings...",rows:12},nigeriancases:{ph:"Describe the legal issue — breach of contract, Land Use Act, CAMA 2020...",rows:5},qa:{ph:"Ask any Nigerian legal question...",rows:4},draft:{ph:"Parties, jurisdiction, key terms, dates, special requirements...",rows:9},clientprep:{ph:"Describe the case, the client's personality, weaknesses, what they will be asked about...",rows:10},witness:{ph:"Paste the full witness statement...",rows:8},evidence:{ph:"Paste the document or describe the evidence in detail...",rows:8},settlement:{ph:"Describe the dispute, claims, reliefs sought, stage of proceedings...",rows:8},negotiation:{ph:"Paste Version 1 then --- VERSION 2 --- then Version 2...",rows:12},correspondence:{ph:"Paste the full text of any letter, demand notice, or legal correspondence...",rows:12},whatsapp:{ph:"Paste the exported WhatsApp chat here...",rows:10},feenote:{ph:"Describe the legal work: matter type, court appearances, documents drafted, time spent...",rows:9},intakememo:{ph:"Describe the client situation in rough notes...",rows:10},clientreport:{ph:"Describe what happened at the hearing, what was filed, what was said...",rows:9},explainer:{ph:"Paste the document or analysis to explain to your client...",rows:12},jurisdiction:{ph:"Paste legal text or describe the concept...",rows:9},compliancecal:{ph:"Describe the company: type, industry, size, states of operation, licences held, financial year end...",rows:8},precedent:{ph:"Describe the clause you need and the contract context...",rows:8},seniorpartner:{ph:"Describe your case or situation...",rows:5},contradiction_detector:{ph:"Paste Document A, then --- DOCUMENT B --- separator, then Document B...",rows:14},timeline_extractor:{ph:"Paste any legal document or describe the facts...",rows:12},obligation_extractor:{ph:"Paste any contract or legal document...",rows:12},risk_delta:{ph:"Paste Version 1 then --- VERSION 2 --- then Version 2...",rows:14},letter_chain:{ph:"Paste the full sequence of letters separated by --- LETTER [DATE] --- markers...",rows:14},brief_builder:{ph:"Paste your issues, arguments, and authorities...",rows:14},precedent_matcher:{ph:"Paste the clause or describe the legal issue...",rows:8},problem_analyzer:{ph:"Paste your law school problem question here...",rows:10},case_explainer:{ph:"Name the case or paste the judgment text...",rows:6},moot_prep:{ph:"Paste the moot problem and any additional instructions...",rows:10},assignment_reviewer:{ph:"Paste your draft assignment answer here...",rows:12},doctrine_tracker:{ph:"Name the doctrine or legal principle you want to trace...",rows:5},legal_health_check:{ph:"Describe your business — type, industry, size, employees, contracts, disputes, licences...",rows:10},contract_plain:{ph:"Paste the contract you want explained...",rows:12},contract_playbook:{ph:"Describe the contract type, your company's typical position, key commercial terms...",rows:10},regulatory_radar:{ph:"Describe the business activity or proposed transaction...",rows:10},board_paper_reviewer:{ph:"Paste the board papers or resolutions for review...",rows:12},judgment_composer:{ph:"Paste the full case file, pleadings, grounds of appeal...",rows:12},court_order:{ph:"Suit number, parties, court, key findings, amounts, special terms...",rows:10},case_summary_judge:{ph:"Paste the full case file, pleadings, or briefs...",rows:12},issue_spotter:{ph:"Paste briefs, statement of claim, grounds of appeal...",rows:12},quick_ruling:{ph:"Suit number, parties, charge or claim, brief facts, what happened today...",rows:10},bail_decision:{ph:"Charge, accused details, age, occupation, criminal record, strength of evidence, community ties...",rows:12},warrant_drafter:{ph:"Name of accused, address, offence, court name, suit number, date...",rows:10},sentencing_guide:{ph:"Offence convicted of, statute, accused background, plea, remorse, antecedents...",rows:14},clerk_filing:{ph:"Paste the court document here...",rows:12},clerk_classify:{ph:"Describe the document or paste its content...",rows:12},paralegal_research:{ph:"Ask any Nigerian legal question — procedures, statutes, documents, time limits...",rows:5},bill_drafter:{ph:"Describe what problem this bill solves, who it applies to, key provisions, offences, regulatory bodies...",rows:12},law_comparison:{ph:"Describe the legal topic and the jurisdictions to compare...",rows:8},law_simplifier:{ph:"Paste any statute section, bill clause, or complex legal text...",rows:12},impact_assessment:{ph:"Paste the bill text, description, or key provisions...",rows:14}};
 
 const NEW_TOOLS=new Set(["contradiction_detector","timeline_extractor","obligation_extractor","risk_delta","letter_chain","brief_builder","precedent_matcher","problem_analyzer","case_explainer","moot_prep","assignment_reviewer","doctrine_tracker","legal_health_check","contract_plain","contract_playbook","regulatory_radar","board_paper_reviewer"]);
 const CHAMBERS_TOOLS=new Set(["crossexam","motionammo","claimanalyser","clientprep","witness","evidence","settlement","seniorpartner"]);
 const SOLO_LOCKED=new Set(["matterclock","warroom","opposing","strength","courtpredictor","briefscore","explainer","clientreport","feenote","intakememo","clausedna","deadlines","jurisdiction","statute","precedent","correspondence","digest","legalmemo","pleadingcheck","compliancecal","negotiation","whatsapp"]);
 
-// â”€â”€ Nav configs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Nav configs ───────────────────────────────────────────────────────────────
 const NAV=[
   {sec:"MAIN",items:["dashboard","matterclock"]},
   {sec:"THE READER",items:["reader","qa","nigeriancases"]},
@@ -251,7 +251,7 @@ const CORPORATE_COUNSEL_NAV=[{sec:"IN-HOUSE",items:["contract_playbook","regulat
 const getActiveNav=role=>{const m={judge:JUDGE_NAV,magistrate:MAGISTRATE_NAV,clerk:CLERK_NAV,legislator:LEGISLATOR_NAV,paralegal:PARALEGAL_NAV,student:STUDENT_NAV,business_owner:BUSINESS_OWNER_NAV,corporate_counsel:CORPORATE_COUNSEL_NAV};return m[role]||NAV;};
 const getMobileTabs=role=>{const m={judge:["dashboard","judgment_composer","nigeriancases","profile"],magistrate:["dashboard","quick_ruling","bail_decision","profile"],clerk:["dashboard","clerk_filing","vault","profile"],legislator:["dashboard","bill_drafter","nigeriancases","profile"],paralegal:["dashboard","paralegal_research","draft","profile"],student:["dashboard","problem_analyzer","case_explainer","profile"],business_owner:["dashboard","legal_health_check","contract_plain","profile"],corporate_counsel:["dashboard","contract_playbook","regulatory_radar","profile"]};return(m[role]||["dashboard","reader","draft","vault","profile"]).map(id=>({id,label:TITLES[id]?.split(" ")[0]||id}));};
 
-// â”€â”€ UI Components â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── UI Components ─────────────────────────────────────────────────────────────
 function Pulse(){return React.createElement("div",{style:{display:"flex",gap:6,alignItems:"center",padding:"14px 0"}},[0,1,2].map(i=>React.createElement("span",{key:i,style:{width:8,height:8,borderRadius:"50%",background:GOLD,animation:`vPulse 1.2s ${i*.2}s infinite ease-in-out`,display:"inline-block"}})),React.createElement("span",{style:{marginLeft:8,fontSize:13,opacity:.45}},"Analyzing..."));}
 
 function Lbl({children,t}){return React.createElement("div",{style:{fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"1.3px",color:t.muted,marginBottom:7}},children);}
@@ -271,7 +271,7 @@ function formatOutput(text){
   if(!text)return[];
   const lines=text.split("\n");const els=[];let k=0;
   for(let line of lines){
-    line=line.replace(/^#{1,4}\s*/,"").replace(/\*\*([^*]+)\*\*/g,"__B__$1__E__").replace(/^[-â€¢]\s+/,"").replace(/`([^`]+)`/g,"$1");
+    line=line.replace(/^#{1,4}\s*/,"").replace(/\*\*([^*]+)\*\*/g,"__B__$1__E__").replace(/^[-•]\s+/,"").replace(/`([^`]+)`/g,"$1");
     const t=line.trim();
     if(!t){els.push(React.createElement("div",{key:k++,style:{height:10}}));continue;}
     const isH=/^[A-Z][A-Z\s\(\)\/\-&:]{4,}:/.test(t)||(/^[A-Z\s]{5,}$/.test(t)&&t.length<80);
@@ -344,13 +344,13 @@ function Hdr({title,desc,isNew,t,onClear,hasContent,onBack}){
   );
 }
 
-// â”€â”€ Gate pages â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Gate pages ────────────────────────────────────────────────────────────────
 function ChambersGate({t,go,featureName}){
   return React.createElement("div",{className:"fade",style:{textAlign:"center",padding:"60px 20px"}},
     React.createElement("div",{style:{display:"inline-flex",alignItems:"center",gap:8,background:"rgba(200,164,94,.1)",border:"1px solid rgba(200,164,94,.3)",borderRadius:100,padding:"5px 16px",fontSize:11,fontWeight:700,color:GOLD,marginBottom:20}},"CHAMBERS EXCLUSIVE"),
     React.createElement("h2",{style:{fontFamily:"'Playfair Display',serif",fontSize:26,fontWeight:700,color:t.text,marginBottom:12}},featureName),
     React.createElement("p",{style:{fontSize:14,color:t.dim,lineHeight:1.8,maxWidth:440,margin:"0 auto 28px"}},"This tool requires a Chambers subscription. Upgrade to unlock the full Trial Prep Suite."),
-    React.createElement(Btn,{onClick:()=>go("upgrade")},"Upgrade to Chambers â€” NGN 20,000/mo")
+    React.createElement(Btn,{onClick:()=>go("upgrade")},"Upgrade to Chambers — NGN 20,000/mo")
   );
 }
 function FreeGate({t,go,featureName}){
@@ -358,11 +358,11 @@ function FreeGate({t,go,featureName}){
     React.createElement("div",{style:{display:"inline-flex",alignItems:"center",gap:8,background:"rgba(74,158,232,.1)",border:"1px solid rgba(74,158,232,.3)",borderRadius:100,padding:"5px 16px",fontSize:11,fontWeight:700,color:"#4A9EE8",marginBottom:20}},"SOLO FEATURE"),
     React.createElement("h2",{style:{fontFamily:"'Playfair Display',serif",fontSize:26,fontWeight:700,color:t.text,marginBottom:12}},featureName),
     React.createElement("p",{style:{fontSize:14,color:t.dim,lineHeight:1.8,maxWidth:440,margin:"0 auto 28px"}},"Upgrade to Solo for NGN 12,000/month and unlock every tool."),
-    React.createElement(Btn,{onClick:()=>go("upgrade")},"Upgrade to Solo â€” NGN 12,000/mo")
+    React.createElement(Btn,{onClick:()=>go("upgrade")},"Upgrade to Solo — NGN 12,000/mo")
   );
 }
 
-// â”€â”€ Generic AI page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Generic AI page ───────────────────────────────────────────────────────────
 function AIPage({toolId,t,go,role}){
   const cfg=INPUTS[toolId]||{ph:"Describe your situation...",rows:10};
   const[inp,setInp]=usePersist(toolId+"_i","");const[out,setOut]=usePersist(toolId+"_o","");
@@ -376,7 +376,7 @@ function AIPage({toolId,t,go,role}){
     React.createElement("div",{className:"two-col"},
       React.createElement("div",null,
         React.createElement(FileUpload,{t,onText:(text)=>setInp(p=>p?p+"\n\n"+text:text)}),
-        React.createElement("div",{style:{textAlign:"center",color:t.muted,fontSize:11,margin:"4px 0"}},"â€” or type/paste directly â€”"),
+        React.createElement("div",{style:{textAlign:"center",color:t.muted,fontSize:11,margin:"4px 0"}},"— or type/paste directly —"),
         React.createElement(Lbl,{t},"Input"),
         React.createElement(Inp,{val:inp,set:setInp,ph:cfg.ph,rows:cfg.rows,t}),
         React.createElement("div",{style:{height:12}}),
@@ -391,7 +391,7 @@ function AIPage({toolId,t,go,role}){
   );
 }
 
-// â”€â”€ Dashboard zones â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Dashboard zones ───────────────────────────────────────────────────────────
 const ZONES=[
   {id:"reader",name:"The Reader",tagline:"Analyse any document instantly",icon:"doc",color:"#4A9EE8",tools:["reader","qa","nigeriancases"]},
   {id:"strategist",name:"The Strategist",tagline:"Know your position before court",icon:"gavel",color:GOLD,tools:["warroom","opposing","strength","courtpredictor"]},
@@ -402,7 +402,7 @@ const ZONES=[
   {id:"vault",name:"The Vault",tagline:"Your matters, organised",icon:"lock",tools:["matterclock","vault","cases"]},
 ];
 
-// â”€â”€ Role-specific dashboards â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Role-specific dashboards ──────────────────────────────────────────────────
 function GenericDashboard({go,t,profile,tools,greeting,startHere}){
   const rc=ROLES[profile?.role||"lawyer"];
   return React.createElement("div",{className:"fade"},
@@ -412,7 +412,7 @@ function GenericDashboard({go,t,profile,tools,greeting,startHere}){
       React.createElement("p",{style:{color:t.dim,fontSize:13.5}},greeting)
     ),
     startHere&&React.createElement("div",{style:{background:"rgba(200,164,94,.06)",border:"1px solid rgba(200,164,94,.2)",borderRadius:12,padding:"14px 18px",marginBottom:20,cursor:"pointer"},onClick:()=>go(startHere.id)},
-      React.createElement("div",{style:{fontSize:13,fontWeight:600,color:GOLD,marginBottom:4}},"Start here â€” "+TITLES[startHere.id]),
+      React.createElement("div",{style:{fontSize:13,fontWeight:600,color:GOLD,marginBottom:4}},"Start here — "+TITLES[startHere.id]),
       React.createElement("div",{style:{fontSize:12.5,color:t.dim,lineHeight:1.7}},DESCS[startHere.id]||"")
     ),
     React.createElement("div",{style:{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:12}},
@@ -434,7 +434,7 @@ function StudentDashboard({go,t,profile}){return React.createElement(GenericDash
 function BusinessOwnerDashboard({go,t,profile}){return React.createElement(GenericDashboard,{go,t,profile,greeting:"Legal intelligence for your business.",startHere:{id:"legal_health_check"},tools:[{id:"legal_health_check",color:"#E05252"},{id:"contract_plain",color:GOLD},{id:"reader",color:"#4A9EE8"},{id:"qa",color:"#2ECC8A"},{id:"deadlines",color:"#9B59B6"},{id:"obligation_extractor",color:"#E67E22"}]});}
 function CorporateCounselDashboard({go,t,profile}){return React.createElement(GenericDashboard,{go,t,profile,greeting:"In-house legal tools for Nigerian corporations.",tools:[{id:"contract_playbook",color:"#2ECC8A"},{id:"regulatory_radar",color:"#4A9EE8"},{id:"board_paper_reviewer",color:GOLD},{id:"reader",color:"#9B59B6"},{id:"compliancecal",color:"#E67E22"},{id:"obligation_extractor",color:"#E05252"}]});}
 
-// â”€â”€ Lawyer dashboard â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Lawyer dashboard ──────────────────────────────────────────────────────────
 function LawyerDashboard({go,t,docCount,caseCount,profile}){
   const tier=profile?.tier||"free";const isChambers=tier==="chambers";const isSolo=tier==="solo"||isChambers;
   const[activeZone,setActiveZone]=useState(null);
@@ -465,7 +465,7 @@ function LawyerDashboard({go,t,docCount,caseCount,profile}){
     React.createElement("div",{style:{marginBottom:20}},
       React.createElement("h1",{style:{fontFamily:"'Playfair Display',serif",fontSize:"clamp(20px,5vw,26px)",fontWeight:700,color:t.text,marginBottom:4}},
         "Welcome back, ",React.createElement("span",{style:{color:GOLD}},profile?.full_name?.split(" ")[0]||"Counsellor")),
-      React.createElement("p",{style:{color:t.muted,fontSize:13}},tier==="free"?"Free tier â€” 3 analyses/month.":tier==="solo"?"Solo plan â€” Unlimited analyses.":"Chambers plan â€” Complete access.")
+      React.createElement("p",{style:{color:t.muted,fontSize:13}},tier==="free"?"Free tier — 3 analyses/month.":tier==="solo"?"Solo plan — Unlimited analyses.":"Chambers plan — Complete access.")
     ),
     tier==="free"&&React.createElement("div",{style:{background:t.card,border:`1px solid ${t.border}`,borderRadius:12,padding:"12px 16px",marginBottom:16,display:"flex",alignItems:"center",gap:14,flexWrap:"wrap"}},
       React.createElement("div",{style:{flex:1}},
@@ -494,7 +494,7 @@ function LawyerDashboard({go,t,docCount,caseCount,profile}){
   );
 }
 
-// â”€â”€ Auth page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Auth page ─────────────────────────────────────────────────────────────────
 function AuthPage({t,onBack}){
   const{signIn,signUp}=useAuth();
   const[mode,setMode]=useState("login");const[email,setEmail]=useState("");const[password,setPassword]=useState("");const[name,setName]=useState("");const[loading,setLoading]=useState(false);const[error,setError]=useState("");const[success,setSuccess]=useState("");
@@ -504,7 +504,7 @@ function AuthPage({t,onBack}){
       React.createElement("div",{style:{textAlign:"center",marginBottom:28}},
         React.createElement("div",{style:{width:52,height:52,background:`linear-gradient(135deg,${GOLD},${GOLD2})`,borderRadius:14,display:"inline-flex",alignItems:"center",justifyContent:"center",fontFamily:"'Playfair Display',serif",fontWeight:700,fontSize:26,color:"#0D1B2E",marginBottom:12}},"V"),
         React.createElement("div",{style:{fontFamily:"'Playfair Display',serif",fontSize:26,fontWeight:700,color:t.text}},"Verdict",React.createElement("span",{style:{color:GOLD}},"AI")),
-        onBack&&React.createElement("button",{onClick:onBack,style:{background:"none",border:"none",color:t.muted,cursor:"pointer",fontSize:12,fontFamily:"inherit",marginTop:8,display:"block",margin:"8px auto 0"}},"â† Back")
+        onBack&&React.createElement("button",{onClick:onBack,style:{background:"none",border:"none",color:t.muted,cursor:"pointer",fontSize:12,fontFamily:"inherit",marginTop:8,display:"block",margin:"8px auto 0"}},"← Back")
       ),
       React.createElement("div",{style:{background:t.card,border:`1px solid ${t.border}`,borderRadius:14,padding:28}},
         React.createElement("div",{style:{display:"flex",gap:8,marginBottom:20,background:t.bg,borderRadius:8,padding:4}},
@@ -523,7 +523,7 @@ function AuthPage({t,onBack}){
   );
 }
 
-// â”€â”€ Role select â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Role select ───────────────────────────────────────────────────────────────
 function RoleSelectPage({onSelect,t}){
   const[selected,setSelected]=useState("");
   return React.createElement("div",{style:{position:"fixed",top:0,left:0,right:0,bottom:0,background:"#07101c",display:"flex",alignItems:"flex-start",justifyContent:"center",padding:"20px",overflowY:"auto",zIndex:1000}},
@@ -539,15 +539,15 @@ function RoleSelectPage({onSelect,t}){
           React.createElement("div",{style:{fontFamily:"'Playfair Display',serif",fontSize:13,fontWeight:700,color:"#F0EDE6",marginBottom:3}},r.label),
           React.createElement("div",{style:{fontSize:10,color:r.color,fontWeight:600,marginBottom:5}},r.tagline),
           React.createElement("div",{style:{fontSize:10,color:"rgba(240,237,230,.5)",lineHeight:1.4}},r.desc),
-          selected===r.id&&React.createElement("div",{style:{position:"absolute",top:10,right:10,width:20,height:20,borderRadius:"50%",background:r.color,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,color:"#07101c",fontWeight:700}},"âœ“")
+          selected===r.id&&React.createElement("div",{style:{position:"absolute",top:10,right:10,width:20,height:20,borderRadius:"50%",background:r.color,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,color:"#07101c",fontWeight:700}},"✓")
         ))
       ),
-      React.createElement("button",{onClick:()=>{if(!selected)return;saveRole(selected);onSelect(selected);},disabled:!selected,style:{width:"100%",padding:"15px",borderRadius:10,background:selected?`linear-gradient(135deg,${GOLD},${GOLD2})`:"rgba(30,52,82,.5)",border:"none",color:selected?"#0D1B2E":"rgba(240,237,230,.3)",fontFamily:"'DM Sans',sans-serif",fontSize:15,fontWeight:700,cursor:selected?"pointer":"not-allowed",transition:"all .2s"}},selected?"Enter Verdict AI â†’":"Select your role to continue")
+      React.createElement("button",{onClick:()=>{if(!selected)return;saveRole(selected);onSelect(selected);},disabled:!selected,style:{width:"100%",padding:"15px",borderRadius:10,background:selected?`linear-gradient(135deg,${GOLD},${GOLD2})`:"rgba(30,52,82,.5)",border:"none",color:selected?"#0D1B2E":"rgba(240,237,230,.3)",fontFamily:"'DM Sans',sans-serif",fontSize:15,fontWeight:700,cursor:selected?"pointer":"not-allowed",transition:"all .2s"}},selected?"Enter Verdict AI →":"Select your role to continue")
     )
   );
 }
 
-// â”€â”€ Matter Clock â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Matter Clock ──────────────────────────────────────────────────────────────
 function MatterClockPage({t}){
   const[matters,setMatters]=usePersist("mc_matters",[]);const[showAdd,setShowAdd]=useState(false);
   const[nm,setNm]=useState({name:"",court:"",nextHearing:"",limitDate:""});
@@ -571,13 +571,13 @@ function MatterClockPage({t}){
       ),
       React.createElement(Btn,{onClick:add},"Add Matter")
     ),
-    matters.length===0&&React.createElement("div",{style:{textAlign:"center",padding:"60px 20px",color:t.muted}},React.createElement("div",{style:{fontSize:36,marginBottom:12}},"â±"),React.createElement("div",{style:{fontSize:13,marginBottom:20}},"Add your active cases. Check every morning."),React.createElement(Btn,{onClick:()=>setShowAdd(true)},"+ Add Matter")),
+    matters.length===0&&React.createElement("div",{style:{textAlign:"center",padding:"60px 20px",color:t.muted}},React.createElement("div",{style:{fontSize:36,marginBottom:12}},"⏱"),React.createElement("div",{style:{fontSize:13,marginBottom:20}},"Add your active cases. Check every morning."),React.createElement(Btn,{onClick:()=>setShowAdd(true)},"+ Add Matter")),
     React.createElement("div",{style:{display:"flex",flexDirection:"column",gap:10}},
       matters.map(m=>{const hd=daysUntil(m.nextHearing),ld=daysUntil(m.limitDate);const crit=(hd!==null&&hd<=7)||(ld!==null&&ld<=30);
         return React.createElement("div",{key:m.id,style:{background:t.card,border:"1px solid "+(crit?"rgba(224,82,82,.4)":t.border),borderRadius:12,padding:18}},
           React.createElement("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}},
             React.createElement("div",null,React.createElement("div",{style:{fontFamily:"'Playfair Display',serif",fontSize:15,fontWeight:700,color:t.text,marginBottom:3}},m.name),m.court&&React.createElement("div",{style:{fontSize:12,color:t.muted}},m.court)),
-            React.createElement("button",{onClick:()=>setMatters(p=>p.filter(x=>x.id!==m.id)),style:{background:"none",border:"none",color:t.muted,cursor:"pointer",fontSize:18,padding:0}},"Ã—")
+            React.createElement("button",{onClick:()=>setMatters(p=>p.filter(x=>x.id!==m.id)),style:{background:"none",border:"none",color:t.muted,cursor:"pointer",fontSize:18,padding:0}},"×")
           ),
           React.createElement("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}},
             React.createElement("div",{style:{background:"rgba(0,0,0,.15)",borderRadius:8,padding:"10px 12px",textAlign:"center"}},React.createElement("div",{style:{fontSize:9,fontWeight:700,letterSpacing:"1px",color:t.muted,marginBottom:4}},"NEXT HEARING"),hd===null?React.createElement("div",{style:{fontSize:13,color:t.muted}},"Not set"):React.createElement("div",null,React.createElement("div",{style:{fontFamily:"'Playfair Display',serif",fontSize:20,fontWeight:700,color:uc(hd)}},hd<0?"PAST":hd+"d"),React.createElement("div",{style:{fontSize:10,color:t.muted}},hd<0?"overdue":"remaining"))),
@@ -589,11 +589,11 @@ function MatterClockPage({t}){
   );
 }
 
-// â”€â”€ Vault â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Vault ─────────────────────────────────────────────────────────────────────
 function VaultPage({docs,onDelete,onRefresh,t}){
   const[q,setQ]=useState("");const[view,setView]=useState(null);
   const filtered=q?docs.filter(d=>d.name?.toLowerCase().includes(q.toLowerCase())):docs;
-  if(view)return React.createElement("div",{className:"fade"},React.createElement(Btn,{variant:"ghost",sm:true,onClick:()=>setView(null)},"â† Back"),React.createElement("div",{style:{height:16}}),React.createElement("h2",{style:{fontFamily:"'Playfair Display',serif",fontSize:20,marginBottom:4,color:t.text}},view.name),view.analysis&&React.createElement("div",null,React.createElement(Lbl,{t},"AI Analysis"),React.createElement(Out,{text:view.analysis,loading:false,t}),React.createElement(ExportBtns,{text:view.analysis,title:"Document"})));
+  if(view)return React.createElement("div",{className:"fade"},React.createElement(Btn,{variant:"ghost",sm:true,onClick:()=>setView(null)},"← Back"),React.createElement("div",{style:{height:16}}),React.createElement("h2",{style:{fontFamily:"'Playfair Display',serif",fontSize:20,marginBottom:4,color:t.text}},view.name),view.analysis&&React.createElement("div",null,React.createElement(Lbl,{t},"AI Analysis"),React.createElement(Out,{text:view.analysis,loading:false,t}),React.createElement(ExportBtns,{text:view.analysis,title:"Document"})));
   return React.createElement("div",{className:"fade"},
     React.createElement(Hdr,{title:"Document Vault",desc:"Every analyzed document saved automatically.",t}),
     React.createElement("div",{style:{display:"flex",gap:8,marginBottom:14}},React.createElement(Inp,{val:q,set:setQ,ph:"Search...",t,style:{flex:1}}),React.createElement(Btn,{onClick:onRefresh,variant:"ghost",sm:true},"Refresh")),
@@ -606,7 +606,7 @@ function VaultPage({docs,onDelete,onRefresh,t}){
   );
 }
 
-// â”€â”€ Cases â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Cases ─────────────────────────────────────────────────────────────────────
 function CasesPage({cases,onAdd,onUpdate,onDelete,t}){
   const[showNew,setShowNew]=useState(false);const[name,setName]=useState("");const[desc,setDesc]=useState("");
   const add=async()=>{if(!name.trim())return;await onAdd({name,description:desc,status:"active"});setName("");setDesc("");setShowNew(false);};
@@ -623,7 +623,7 @@ function CasesPage({cases,onAdd,onUpdate,onDelete,t}){
       cases.map(c=>React.createElement("div",{key:c.id,style:{background:t.card,border:`1px solid ${t.border}`,borderRadius:10,padding:16}},
         React.createElement("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}},
           React.createElement("div",{style:{fontFamily:"'Playfair Display',serif",fontSize:13.5,fontWeight:600,color:t.text}},c.name),
-          React.createElement("button",{onClick:()=>{if(confirm("Delete?"))onDelete(c.id);},style:{background:"none",border:"none",color:t.muted,cursor:"pointer"}},"Ã—")
+          React.createElement("button",{onClick:()=>{if(confirm("Delete?"))onDelete(c.id);},style:{background:"none",border:"none",color:t.muted,cursor:"pointer"}},"×")
         ),
         c.description&&React.createElement("div",{style:{fontSize:12.5,color:t.dim,lineHeight:1.55,marginTop:6}},c.description)
       ))
@@ -631,7 +631,7 @@ function CasesPage({cases,onAdd,onUpdate,onDelete,t}){
   );
 }
 
-// â”€â”€ Profile â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Profile ───────────────────────────────────────────────────────────────────
 function ProfilePage({profile,onUpdate,t,go}){
   const{user}=useAuth();const[name,setName]=useState(profile?.full_name||"");const[firm,setFirm]=useState(profile?.firm_name||"");const[saved,setSaved]=useState(false);
   const save=async()=>{await onUpdate({full_name:name,firm_name:firm});setSaved(true);setTimeout(()=>setSaved(false),3000);};
@@ -642,7 +642,7 @@ function ProfilePage({profile,onUpdate,t,go}){
       React.createElement("div",{style:{marginBottom:10}},React.createElement(Lbl,{t},"Email"),React.createElement("div",{style:{fontSize:13.5,color:t.dim,padding:"6px 0"}},user?.email)),
       React.createElement("div",{style:{marginBottom:10}},React.createElement(Lbl,{t},"Full Name"),React.createElement(Inp,{val:name,set:setName,ph:"Your full name",t})),
       React.createElement("div",{style:{marginBottom:16}},React.createElement(Lbl,{t},"Firm"),React.createElement(Inp,{val:firm,set:setFirm,ph:"Your firm name",t})),
-      React.createElement(Btn,{onClick:save},saved?"Saved âœ“":"Save Changes")
+      React.createElement(Btn,{onClick:save},saved?"Saved ✓":"Save Changes")
     ),
     React.createElement("div",{style:{background:t.card,border:`1px solid ${t.border}`,borderRadius:12,padding:22,marginBottom:16}},
       React.createElement("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8,marginBottom:8}},
@@ -651,14 +651,14 @@ function ProfilePage({profile,onUpdate,t,go}){
       )
     ),
     React.createElement("div",{style:{background:t.card,border:`1px solid ${t.border}`,borderRadius:12,padding:22,marginBottom:16}},
-      React.createElement("div",{style:{marginBottom:10,fontSize:13,color:t.muted}},"Version 5.0.0 â€” Layered Prompt Architecture + RAG"),
+      React.createElement("div",{style:{marginBottom:10,fontSize:13,color:t.muted}},"Version 5.0.0 — Layered Prompt Architecture + RAG"),
       React.createElement(Btn,{variant:"ghost",onClick:()=>{if(confirm("Clear all saved page content?"))clearAllPageStates();}},"Clear Saved Content")
     ),
     React.createElement(Btn,{variant:"red",onClick:()=>sb.auth.signOut()},"Sign Out")
   );
 }
 
-// â”€â”€ Upgrade â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Upgrade ───────────────────────────────────────────────────────────────────
 let PAYSTACK_PK="";
 (async()=>{try{const r=await fetch("/api/config");const d=await r.json();if(d.paystackPublicKey)PAYSTACK_PK=d.paystackPublicKey;}catch{}})();
 
@@ -716,7 +716,7 @@ function UpgradePage({t,go,userTier,userEmail,onUpgradeSuccess}){
   );
 }
 
-// â”€â”€ Landing â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Landing ───────────────────────────────────────────────────────────────────
 function Landing({onStart}){
   return React.createElement("div",{style:{minHeight:"100vh",background:"#07101c",display:"flex",alignItems:"center",justifyContent:"center",padding:20}},
     React.createElement("div",{style:{textAlign:"center",maxWidth:600}},
@@ -739,14 +739,13 @@ function Landing({onStart}){
   );
 }
 
-// â”€â”€ Nigerian Cases page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Nigerian Cases page ───────────────────────────────────────────────────────
 function NigerianCasesPage({t,go,role}){
-  const[query,setQuery]=usePersist("nc_q","");const[aiOut,setAiOut]=usePersist("nc_o","");const[loading,setLoading]=useState(false);const[limitReached,setLimitReached]=useState(false);const[dbResults,setDbResults]=useState([]);const[dbLoading,setDbLoading]=useState(false);const[searched,setSearched]=useState(false);const[selectedCase,setSelectedCase]=useState(null);
+  const[query,setQuery]=usePersist("nc_q","");const[aiOut,setAiOut]=usePersist("nc_o","");const[loading,setLoading]=useState(false);const[limitReached,setLimitReached]=useState(false);const[dbResults,setDbResults]=useState([]);const[dbLoading,setDbLoading]=useState(false);const[searched,setSearched]=useState(false);
   const runAI=async()=>{if(!query.trim())return;setLoading(true);setAiOut("");setLimitReached(false);try{await stream("nigeriancases","Nigerian law research: "+query,v=>setAiOut(v),0,role||"lawyer");}catch(e){if(e.message==="FREE_LIMIT_REACHED")setLimitReached(true);else setAiOut("Error: "+e.message);}setLoading(false);};
-  const searchDB=async()=>{if(!query.trim())return;setDbLoading(true);setSearched(true);setSelectedCase(null);try{const d=await api(`/api/cases/search?q=${encodeURIComponent(query)}`);setDbResults(d.results||[]);}catch{setDbResults([]);}setDbLoading(false);};
-  const openCase=r=>{if(r.url){window.open(r.url,"_blank","noopener,noreferrer");return;}setSelectedCase(c=>c&&c.id===r.id?null:r);};
+  const searchDB=async()=>{if(!query.trim())return;setDbLoading(true);setSearched(true);try{const d=await api(`/api/cases/search?q=${encodeURIComponent(query)}`);setDbResults(d.results||[]);}catch{setDbResults([]);}setDbLoading(false);};
   return React.createElement("div",{className:"fade"},
-    React.createElement(Hdr,{title:"Nigerian Case Law",desc:"AI research grounded in verified Nigerian case law. Database-first. Never invented.",t,onClear:()=>{setQuery("");setAiOut("");setDbResults([]);setSearched(false);setSelectedCase(null);},hasContent:!!(query||aiOut),onBack:()=>go("dashboard")}),
+    React.createElement(Hdr,{title:"Nigerian Case Law",desc:"AI research grounded in verified Nigerian case law. Database-first. Never invented.",t,onClear:()=>{setQuery("");setAiOut("");setDbResults([]);setSearched(false);},hasContent:!!(query||aiOut),onBack:()=>go("dashboard")}),
     limitReached&&React.createElement(UpgradeBanner,{t,go}),
     React.createElement(Lbl,{t},"Research Query"),React.createElement(Inp,{val:query,set:setQuery,ph:"Describe the legal issue...",rows:3,t}),
     React.createElement("div",{style:{display:"flex",gap:10,margin:"12px 0 24px",flexWrap:"wrap"}},
@@ -758,23 +757,12 @@ function NigerianCasesPage({t,go,role}){
       React.createElement("div",null,React.createElement(Lbl,{t},"Case Database"),
         !searched?React.createElement("div",{style:{background:t.input,border:"1px solid "+t.border,borderRadius:10,padding:20,minHeight:180,display:"flex",alignItems:"center",justifyContent:"center",color:t.muted,fontSize:13,fontStyle:"italic"}},"Click Search Case Database to find verified Nigerian decisions."):
         dbLoading?React.createElement("div",{style:{background:t.input,border:"1px solid "+t.border,borderRadius:10,padding:20,minHeight:180}},React.createElement(Pulse)):
-        React.createElement("div",{style:{background:t.input,border:"1px solid "+t.border,borderRadius:10,padding:16,maxHeight:500,overflowY:"auto"}},
+        React.createElement("div",{style:{background:t.input,border:"1px solid "+t.border,borderRadius:10,padding:16,maxHeight:400,overflowY:"auto"}},
           dbResults.length===0?React.createElement("div",{style:{color:t.muted,fontSize:13,textAlign:"center",padding:20}},"No matches found in database."):
-          dbResults.map((r,i)=>React.createElement("button",{key:r.id||i,onClick:()=>openCase(r),style:{display:"block",width:"100%",textAlign:"left",padding:"12px 14px",borderRadius:8,background:selectedCase&&selectedCase.id===r.id?"rgba(200,164,94,.10)":t.card,border:"1px solid "+((selectedCase&&selectedCase.id===r.id)?"rgba(200,164,94,.35)":t.border),marginBottom:8,cursor:"pointer",fontFamily:"inherit"}},
-            React.createElement("div",{style:{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:10}},
-              React.createElement("div",{style:{flex:1,minWidth:0}},
-                React.createElement("div",{style:{fontSize:13,fontWeight:600,color:GOLD,marginBottom:2}},r.title),
-                React.createElement("div",{style:{fontSize:11,color:t.muted,marginBottom:4}},r.court),
-                React.createElement("div",{style:{fontSize:12,color:t.dim,lineHeight:1.5}},r.citation||r.snippet)
-              ),
-              React.createElement("div",{style:{fontSize:10,color:t.muted,whiteSpace:"nowrap"}},r.url?"Open":"View")
-            ),
-            selectedCase&&selectedCase.id===r.id&&React.createElement("div",{style:{marginTop:10,paddingTop:10,borderTop:"1px solid "+t.border}},
-              r.parties&&React.createElement("div",{style:{fontSize:11,color:t.muted,marginBottom:6}},React.createElement("strong",{style:{color:t.text}},"Parties: "),r.parties),
-              r.decisionDate&&React.createElement("div",{style:{fontSize:11,color:t.muted,marginBottom:6}},React.createElement("strong",{style:{color:t.text}},"Date: "),r.decisionDate),
-              r.holding&&React.createElement("div",{style:{fontSize:12,color:t.text,lineHeight:1.6,marginBottom:6}},React.createElement("strong",null,"Holding: "),r.holding),
-              r.snippet&&React.createElement("div",{style:{fontSize:12,color:t.dim,lineHeight:1.6}},r.snippet)
-            )
+          dbResults.map((r,i)=>React.createElement("div",{key:i,style:{padding:"10px 12px",borderRadius:8,background:t.card,border:"1px solid "+t.border,marginBottom:8}},
+            React.createElement("div",{style:{fontSize:13,fontWeight:600,color:GOLD,marginBottom:2}},r.title),
+            React.createElement("div",{style:{fontSize:11,color:t.muted,marginBottom:4}},r.court),
+            React.createElement("div",{style:{fontSize:12,color:t.dim,lineHeight:1.5}},r.snippet)
           ))
         )
       )
@@ -782,23 +770,23 @@ function NigerianCasesPage({t,go,role}){
   );
 }
 
-// â”€â”€ Senior Partner chat â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Senior Partner chat ───────────────────────────────────────────────────────
 function SeniorPartnerPage({t,go,role}){
   const[messages,setMessages]=usePersist("sp_msgs",[]);const[input,setInput]=useState("");const[loading,setLoading]=useState(false);const[limitReached,setLimitReached]=useState(false);const endRef=useRef();
   useEffect(()=>{if(endRef.current)endRef.current.scrollIntoView({behavior:"smooth"});},[messages,loading]);
-  const STARTERS=["I have a client meeting tomorrow and need to think through our strategy.","My client just received a suspicious contract â€” I want your read on it.","We are going to trial in 3 weeks. Walk me through what I should be doing.","Help me assess whether to settle or fight."];
+  const STARTERS=["I have a client meeting tomorrow and need to think through our strategy.","My client just received a suspicious contract — I want your read on it.","We are going to trial in 3 weeks. Walk me through what I should be doing.","Help me assess whether to settle or fight."];
   const send=async()=>{if(!input.trim()||loading)return;const userMsg={role:"user",content:input};const msgs=[...messages,userMsg];setMessages(msgs);setInput("");setLoading(true);setLimitReached(false);const conv=msgs.map(m=>m.role+": "+m.content).join("\n\n");let reply="";try{await stream("seniorpartner",conv,v=>{reply=v;},0,role||"lawyer");setMessages(p=>[...p,{role:"partner",content:reply}]);}catch(e){if(e.message==="FREE_LIMIT_REACHED")setLimitReached(true);else setMessages(p=>[...p,{role:"partner",content:"Error: "+e.message}]);}setLoading(false);};
   return React.createElement("div",{className:"fade"},
-    React.createElement(Hdr,{title:"AI Senior Partner",desc:"Talk through any case with Ade Bello SAN â€” 28 years. He gives his view first. Then pushes back.",t,onClear:messages.length?()=>setMessages([]):null,hasContent:messages.length>0}),
+    React.createElement(Hdr,{title:"AI Senior Partner",desc:"Talk through any case with Ade Bello SAN — 28 years. He gives his view first. Then pushes back.",t,onClear:messages.length?()=>setMessages([]):null,hasContent:messages.length>0}),
     limitReached&&React.createElement(UpgradeBanner,{t,go}),
     React.createElement("div",{style:{background:t.card,border:"2px solid rgba(200,164,94,.3)",borderRadius:14,overflow:"hidden"}},
       React.createElement("div",{style:{background:"linear-gradient(135deg,rgba(200,164,94,.12),rgba(200,164,94,.04))",padding:"14px 20px",borderBottom:"1px solid rgba(200,164,94,.2)",display:"flex",alignItems:"center",gap:12}},
         React.createElement("div",{style:{width:40,height:40,borderRadius:"50%",background:`linear-gradient(135deg,${GOLD},${GOLD2})`,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Playfair Display',serif",fontSize:16,fontWeight:700,color:"#0D1B2E"}},"AB"),
-        React.createElement("div",null,React.createElement("div",{style:{fontFamily:"'Playfair Display',serif",fontSize:15,fontWeight:700,color:t.text}},"Ade Bello, SAN"),React.createElement("div",{style:{fontSize:11,color:t.dim}},"Senior Partner â€” 28 Years â€” Commercial Litigation"))
+        React.createElement("div",null,React.createElement("div",{style:{fontFamily:"'Playfair Display',serif",fontSize:15,fontWeight:700,color:t.text}},"Ade Bello, SAN"),React.createElement("div",{style:{fontSize:11,color:t.dim}},"Senior Partner — 28 Years — Commercial Litigation"))
       ),
       React.createElement("div",{style:{height:380,overflowY:"auto",padding:20,display:"flex",flexDirection:"column",gap:14}},
         messages.length===0&&React.createElement("div",{style:{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",textAlign:"center",color:t.muted}},
-          React.createElement("p",{style:{fontSize:13,lineHeight:1.7,maxWidth:380,marginBottom:16}},"Bring me a case, a clause, a strategy question. I give my view first â€” then I push back."),
+          React.createElement("p",{style:{fontSize:13,lineHeight:1.7,maxWidth:380,marginBottom:16}},"Bring me a case, a clause, a strategy question. I give my view first — then I push back."),
           React.createElement("div",{style:{display:"flex",gap:8,flexWrap:"wrap",justifyContent:"center"}},STARTERS.map(q=>React.createElement("button",{key:q,onClick:()=>setInput(q),style:{background:t.input,border:"1px solid "+t.border,borderRadius:8,padding:"8px 12px",fontSize:11,color:t.dim,cursor:"pointer",fontFamily:"inherit",textAlign:"left",lineHeight:1.4}},q)))
         ),
         messages.map((m,i)=>React.createElement("div",{key:i,style:{display:"flex",gap:10,flexDirection:m.role==="user"?"row-reverse":"row",alignItems:"flex-start"}},
@@ -816,7 +804,7 @@ function SeniorPartnerPage({t,go,role}){
   );
 }
 
-// â”€â”€ App Content â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── App Content ───────────────────────────────────────────────────────────────
 function AppContent(){
   const{user,loading:authLoading}=useAuth();
   const[page,setPage]=useState(()=>{try{return sessionStorage.getItem("vd_page")||"dashboard";}catch{return "dashboard";}});
@@ -906,7 +894,7 @@ function AppContent(){
           React.createElement("div",{style:{width:32,height:32,background:`linear-gradient(135deg,${GOLD},${GOLD2})`,borderRadius:9,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Playfair Display',serif",fontWeight:700,fontSize:16,color:"#0D1B2E"}},"V"),
           React.createElement("span",{style:{fontFamily:"'Playfair Display',serif",fontSize:18,fontWeight:700,color:t.text}},"Verdict",React.createElement("span",{style:{color:GOLD}},"AI"))
         ),
-        React.createElement("button",{onClick:()=>setSideOpen(false),style:{background:"none",border:"none",color:t.muted,cursor:"pointer",fontSize:22,padding:4}},"Ã—")
+        React.createElement("button",{onClick:()=>setSideOpen(false),style:{background:"none",border:"none",color:t.muted,cursor:"pointer",fontSize:22,padding:4}},"×")
       ),
       React.createElement("div",{style:{padding:"10px 14px 12px",borderBottom:`1px solid ${t.border}`,display:"flex",alignItems:"center",gap:10,cursor:"pointer"},onClick:()=>go("profile")},
         React.createElement("div",{style:{width:30,height:30,borderRadius:"50%",background:`linear-gradient(135deg,${rc.color},${rc.color}cc)`,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",flexShrink:0,fontSize:12,fontWeight:700}},userRole.slice(0,2).toUpperCase()),
@@ -925,7 +913,7 @@ function AppContent(){
         ))
       ),
       React.createElement("div",{style:{padding:"8px 6px",borderTop:`1px solid ${t.border}`}},
-        tier==="free"&&React.createElement("button",{onClick:()=>go("upgrade"),style:{display:"flex",alignItems:"center",justifyContent:"center",width:"100%",padding:"8px",marginBottom:6,borderRadius:7,background:`linear-gradient(135deg,${GOLD},${GOLD2})`,border:"none",color:"#0D1B2E",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}},"Upgrade â€” from NGN 12,000"),
+        tier==="free"&&React.createElement("button",{onClick:()=>go("upgrade"),style:{display:"flex",alignItems:"center",justifyContent:"center",width:"100%",padding:"8px",marginBottom:6,borderRadius:7,background:`linear-gradient(135deg,${GOLD},${GOLD2})`,border:"none",color:"#0D1B2E",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}},"Upgrade — from NGN 12,000"),
         React.createElement("div",{style:{display:"flex",alignItems:"center",gap:8,padding:"4px 8px"}},
           React.createElement("div",{onClick:toggleDark,style:{width:40,height:22,background:dark?"rgba(200,164,94,.18)":"rgba(0,0,0,.1)",border:`1px solid ${dark?"rgba(200,164,94,.3)":t.border}`,borderRadius:100,position:"relative",cursor:"pointer",transition:"all .3s"}},React.createElement("div",{style:{position:"absolute",top:2,left:dark?18:2,width:16,height:16,background:GOLD,borderRadius:"50%",transition:"left .3s"}})),
           React.createElement("span",{style:{fontSize:11,color:t.muted}},dark?"Dark":"Light")
