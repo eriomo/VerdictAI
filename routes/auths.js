@@ -43,6 +43,7 @@ router.post('/login', async (req, res) => {
   }
 
   const { data: profile } = await supabase.from('profiles').select('*').eq('id', data.user.id).single();
+
   return res.json({
     token: data.session.access_token,
     user: buildUser(data.user, profile),
@@ -80,6 +81,7 @@ router.post('/register', async (req, res) => {
   });
 
   const signedIn = await supabase.auth.signInWithPassword({ email, password });
+
   if (signedIn.error || !signedIn.data?.session?.access_token) {
     return res.status(200).json({
       user: buildUser(created.data.user, { full_name: fullName, role }),
@@ -103,6 +105,7 @@ router.post('/me', async (req, res) => {
   }
 
   const { data: profile } = await supabase.from('profiles').select('*').eq('id', authData.user.id).single();
+
   return res.json({
     user: buildUser(authData.user, profile),
   });
