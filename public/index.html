@@ -38,6 +38,7 @@ body{font-family:'DM Sans',sans-serif;color:#F0EDE6;-webkit-font-smoothing:antia
 @keyframes vPulse{0%,80%,100%{transform:scale(.75);opacity:.4}40%{transform:scale(1.2);opacity:1}}
 @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 @keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
 .fade{animation:fadeIn .3s ease}
 .two-col{display:grid;grid-template-columns:1fr 1fr;gap:24px}
 .zone-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
@@ -791,31 +792,142 @@ function Landing({onStart}){
 }
 
 // ── Nigerian Cases page ───────────────────────────────────────────────────────
-function NigerianCasesPage({t,go,role}){
-  const[query,setQuery]=usePersist("nc_q","");const[aiOut,setAiOut]=usePersist("nc_o","");const[loading,setLoading]=useState(false);const[limitReached,setLimitReached]=useState(false);const[dbResults,setDbResults]=useState([]);const[dbLoading,setDbLoading]=useState(false);const[searched,setSearched]=useState(false);
-  const runAI=async()=>{if(!query.trim())return;setLoading(true);setAiOut("");setLimitReached(false);try{await stream("nigeriancases","Nigerian law research: "+query,v=>setAiOut(v),0,role||"lawyer");}catch(e){if(e.message==="FREE_LIMIT_REACHED")setLimitReached(true);else setAiOut("Error: "+e.message);}setLoading(false);};
-  const searchDB=async()=>{if(!query.trim())return;setDbLoading(true);setSearched(true);try{const d=await api(`/api/cases/search?q=${encodeURIComponent(query)}`);setDbResults(d.results||[]);}catch{setDbResults([]);}setDbLoading(false);};
-  return React.createElement("div",{className:"fade"},
-    React.createElement(Hdr,{title:"Nigerian Case Law",desc:"AI research grounded in verified Nigerian case law. Database-first. Never invented.",t,onClear:()=>{setQuery("");setAiOut("");setDbResults([]);setSearched(false);},hasContent:!!(query||aiOut),onBack:()=>go("dashboard")}),
-    limitReached&&React.createElement(UpgradeBanner,{t,go}),
-    React.createElement(Lbl,{t},"Research Query"),React.createElement(Inp,{val:query,set:setQuery,ph:"Describe the legal issue...",rows:3,t}),
-    React.createElement("div",{style:{display:"flex",gap:10,margin:"12px 0 24px",flexWrap:"wrap"}},
-      React.createElement(Btn,{onClick:runAI,disabled:loading||!query.trim(),full:true},loading?"Researching...":"AI Legal Research"),
-      React.createElement(Btn,{onClick:searchDB,disabled:dbLoading||!query.trim(),variant:"ghost"},dbLoading?"Searching...":"Search Case Database")
-    ),
-    React.createElement("div",{className:"two-col"},
-      React.createElement("div",null,React.createElement(Lbl,{t},"AI Analysis"),React.createElement(Out,{text:aiOut,loading,ph:"Click AI Legal Research for analysis.",t}),React.createElement(ExportBtns,{text:aiOut,title:"Nigerian-Law-Research"})),
-      React.createElement("div",null,React.createElement(Lbl,{t},"Case Database"),
-        !searched?React.createElement("div",{style:{background:t.input,border:"1px solid "+t.border,borderRadius:10,padding:20,minHeight:180,display:"flex",alignItems:"center",justifyContent:"center",color:t.muted,fontSize:13,fontStyle:"italic"}},"Click Search Case Database to find verified Nigerian decisions."):
-        dbLoading?React.createElement("div",{style:{background:t.input,border:"1px solid "+t.border,borderRadius:10,padding:20,minHeight:180}},React.createElement(Pulse)):
-        React.createElement("div",{style:{background:t.input,border:"1px solid "+t.border,borderRadius:10,padding:16,maxHeight:400,overflowY:"auto"}},
-          dbResults.length===0?React.createElement("div",{style:{color:t.muted,fontSize:13,textAlign:"center",padding:20}},"No matches found in database."):
-          dbResults.map((r,i)=>React.createElement("div",{key:i,style:{padding:"10px 12px",borderRadius:8,background:t.card,border:"1px solid "+t.border,marginBottom:8}},
-            React.createElement("div",{style:{fontSize:13,fontWeight:600,color:GOLD,marginBottom:2}},r.title),
-            React.createElement("div",{style:{fontSize:11,color:t.muted,marginBottom:4}},r.court),
-            React.createElement("div",{style:{fontSize:12,color:t.dim,lineHeight:1.5}},r.snippet)
-          ))
+function CaseCard({r,t,onSelect}){
+  const[expanded,setExpanded]=useState(false);
+  return React.createElement("div",{style:{background:t.card,border:"1px solid "+t.border,borderRadius:10,overflow:"hidden",marginBottom:8,transition:"all .15s"},
+    onMouseEnter:e=>e.currentTarget.style.borderColor="rgba(200,164,94,0.4)",
+    onMouseLeave:e=>e.currentTarget.style.borderColor=t.border},
+    React.createElement("div",{style:{padding:"14px 16px",cursor:"pointer",display:"flex",alignItems:"flex-start",gap:12},onClick:()=>setExpanded(p=>!p)},
+      React.createElement("div",{style:{flex:1,minWidth:0}},
+        React.createElement("div",{style:{fontSize:13.5,fontWeight:700,color:GOLD,marginBottom:4,lineHeight:1.4}},r.title),
+        React.createElement("div",{style:{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}},
+          r.court&&React.createElement("span",{style:{fontSize:11,color:"#2ECC8A",fontWeight:600,background:"rgba(46,204,138,0.1)",padding:"2px 8px",borderRadius:100}},r.court),
+          r.citation&&React.createElement("span",{style:{fontSize:11,color:"rgba(200,164,94,0.7)",fontFamily:"monospace"}},r.citation),
+          r.date&&React.createElement("span",{style:{fontSize:11,color:t.muted}},r.date)
         )
+      ),
+      React.createElement("div",{style:{flexShrink:0,color:t.muted,fontSize:16,marginTop:2,transition:"transform .2s",transform:expanded?"rotate(90deg)":"none"}},"›")
+    ),
+    expanded&&React.createElement("div",{style:{borderTop:"1px solid "+t.border,padding:"14px 16px",background:"rgba(0,0,0,0.15)"}},
+      r.snippet&&React.createElement("div",{style:{fontSize:13,color:t.dim,lineHeight:1.75,marginBottom:r.holding?12:0}},r.snippet),
+      r.holding&&React.createElement("div",null,
+        React.createElement("div",{style:{fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"1px",color:t.muted,marginBottom:5}},"HOLDING"),
+        React.createElement("div",{style:{fontSize:13,color:t.text,lineHeight:1.7,borderLeft:"3px solid "+GOLD,paddingLeft:12}},r.holding)
+      ),
+      React.createElement("div",{style:{display:"flex",gap:8,marginTop:12,flexWrap:"wrap"}},
+        React.createElement("button",{onClick:()=>onSelect(r),style:{padding:"7px 14px",borderRadius:7,background:"rgba(200,164,94,0.1)",border:"1px solid rgba(200,164,94,0.3)",color:GOLD,fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}},"Use in AI Analysis"),
+        React.createElement("button",{onClick:()=>navigator.clipboard.writeText(`${r.title}${r.citation?" ("+r.citation+")":""}: ${r.snippet||""}`),style:{padding:"7px 14px",borderRadius:7,background:"transparent",border:"1px solid "+t.border,color:t.muted,fontSize:12,cursor:"pointer",fontFamily:"inherit"}},"Copy Citation")
+      )
+    )
+  );
+}
+
+function NigerianCasesPage({t,go,role}){
+  const[query,setQuery]=usePersist("nc_q","");
+  const[aiOut,setAiOut]=usePersist("nc_o","");
+  const[loading,setLoading]=useState(false);
+  const[limitReached,setLimitReached]=useState(false);
+  const[dbResults,setDbResults]=useState([]);
+  const[dbLoading,setDbLoading]=useState(false);
+  const[searched,setSearched]=useState(false);
+  const[activeTab,setActiveTab]=useState("search");
+  const[selectedCase,setSelectedCase]=useState(null);
+  const[filterCourt,setFilterCourt]=useState("");
+  const inputRef=useRef();
+
+  const QUICK_SEARCHES=["Breach of contract","Land Use Act consent","Wrongful dismissal","CAMA 2020 shareholder rights","Limitation of action","Evidence Act Section 84","Interlocutory injunction","Child custody Nigeria","Company winding up","Criminal bail application"];
+
+  const searchDB=async(q)=>{
+    const sq=q||query;
+    if(!sq.trim())return;
+    setDbLoading(true);setSearched(true);setDbResults([]);
+    try{const d=await api(`/api/cases/search?q=${encodeURIComponent(sq)}`);setDbResults(d.results||[]);}
+    catch{setDbResults([]);}
+    setDbLoading(false);
+  };
+
+  const runAI=async()=>{
+    if(!query.trim())return;
+    setAiOut("");setLimitReached(false);setActiveTab("ai");setLoading(true);
+    try{await stream("nigeriancases","Nigerian law research: "+query,v=>setAiOut(v),0,role||"lawyer");}
+    catch(e){if(e.message==="FREE_LIMIT_REACHED")setLimitReached(true);else setAiOut("Error: "+e.message);}
+    setLoading(false);
+  };
+
+  const handleQuick=q=>{setQuery(q);searchDB(q);setActiveTab("search");};
+  const handleKey=e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();searchDB();}};
+  const handleUseInAI=r=>{setQuery(r.title+(r.citation?" ("+r.citation+")":""));setActiveTab("ai");};
+
+  const filtered=filterCourt?dbResults.filter(r=>(r.court||"").toLowerCase().includes(filterCourt.toLowerCase())):dbResults;
+  const courts=[...new Set(dbResults.map(r=>r.court).filter(Boolean))];
+
+  return React.createElement("div",{className:"fade"},
+    React.createElement(Hdr,{title:"Nigerian Case Law",desc:"Search 8,000+ verified Nigerian court decisions. Click any case to expand it.",t,onClear:()=>{setQuery("");setAiOut("");setDbResults([]);setSearched(false);setFilterCourt("");},hasContent:!!(query||aiOut||dbResults.length),onBack:()=>go("dashboard")}),
+
+    // Search bar
+    React.createElement("div",{style:{background:t.card,border:"1px solid "+t.border,borderRadius:12,padding:"16px",marginBottom:20}},
+      React.createElement("div",{style:{display:"flex",gap:8,marginBottom:12}},
+        React.createElement("input",{ref:inputRef,value:query,onChange:e=>setQuery(e.target.value),onKeyDown:handleKey,placeholder:"Search by case name, citation, legal principle, statute, party name...",style:{flex:1,background:t.input,border:"1px solid "+t.border,borderRadius:8,padding:"12px 16px",fontFamily:"'DM Sans',sans-serif",fontSize:14,color:t.text,outline:"none"},onFocus:e=>e.target.style.borderColor=GOLD,onBlur:e=>e.target.style.borderColor=t.border}),
+        React.createElement("button",{onClick:()=>searchDB(),disabled:dbLoading||!query.trim(),style:{padding:"12px 24px",borderRadius:8,background:dbLoading||!query.trim()?"rgba(200,164,94,0.3)":`linear-gradient(135deg,${GOLD},${GOLD2})`,border:"none",color:"#0D1B2E",fontWeight:700,fontSize:14,cursor:dbLoading||!query.trim()?"not-allowed":"pointer",fontFamily:"inherit",flexShrink:0,minWidth:100}},dbLoading?React.createElement("div",{style:{display:"flex",gap:4,alignItems:"center"}},[0,1,2].map(i=>React.createElement("span",{key:i,style:{width:5,height:5,borderRadius:"50%",background:"#0D1B2E",animation:`vPulse 1s ${i*0.2}s infinite`}}))):Ic({n:"search",sz:16,c:"#0D1B2E"}))
+      ),
+      // Quick searches
+      React.createElement("div",{style:{display:"flex",gap:6,flexWrap:"wrap"}},
+        React.createElement("span",{style:{fontSize:11,color:t.muted,alignSelf:"center",flexShrink:0}},"Quick:"),
+        QUICK_SEARCHES.map(q=>React.createElement("button",{key:q,onClick:()=>handleQuick(q),style:{padding:"4px 10px",borderRadius:100,background:"transparent",border:"1px solid "+t.border,color:t.dim,fontSize:11,cursor:"pointer",fontFamily:"inherit",transition:"all .15s",whiteSpace:"nowrap"},onMouseEnter:e=>{e.target.style.borderColor="rgba(200,164,94,0.5)";e.target.style.color=GOLD;},onMouseLeave:e=>{e.target.style.borderColor=t.border;e.target.style.color=t.dim;}},q))
+      )
+    ),
+
+    // Tabs
+    React.createElement("div",{style:{display:"flex",gap:4,marginBottom:16,background:t.card,borderRadius:10,padding:4,border:"1px solid "+t.border,width:"fit-content"}},
+      [{id:"search",label:"Case Results",count:dbResults.length},{id:"ai",label:"AI Analysis",count:null}].map(tab=>
+        React.createElement("button",{key:tab.id,onClick:()=>setActiveTab(tab.id),style:{padding:"8px 18px",borderRadius:7,border:"none",fontFamily:"inherit",fontSize:13,fontWeight:600,cursor:"pointer",background:activeTab===tab.id?"rgba(200,164,94,0.15)":"transparent",color:activeTab===tab.id?GOLD:t.muted,transition:"all .15s",display:"flex",alignItems:"center",gap:6}},
+          tab.label,
+          tab.count>0&&React.createElement("span",{style:{background:"rgba(200,164,94,0.2)",color:GOLD,fontSize:10,fontWeight:700,padding:"1px 7px",borderRadius:100}},tab.count)
+        )
+      ),
+      React.createElement("button",{onClick:runAI,disabled:loading||!query.trim(),style:{padding:"8px 18px",borderRadius:7,border:"none",fontFamily:"inherit",fontSize:13,fontWeight:600,cursor:loading||!query.trim()?"not-allowed":"pointer",background:"transparent",color:loading?"rgba(200,164,94,0.4)":t.muted,transition:"all .15s"}},loading?"Analyzing...":"Run AI Analysis →")
+    ),
+
+    // Search results tab
+    activeTab==="search"&&React.createElement("div",null,
+      !searched&&React.createElement("div",{style:{textAlign:"center",padding:"60px 20px",color:t.muted}},
+        React.createElement("div",{style:{marginBottom:12,display:"flex",justifyContent:"center"}},Ic({n:"book",sz:32,c:t.muted})),
+        React.createElement("div",{style:{fontSize:13,marginBottom:8}},"Search the verified Nigerian case law database"),
+        React.createElement("div",{style:{fontSize:12,color:t.muted,opacity:.7}},"8,000+ court decisions from Supreme Court, Court of Appeal, Federal High Court, and State High Courts")
+      ),
+      dbLoading&&React.createElement("div",{style:{display:"flex",flexDirection:"column",gap:8}},
+        [1,2,3,4].map(i=>React.createElement("div",{key:i,style:{background:t.card,border:"1px solid "+t.border,borderRadius:10,padding:16,height:72,animation:"pulse 1.5s infinite",opacity:.6}}))
+      ),
+      searched&&!dbLoading&&React.createElement("div",null,
+        dbResults.length>0&&React.createElement("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12,flexWrap:"wrap",gap:8}},
+          React.createElement("div",{style:{fontSize:13,color:t.muted}},dbResults.length+" results for ",React.createElement("strong",{style:{color:t.text}},'"'+query+'"')),
+          courts.length>1&&React.createElement("select",{value:filterCourt,onChange:e=>setFilterCourt(e.target.value),style:{background:t.input,border:"1px solid "+t.border,borderRadius:7,padding:"5px 10px",color:t.text,fontSize:12,fontFamily:"inherit",outline:"none"}},
+            React.createElement("option",{value:""},"All courts ("+dbResults.length+")"),
+            courts.map(c=>React.createElement("option",{key:c,value:c},c+" ("+dbResults.filter(r=>r.court===c).length+")"))
+          )
+        ),
+        dbResults.length===0&&React.createElement("div",{style:{textAlign:"center",padding:"40px 20px",color:t.muted}},
+          React.createElement("div",{style:{fontSize:13,marginBottom:8}},"No cases found for that query."),
+          React.createElement("div",{style:{fontSize:12,opacity:.7}},"Try a different search term, case name, or legal principle.")
+        ),
+        filtered.map((r,i)=>React.createElement(CaseCard,{key:i,r,t,onSelect:handleUseInAI}))
+      )
+    ),
+
+    // AI analysis tab
+    activeTab==="ai"&&React.createElement("div",null,
+      limitReached&&React.createElement(UpgradeBanner,{t,go}),
+      !aiOut&&!loading&&React.createElement("div",{style:{textAlign:"center",padding:"40px 20px",color:t.muted}},
+        React.createElement("div",{style:{fontSize:13,marginBottom:8}},"Enter a query above and click Run AI Analysis"),
+        React.createElement("div",{style:{fontSize:12,opacity:.7}},"AI analysis uses the verified database as context — no invented cases.")
+      ),
+      (aiOut||loading)&&React.createElement("div",null,
+        React.createElement("div",{style:{display:"flex",alignItems:"center",gap:8,marginBottom:12}},
+          React.createElement("div",{style:{width:8,height:8,borderRadius:"50%",background:GOLD}}),
+          React.createElement("span",{style:{fontSize:12,color:t.muted}},"Analysis grounded in verified Nigerian case law")
+        ),
+        React.createElement(Out,{text:aiOut,loading,ph:"AI analysis appears here...",t}),
+        React.createElement(ExportBtns,{text:aiOut,title:"Nigerian-Law-Research"})
       )
     )
   );
